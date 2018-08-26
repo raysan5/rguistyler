@@ -1,9 +1,9 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v2.1 - raygui Style Editor
+*   rGuiStyler v2.2 - raygui Style Editor
 *
 *   Compile this program using:
-*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -I..\.. \ 
+*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -Iexternal \ 
 *       -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32 -std=c99 -Wall
 *
 *   CONTRIBUTORS:
@@ -42,7 +42,7 @@
 
 #include "external/tinyfiledialogs.h"   // Open/Save file dialogs
 
-#include "raygui_style_table_light.h"   // Image table data
+#include "raygui_style_light.h"   // Image table data
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -59,6 +59,8 @@
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
+#define TOOL_VERSION_TEXT   "2.2"
+
 #define NUM_CONTROLS        13
 #define NUM_STYLES_A         4
 #define NUM_STYLES_B         8
@@ -100,6 +102,14 @@ typedef enum {
     TEXT_COLOR_DISABLED
 } GuiStyleType;
 
+typedef enum {
+    RGS_TEXT = 0,
+    RGS_BINARY,
+    PNG_PALETTE,
+    CODE_PALETTE,
+    PNG_CONTROLS_TABLE
+} StyleFileType;
+
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
@@ -115,9 +125,7 @@ const char *guiControlText[NUM_CONTROLS] = {
     "DEFAULT", 
     "LABELBUTTON",
     "BUTTON", 
-    //"IMAGEBUTTON",
     "TOGGLE", 
-    //"TOGGLEGROUP", 
     "SLIDER", 
     "SLIDERBAR", 
     "PROGRESSBAR", 
@@ -325,32 +333,132 @@ const char *guiPropertyText[NUM_PROPERTIES] = {
     "LISTVIEW_TEXT_COLOR_DISABLED"
 };
 
+static bool styleSaved = false;                                 // Show save dialog on closing if not saved
+
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
+static void ShowUsageInfo(void);                                // Show command line usage info
+
 static void BtnLoadStyle(void);                                 // Button load style function
 static void BtnSaveStyle(const char *defaultName, bool binary); // Button save style function
 
 static void SaveStyleRGS(const char *fileName, bool binary);    // Save raygui style file (.rgs), text or binary
-static void GenImageControlsTable(void);                        // Generate controls table image
+
+static void ExportStylePalette(const char *fileName, bool code);// Export style palette (image or code)
+static void ExportStyleTableImage(const char *fileName);        // Export style controls table image
 
 static int GetGuiStylePropertyIndex(int control, int property);
 static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color);
 
-static bool cancelSave = false;                                 // Used for saving styles
 
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-    // Initialization
+    // Command-line usage mode
+    //--------------------------------------------------------------------------------------
+    if (argc > 1)
+    {
+        bool inputValidFile = false;
+        bool showVersion = false;
+        bool showInfo = false;
+        bool showHelp = false;
+        bool showUsageInfo = false;
+        
+        int outputFormat = 0;       // RGS_TEXT = 0, RGS_BINARY, PNG_PALETTE, PNG_CONTROLS_TABLE, CODE_PALETTE
+        
+        char inFileName[256] = { 0 };
+        
+        // Arguments scan and record
+        for (int i = 1; i < argc; i++)
+        {
+            if (strcmp(argv[i], "--input") == 0) // || (strcmp(argv[i], "-i") == 0)
+            {
+                // Read input file
+                strcpy(inFileName, argv[i + 1]);
+                
+                // Verify file provided with supported extension
+                // NOTE: Also checking no "--" is comming after --input
+                if (((i + 1) < argc) && (argv[i + 1][0] != '-') && IsFileExtension(inFileName, ".png")) inputValidFile = true;
+
+                i++;
+            }
+            else if (strcmp(argv[i], "--version") == 0) showVersion = true;
+            else if (strcmp(argv[i], "--help") == 0) showHelp = true;
+            else if (strcmp(argv[i], "--info") == 0) 
+            {
+                if (inputValidFile)
+                {
+
+                }
+            }
+            else if (strcmp(argv[i], "--format") == 0) 
+            {
+                if (((i + 1) < argc) && (argv[i + 1][0] != '-'))  // Check if next argument could be readed
+                {
+                    // Check support format string
+                    if (strcmp(argv[i + 1], "RGS_TEXT") == 0) outputFormat = 0;
+                    else if (strcmp(argv[i + 1], "RGS_BINARY") == 0) outputFormat = 1;
+                    /* */
+                    else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); ShowUsageInfo(); }
+                }
+                else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); ShowUsageInfo(); }
+            }
+            else 
+            {
+                TraceLog(LOG_WARNING, "No valid parameter: %s", argv[i]);
+                showUsageInfo = true;
+            }
+        }
+        
+        if (inputValidFile)
+        {
+            // Process input .rgs file
+            GuiLoadStyle(inFileName);
+            
+            // TODO: Setup output file name, based on input
+            char outFileName[256] = { 0 };
+            strcpy(outFileName, inFileName);
+            
+            // Generate style files with different formats
+            switch (outputFormat)
+            {
+                case RGS_TEXT:          // .rgs text file
+                {
+                    SaveStyleRGS(outFileName, false);       // Save style file (text)
+                } break;
+                case RGS_BINARY:        // .rgs binary file
+                {
+                    SaveStyleRGS(outFileName, true);        // Save style file (binary)
+                } break;
+                case PNG_PALETTE:       // .png palette image
+                {
+                    //ExportStylePalette(outFileName);        // TODO: Export PNG palette image
+                } break;
+                case CODE_PALETTE:      // .h palette code (defined as array of hex colors)
+                {
+                    //ExportStylePaletteCode(outFileName);    // TODO: Save palette as code file
+                } break;
+                case PNG_CONTROLS_TABLE: // .png controls table image (good for full reference)
+                {
+                    //GenImageControlsTable(outFileName);   // Export PNG controls table image
+                } break;
+            }
+        }
+        else ShowUsageInfo();
+        
+        return 0;
+    }
+    
+    // Initialization (GUI usage mode)
     //--------------------------------------------------------------------------------------
     const int screenWidth = 720;
     const int screenHeight = 640;
     
     //SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "rGuiStyler v2.1 - raygui style editor");
+    InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - raygui style editor", TOOL_VERSION_TEXT));
     SetExitKey(0);
 
     int dropsCount = 0;
@@ -358,8 +466,6 @@ int main(int argc, char *argv[])
     
     int framesCounter = 0;
     
-    int guiPosX = 336;
-    int guiPosY = 36;
     Vector2 anchor01 = { 0, 0 };
     Vector2 anchor02 = { 345, 40 };
     bool saveColor = false;
@@ -371,15 +477,13 @@ int main(int argc, char *argv[])
         (Rectangle){ 0 },                                           // DEFAULT
         (Rectangle){ anchor02.x + 85, anchor02.y + 35, 145, 25 },   // LABELBUTTON
         (Rectangle){ anchor02.x + 195, anchor02.y + 240, 160, 30 }, // BUTTON
-        //(Rectangle){ guiPosX + 251, guiPosY + 5, 113, 32 },       // IMAGEBUTTON
         (Rectangle){ anchor02.x + 10, anchor02.y + 70, 65, 30 },    // TOGGLE
-        //(Rectangle){ guiPosX + 98, guiPosY + 54, 65, 30 },        // TOGGLEGROUP
         (Rectangle){ anchor02.x + 75, anchor02.y + 115, 250, 15 },  // SLIDER
         (Rectangle){ anchor02.x + 75, anchor02.y + 140, 250, 15 },  // SLIDERBAR
         (Rectangle){ anchor02.x + 10, anchor02.y + 165, 315, 15 },  // PROGRESSBAR    
         (Rectangle){ anchor02.x + 270, anchor02.y + 38, 20, 20 },  // CHECKBOX
         (Rectangle){ anchor02.x + 240, anchor02.y + 195, 115, 30 },  // SPINNER
-        (Rectangle){ anchor02.x + 10, anchor02.y + 195, 110, 30 },  // COMBOBOX
+        (Rectangle){ anchor02.x + 10, anchor02.y + 195, 160, 30 },  // COMBOBOX
         (Rectangle){ anchor02.x + 10, anchor02.y + 240, 180, 30 }, // TEXTBOX
         (Rectangle){ anchor01.x + 10, anchor01.y + 40, 140, 560 },  // LISTVIEW
         (Rectangle){ anchor02.x + 10, anchor02.y + 300, 240, 240 }  // COLORPICKER
@@ -395,7 +499,7 @@ int main(int argc, char *argv[])
     const char *toggleGuiText[4] = { "toggle", "group", "selection", "options" };
     
     int dropdownBoxActive = false;
-    const char *dropdownBoxList[3] = { "dropdown", "selection", "options" };
+    const char *dropdownBoxList[3] = { "A", "B", "C" };
 
     float sliderValue = 50.0f;
     float sliderBarValue = 20.0f;
@@ -409,8 +513,8 @@ int main(int argc, char *argv[])
     
     Vector2 mousePos = { 0 };
 
-    int comboNum = 2;
-    const char *comboText[2] = { "Text (.rgs)", "Binary (.rgs)" };
+    int comboNum = 5;
+    const char *comboText[5] = { "Text (.rgs)", "Binary (.rgs)", "Palette (.png)", "Palette (.h)", "Controls Table (.png)" };
     int comboActive = 0;
     
     char guiText[32] =  "custom_style.rgs";
@@ -470,16 +574,18 @@ int main(int argc, char *argv[])
         mousePos = GetMousePosition();
         
         // Export controls table image
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) GenImageControlsTable();
+        // TODO: Support style name definition!
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) ExportStyleTableImage("style_table.png");
 
         // Check for dropped files
+        // NOTE: Supports loading .rgs style files (text or binary) and .png style palette images
         if (IsFileDropped())
         {
             currentSelectedControl = -1;
             droppedFiles = GetDroppedFiles(&dropsCount);
             
             if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
-            else if (IsFileExtension(droppedFiles[0], ".png")) GuiLoadStyleImage(droppedFiles[0]);
+            else if (IsFileExtension(droppedFiles[0], ".png")) GuiLoadStylePaletteImage(droppedFiles[0]);
             
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
             
@@ -658,7 +764,7 @@ int main(int argc, char *argv[])
             // Draw save style button
             if (GuiButton(bounds[BUTTON], "Save Style")) BtnSaveStyle(guiText, comboActive);
 
-            dropdownBoxActive = GuiDropdownBox((Rectangle){ anchor02.x + 125, anchor02.y + 195, 110, 30 }, dropdownBoxList, 3, dropdownBoxActive);
+            dropdownBoxActive = GuiDropdownBox((Rectangle){ anchor02.x + 175, anchor02.y + 195, 60, 30 }, dropdownBoxList, 3, dropdownBoxActive);
             
             GuiEnable();
             
@@ -675,9 +781,9 @@ int main(int argc, char *argv[])
                 
                 if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes")) 
                 { 
-                    cancelSave = false;
+                    styleSaved = false;
                     BtnSaveStyle(guiText, comboActive);
-                    if (cancelSave) exitWindow = true;
+                    if (styleSaved) exitWindow = true;
                 }
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
             }
@@ -698,6 +804,21 @@ int main(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 // Module functions
 //--------------------------------------------------------------------------------------------
+
+// Show command line usage info
+static void ShowUsageInfo(void)
+{
+    printf("\nrGuiStyler v%s - raygui styles editor\n", TOOL_VERSION_TEXT);
+    printf("View, edit and export raygui styles.\n");
+    printf("powered by raylib v2.0 and raygui v2.0\n\n");
+    printf("LICENSE: zlib/libpng\n");
+    printf("Copyright (c) 2017-2018 raylib technologies (@raylibtech)\n\n");
+
+    printf("Usage: rguistyler [--version] [--help] [--input <filename.rgs>]\n");
+    printf("       [--info] [--output <filename.ext>] [--format <styleformat>]\n");
+    
+    // Style formats: RGS_TEXT, RGS_BINARY, PNG_PALETTE, PNG_CONTROLS_TABLE, CODE_PALETTE
+}
 
 // Button load style function
 static void BtnLoadStyle(void)
@@ -730,11 +851,12 @@ static void BtnSaveStyle(const char *defaultName, bool binary)
 
     if (fileName != NULL)
     {
-        char outFileName[64] = { 0 };
+        char outFileName[256] = { 0 };
         strcpy(outFileName, fileName);
         if (GetExtension(outFileName) == NULL) strcat(outFileName, ".rgs\0");     // No extension provided
         if (outFileName != NULL) SaveStyleRGS(outFileName, binary);               // Save style file (text or binary)
-        cancelSave = true;
+        
+        styleSaved = true;
     }
 }
 
@@ -872,9 +994,30 @@ static void SaveStyleRGS(const char *fileName, bool binary)
     }
 }
 
-// Generate controls table image
+// Export style palette (image or code)
+static void ExportStylePalette(const char *fileName, bool code)
+{
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_NORMAL]), GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_NORMAL]), GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_FOCUSED]), GetColor(style[DEFAULT_BORDER_COLOR_FOCUSED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_FOCUSED]), GetColor(style[DEFAULT_BASE_COLOR_FOCUSED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_FOCUSED]), GetColor(style[DEFAULT_TEXT_COLOR_FOCUSED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_PRESSED]), GetColor(style[DEFAULT_BORDER_COLOR_PRESSED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_PRESSED]), GetColor(style[DEFAULT_BASE_COLOR_PRESSED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_PRESSED]), GetColor(style[DEFAULT_TEXT_COLOR_PRESSED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
+    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+    
+    ExportImage(fileName, image_raygui_style_palette_light);
+}
+
+// Export style controls table image
 // NOTE: We use embedded image raygui_style_table_light 
-static void GenImageControlsTable(void)
+static void ExportStyleTableImage(const char *fileName)
 {   
     ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
     ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
@@ -891,5 +1034,5 @@ static void GenImageControlsTable(void)
     ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
     ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
     
-    ExportImage("raygui_style_table.png", image_raygui_style_table_light);
+    ExportImage(fileName, image_raygui_style_table_light);
 }
