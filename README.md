@@ -27,7 +27,7 @@ Once a style has been created, just save it as a **.rgs** file, it can be saved 
 
 ## Screenshots
 
-![rGuiStyler](screenshots/screenshot000.png)
+![rGuiStyler](screenshots/rguistyler_v210_light_shot01.png)
 
 ## License
 
