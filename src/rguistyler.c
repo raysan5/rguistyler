@@ -37,29 +37,21 @@
 
 #define RAYGUI_IMPLEMENTATION
 #define RAYGUI_STYLE_SAVE_LOAD
-#define RAYGUI_STYLE_DEFAULT_LIGHT      1
-#include "raygui.h"
+#define RAYGUI_STYLE_DEFAULT_LIGHT
+#include "raygui.h"                     // Required for: IMGUI controls
 
-#include "external/tinyfiledialogs.h"   // Open/Save file dialogs
+#include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
 
-#include "raygui_style_light.h"   // Image table data
+#include "raygui_style_light.h"         // Embedded Image: controls table
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-#if defined(_WIN32)
-    #include <direct.h>
-    #define GetCurrentDir _getcwd
-#else
-    #include <unistd.h>
-    #define GetCurrentDir getcwd
-#endif
+#include <stdlib.h>                     // Required for: malloc(), free()
+#include <string.h>                     // Required for: strcmp()
+#include <stdio.h>                      // Required for: fopen(), fclose(), fread()...
 
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
-#define TOOL_VERSION_TEXT   "2.2"
+#define RGUISTYLER_VERSION   "2.2"      // Tool version string
 
 #define NUM_CONTROLS        13
 #define NUM_STYLES_A         4
@@ -371,7 +363,7 @@ int main(int argc, char *argv[])
         
         char inFileName[256] = { 0 };
         
-        // Arguments scan and record
+        // Arguments scan and processing
         for (int i = 1; i < argc; i++)
         {
             if (strcmp(argv[i], "--input") == 0) // || (strcmp(argv[i], "-i") == 0)
@@ -452,13 +444,13 @@ int main(int argc, char *argv[])
         return 0;
     }
     
-    // Initialization (GUI usage mode)
+    // GUI usage mode - Initialization
     //--------------------------------------------------------------------------------------
     const int screenWidth = 720;
     const int screenHeight = 640;
     
     //SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - raygui style editor", TOOL_VERSION_TEXT));
+    InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - raygui style editor", RGUISTYLER_VERSION));
     SetExitKey(0);
 
     int dropsCount = 0;
@@ -808,7 +800,7 @@ int main(int argc, char *argv[])
 // Show command line usage info
 static void ShowUsageInfo(void)
 {
-    printf("\nrGuiStyler v%s - raygui styles editor\n", TOOL_VERSION_TEXT);
+    printf("\nrGuiStyler v%s - raygui styles editor\n", RGUISTYLER_VERSION);
     printf("View, edit and export raygui styles.\n");
     printf("powered by raylib v2.0 and raygui v2.0\n\n");
     printf("LICENSE: zlib/libpng\n");
