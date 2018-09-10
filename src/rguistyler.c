@@ -330,7 +330,7 @@ static bool styleSaved = false;                                 // Show save dia
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
-static void ShowUsageInfo(void);                                // Show command line usage info
+static void ShowUsageInfo(void);    // Show command line usage info
 
 static void BtnLoadStyle(void);                                 // Button load style function
 static void BtnSaveStyle(const char *defaultName, bool binary); // Button save style function
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
         // Arguments scan and processing
         for (int i = 1; i < argc; i++)
         {
-            if (strcmp(argv[i], "--input") == 0) // || (strcmp(argv[i], "-i") == 0)
+            if ((strcmp(argv[i], "--input") == 0) || (strcmp(argv[i], "-i") == 0))
             {
                 // Read input file
                 strcpy(inFileName, argv[i + 1]);
@@ -377,14 +377,15 @@ int main(int argc, char *argv[])
 
                 i++;
             }
-            else if (strcmp(argv[i], "--version") == 0) showVersion = true;
-            else if (strcmp(argv[i], "--help") == 0) showHelp = true;
+            else if (strcmp(argv[i], "--version") == 0) showUsageInfo = true;
+            else if (strcmp(argv[i], "--help") == 0) showUsageInfo = true;
             else if (strcmp(argv[i], "--info") == 0) 
             {
                 if (inputValidFile)
                 {
 
                 }
+                else showUsageInfo = true;
             }
             else if (strcmp(argv[i], "--format") == 0) 
             {
@@ -394,9 +395,9 @@ int main(int argc, char *argv[])
                     if (strcmp(argv[i + 1], "RGS_TEXT") == 0) outputFormat = 0;
                     else if (strcmp(argv[i + 1], "RGS_BINARY") == 0) outputFormat = 1;
                     /* */
-                    else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); ShowUsageInfo(); }
+                    else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); showUsageInfo = true; }
                 }
-                else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); ShowUsageInfo(); }
+                else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); showUsageInfo = true; }
             }
             else 
             {
@@ -439,7 +440,8 @@ int main(int argc, char *argv[])
                 } break;
             }
         }
-        else ShowUsageInfo();
+        
+        if (showUsageInfo) ShowUsageInfo();
         
         return 0;
     }
@@ -794,19 +796,18 @@ int main(int argc, char *argv[])
 }
 
 //--------------------------------------------------------------------------------------------
-// Module functions
+// Module Functions Definitions (local)
 //--------------------------------------------------------------------------------------------
 
 // Show command line usage info
 static void ShowUsageInfo(void)
 {
     printf("\nrGuiStyler v%s - raygui styles editor\n", RGUISTYLER_VERSION);
-    printf("View, edit and export raygui styles.\n");
-    printf("powered by raylib v2.0 and raygui v2.0\n\n");
+    printf("Powered by raylib v2.0 and raygui v2.0\n\n");
     printf("LICENSE: zlib/libpng\n");
-    printf("Copyright (c) 2017-2018 raylib technologies (@raylibtech)\n\n");
+    printf("Copyright (c) 2017-2018 raylib technologies (@raylibtech).\n\n");
 
-    printf("Usage: rguistyler [--version] [--help] [--input <filename.rgs>]\n");
+    printf("USAGE: rguistyler [--version] [--help] [--input <filename.rgs>]\n");
     printf("       [--info] [--output <filename.ext>] [--format <styleformat>]\n");
     
     // Style formats: RGS_TEXT, RGS_BINARY, PNG_PALETTE, PNG_CONTROLS_TABLE, CODE_PALETTE
