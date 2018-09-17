@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v2.2 - raygui Style Editor
+*   rGuiStyler v2.2 - raygui styles editor
 *
 *   Compile this program using:
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -Iexternal \ 
@@ -95,11 +95,11 @@ typedef enum {
 } GuiStyleType;
 
 typedef enum {
-    RGS_TEXT = 0,
-    RGS_BINARY,
-    PNG_PALETTE,
-    CODE_PALETTE,
-    PNG_CONTROLS_TABLE
+    STYLE_TEXT = 0,         // raygui style text file (.rgs)
+    STYLE_BINARY,           // raygui style binary file (.rgs)
+    PALETTE_IMAGE,
+    PALETTE_CODE,
+    CONTROLS_TABLE_IMAGE
 } StyleFileType;
 
 //----------------------------------------------------------------------------------
@@ -335,10 +335,8 @@ static void ShowUsageInfo(void);    // Show command line usage info
 static void BtnLoadStyle(void);                                 // Button load style function
 static void BtnSaveStyle(const char *defaultName, bool binary); // Button save style function
 
-static void SaveStyleRGS(const char *fileName, bool binary);    // Save raygui style file (.rgs), text or binary
-
-static void ExportStylePalette(const char *fileName, bool code);// Export style palette (image or code)
-static void ExportStyleTableImage(const char *fileName);        // Export style controls table image
+static void SaveStyle(const char *fileName, bool binary);       // Save raygui style (.rgs), text or binary
+static void ExportStyle(const char *fileName, int type);        // Export style color palette
 
 static int GetGuiStylePropertyIndex(int control, int property);
 static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color);
@@ -359,7 +357,7 @@ int main(int argc, char *argv[])
         bool showHelp = false;
         bool showUsageInfo = false;
         
-        int outputFormat = 0;       // RGS_TEXT = 0, RGS_BINARY, PNG_PALETTE, PNG_CONTROLS_TABLE, CODE_PALETTE
+        int outputFormat = 0;       // STYLE_TEXT = 0, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
         
         char inFileName[256] = { 0 };
         
@@ -392,8 +390,8 @@ int main(int argc, char *argv[])
                 if (((i + 1) < argc) && (argv[i + 1][0] != '-'))  // Check if next argument could be readed
                 {
                     // Check support format string
-                    if (strcmp(argv[i + 1], "RGS_TEXT") == 0) outputFormat = 0;
-                    else if (strcmp(argv[i + 1], "RGS_BINARY") == 0) outputFormat = 1;
+                    if (strcmp(argv[i + 1], "STYLE_TEXT") == 0) outputFormat = 0;
+                    else if (strcmp(argv[i + 1], "STYLE_BINARY") == 0) outputFormat = 1;
                     /* */
                     else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); showUsageInfo = true; }
                 }
@@ -415,30 +413,8 @@ int main(int argc, char *argv[])
             char outFileName[256] = { 0 };
             strcpy(outFileName, inFileName);
             
-            // Generate style files with different formats
-            switch (outputFormat)
-            {
-                case RGS_TEXT:          // .rgs text file
-                {
-                    SaveStyleRGS(outFileName, false);       // Save style file (text)
-                } break;
-                case RGS_BINARY:        // .rgs binary file
-                {
-                    SaveStyleRGS(outFileName, true);        // Save style file (binary)
-                } break;
-                case PNG_PALETTE:       // .png palette image
-                {
-                    //ExportStylePalette(outFileName);        // TODO: Export PNG palette image
-                } break;
-                case CODE_PALETTE:      // .h palette code (defined as array of hex colors)
-                {
-                    //ExportStylePaletteCode(outFileName);    // TODO: Save palette as code file
-                } break;
-                case PNG_CONTROLS_TABLE: // .png controls table image (good for full reference)
-                {
-                    //GenImageControlsTable(outFileName);   // Export PNG controls table image
-                } break;
-            }
+            // Export style files with different formats
+            ExportStyle(outFileName, outputFormat);
         }
         
         if (showUsageInfo) ShowUsageInfo();
@@ -452,7 +428,7 @@ int main(int argc, char *argv[])
     const int screenHeight = 640;
     
     //SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - raygui style editor", RGUISTYLER_VERSION));
+    InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - raygui styles editor", RGUISTYLER_VERSION));
     SetExitKey(0);
 
     int dropsCount = 0;
@@ -803,14 +779,36 @@ int main(int argc, char *argv[])
 static void ShowUsageInfo(void)
 {
     printf("\nrGuiStyler v%s - raygui styles editor\n", RGUISTYLER_VERSION);
-    printf("Powered by raylib v2.0 and raygui v2.0\n\n");
-    printf("LICENSE: zlib/libpng\n");
-    printf("Copyright (c) 2017-2018 raylib technologies (@raylibtech).\n\n");
 
     printf("USAGE: rguistyler [--version] [--help] [--input <filename.rgs>]\n");
     printf("       [--info] [--output <filename.ext>] [--format <styleformat>]\n");
     
-    // Style formats: RGS_TEXT, RGS_BINARY, PNG_PALETTE, PNG_CONTROLS_TABLE, CODE_PALETTE
+    printf("USAGE:\n\n");
+    printf("    > rguistyler [--version] [--help] --input <filename.rfs> [--output <filename.ext>]\n");
+    printf("                 [--format <type_value>] [--edit-prop <property> <value>]\n");
+    
+    printf("\nOPTIONS:\n\n");
+    printf("    -v, --version               Show tool version and command line usage help\n");
+    printf("    -h, --help                    Show tool version and command line usage help\n");
+    printf("    -i, --input <filename.rgs>    Define input style file. Supported extensions: .rgs\n");
+    printf("    -o, --output <filename.ext>    Define output file. Supported extensions: .rgs, .png, .h\n");
+    printf("                                NOTE: Extension could be modified depending on format\n");
+    printf("    -f, --format <type_value>    Define output file format to export style data. Supported values:\n");
+    printf("                                    0 - Style text format (.rgs)  \n");          
+    printf("                                    1 - Style binary format (.rgs)\n");    
+    printf("                                    2 - Palette image (.png)\n");
+    printf("                                    3 - Palette as int array (.h)\n");
+    printf("                                    4 - Controls table image (.png)\n");
+    printf("    -e, --edit-prop <property> <value>\n");
+    printf("                                Edit specific property from input to output.\n");
+
+
+    printf("\nEXAMPLES:\n\n");
+    printf("    > rguistyler --input tools.rgs --output tools.png\n");
+    // Style formats: STYLE_TEXT, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
+    
+    printf("LICENSE: Free Software\n\n");
+    printf("    Copyright (c) 2017-2018 raylib technologies (@raylibtech).\n\n");
 }
 
 // Button load style function
@@ -847,7 +845,7 @@ static void BtnSaveStyle(const char *defaultName, bool binary)
         char outFileName[256] = { 0 };
         strcpy(outFileName, fileName);
         if (GetExtension(outFileName) == NULL) strcat(outFileName, ".rgs\0");     // No extension provided
-        if (outFileName != NULL) SaveStyleRGS(outFileName, binary);               // Save style file (text or binary)
+        if (outFileName != NULL) SaveStyle(outFileName, binary);               // Save style file (text or binary)
         
         styleSaved = true;
     }
@@ -911,7 +909,7 @@ static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color)
 }
 
 // Save raygui style file (.rgs), text or binary
-static void SaveStyleRGS(const char *fileName, bool binary)
+static void SaveStyle(const char *fileName, bool binary)
 {
     #define NUM_COLOR_PROPERTIES 130
 
@@ -987,45 +985,59 @@ static void SaveStyleRGS(const char *fileName, bool binary)
     }
 }
 
-// Export style palette (image or code)
-static void ExportStylePalette(const char *fileName, bool code)
+// Export style color palette
+static void ExportStyle(const char *fileName, int type)
 {
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_NORMAL]), GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_NORMAL]), GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_FOCUSED]), GetColor(style[DEFAULT_BORDER_COLOR_FOCUSED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_FOCUSED]), GetColor(style[DEFAULT_BASE_COLOR_FOCUSED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_FOCUSED]), GetColor(style[DEFAULT_TEXT_COLOR_FOCUSED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_PRESSED]), GetColor(style[DEFAULT_BORDER_COLOR_PRESSED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_PRESSED]), GetColor(style[DEFAULT_BASE_COLOR_PRESSED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_PRESSED]), GetColor(style[DEFAULT_TEXT_COLOR_PRESSED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
-    ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
-    
-    ExportImage(fileName, image_raygui_style_palette_light);
-}
-
-// Export style controls table image
-// NOTE: We use embedded image raygui_style_table_light 
-static void ExportStyleTableImage(const char *fileName)
-{   
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_NORMAL]), GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_NORMAL]), GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_FOCUSED]), GetColor(style[DEFAULT_BORDER_COLOR_FOCUSED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_FOCUSED]), GetColor(style[DEFAULT_BASE_COLOR_FOCUSED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_FOCUSED]), GetColor(style[DEFAULT_TEXT_COLOR_FOCUSED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_PRESSED]), GetColor(style[DEFAULT_BORDER_COLOR_PRESSED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_PRESSED]), GetColor(style[DEFAULT_BASE_COLOR_PRESSED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_PRESSED]), GetColor(style[DEFAULT_TEXT_COLOR_PRESSED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
-    ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
-    
-    ExportImage(fileName, image_raygui_style_table_light);
+    switch (type)
+    {
+        case STYLE_TEXT: SaveStyle(fileName, false); break;
+        case STYLE_BINARY: SaveStyle(fileName, true); break;
+        case PALETTE_IMAGE:
+        {
+            // Export style palette image
+            // NOTE: We use embedded image image_raygui_style_palette_light
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_NORMAL]), GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_NORMAL]), GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_FOCUSED]), GetColor(style[DEFAULT_BORDER_COLOR_FOCUSED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_FOCUSED]), GetColor(style[DEFAULT_BASE_COLOR_FOCUSED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_FOCUSED]), GetColor(style[DEFAULT_TEXT_COLOR_FOCUSED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_PRESSED]), GetColor(style[DEFAULT_BORDER_COLOR_PRESSED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_PRESSED]), GetColor(style[DEFAULT_BASE_COLOR_PRESSED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_PRESSED]), GetColor(style[DEFAULT_TEXT_COLOR_PRESSED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
+            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+        
+            ExportImage(fileName, image_raygui_style_palette_light);
+        }
+        case PALETTE_CODE:
+        {
+            // TODO: Export style palette as int colors array code
+        }
+        case CONTROLS_TABLE_IMAGE:
+        {
+            // Export style controls table image
+            // NOTE: We use embedded image raygui_style_table_light 
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_NORMAL]), GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_NORMAL]), GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_FOCUSED]), GetColor(style[DEFAULT_BORDER_COLOR_FOCUSED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_FOCUSED]), GetColor(style[DEFAULT_BASE_COLOR_FOCUSED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_FOCUSED]), GetColor(style[DEFAULT_TEXT_COLOR_FOCUSED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_PRESSED]), GetColor(style[DEFAULT_BORDER_COLOR_PRESSED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_PRESSED]), GetColor(style[DEFAULT_BASE_COLOR_PRESSED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_PRESSED]), GetColor(style[DEFAULT_TEXT_COLOR_PRESSED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
+            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+            
+            ExportImage(fileName, image_raygui_style_table_light);
+        }
+        default: break;
+    }
 }
