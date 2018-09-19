@@ -1,20 +1,34 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v2.2 - raygui styles editor
+*   rGuiStyler v2.2 - A simple and easy-to-use raygui styles editor
 *
-*   Compile this program using:
-*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -Iexternal \ 
-*       -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32 -std=c99 -Wall
+*   CONFIGURATION:
 *
-*   CONTRIBUTORS:
-*       Ramon Santamaria:   Supervision, review, redesign, update and maintenance...
-*       Adria Arranz:       Reimplementation and new features v2.0 (2018)
-*       Jordi Jorba:        Reimplementation and new features v2.0 (2018)
-*       Sergio Martinez:    Implementation and testing v1.0 (2015..2017)
+*   #define ENABLE_PRO_FEATURES
+*       Enable PRO features for the tool. Usually command-line and export options related.
+*
+*   DEPENDENCIES:
+*       raylib 2.0              - Windowing/input management and drawing.
+*       raygui 2.0              - IMGUI controls (based on raylib).
+*       tinyfiledialogs 3.3.7   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
+*
+*   COMPILATION (Windows - MinGW):
+*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -Iexternal / 
+*           -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32 -std=c99
+* 
+*   COMPILATION (Linux - GCC):
+*       gcc -o rguistyler rguistyler.c external/tinyfiledialogs.c -s -Iexternal -no-pie -D_DEFAULT_SOURCE /
+*           -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
+*
+*   DEVELOPERS:
+*       Ramon Santamaria (@raysan5):    Supervision, review, redesign, update and maintainer.
+*       Adria Arranz (@Adri102):        Developer and designer, implemented v2.0 (2018)
+*       Jordi Jorba (@KoroBli):         Developer and designer, implemented v2.0 (2018)
+*       Sergio Martinez (@anidealgift): Development and testing v1.0 (2015..2017)
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2014-2018 raylib technologies (@raysan5)
+*   Copyright (c) 2014-2018 raylib technologies (@raysan5).
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -51,7 +65,9 @@
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
-#define RGUISTYLER_VERSION   "2.2"      // Tool version string
+#define ENABLE_PRO_FEATURES             // Enable PRO version features
+
+#define TOOL_VERSION_TEXT   "2.2"       // Tool version string
 
 #define NUM_CONTROLS        13
 #define NUM_STYLES_A         4
@@ -428,7 +444,7 @@ int main(int argc, char *argv[])
     const int screenHeight = 640;
     
     //SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - raygui styles editor", RGUISTYLER_VERSION));
+    InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - A simple and easy-to-use raygui styles editor", TOOL_VERSION_TEXT));
     SetExitKey(0);
 
     int dropsCount = 0;
@@ -778,7 +794,7 @@ int main(int argc, char *argv[])
 // Show command line usage info
 static void ShowUsageInfo(void)
 {
-    printf("\nrGuiStyler v%s - raygui styles editor\n", RGUISTYLER_VERSION);
+    printf("\nrGuiStyler v%s - raygui styles editor\n", TOOL_VERSION_TEXT);
 
     printf("USAGE: rguistyler [--version] [--help] [--input <filename.rgs>]\n");
     printf("       [--info] [--output <filename.ext>] [--format <styleformat>]\n");
