@@ -9,8 +9,8 @@ BEGIN
 	//BLOCK "080904E4" 	// English UK
     BLOCK "040904E4"	// English US
     BEGIN
-	  //VALUE "CompanyName", "My Company Name"
-      VALUE "FileDescription", "rGuiStyler - raygui styles editor"
+	  VALUE "CompanyName", "raylib technologies"
+      VALUE "FileDescription", "rGuiStyler - A simple and easy-to-use raygui styles editor"
       VALUE "FileVersion", "2.2"
       VALUE "InternalName", "rguistyler"
       VALUE "LegalCopyright", "(c) 2018 raylib technologies (@raylibtech)"

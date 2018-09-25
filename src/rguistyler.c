@@ -561,7 +561,7 @@ int main(int argc, char *argv[])
         
         // Export controls table image
         // TODO: Support style name definition!
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) ExportStyleTableImage("style_table.png");
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) ExportStyle("style_table.png", CONTROLS_TABLE_IMAGE);
 
         // Check for dropped files
         // NOTE: Supports loading .rgs style files (text or binary) and .png style palette images
@@ -1027,7 +1027,7 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
         
-            ExportImage(fileName, image_raygui_style_palette_light);
+            ExportImage(image_raygui_style_palette_light, fileName);
         }
         case PALETTE_CODE:
         {
@@ -1052,7 +1052,7 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
             
-            ExportImage(fileName, image_raygui_style_table_light);
+            ExportImage(image_raygui_style_table_light, fileName);
         }
         default: break;
     }
