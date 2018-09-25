@@ -794,37 +794,43 @@ int main(int argc, char *argv[])
 // Show command line usage info
 static void ShowUsageInfo(void)
 {
-    printf("\nrGuiStyler v%s - raygui styles editor\n", TOOL_VERSION_TEXT);
+    printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
+    printf("//                                                                              //\n");
+    printf("// rGuiStyler v%s - A simple and easy-to-use raygui styles editor              //\n", TOOL_VERSION_TEXT);
+    printf("// powered by raylib v2.0 (www.raylib.com) and raygui v2.0                      //\n");
+    printf("// more info and bugs-report: github.com/raysan5/rguistyler                     //\n");
+    printf("//                                                                              //\n");
+    printf("// Copyright (c) 2017-2018 raylib technologies (@raylibtech)                    //\n");
+    printf("//                                                                              //\n");
+    printf("//////////////////////////////////////////////////////////////////////////////////\n\n");
 
-    printf("USAGE: rguistyler [--version] [--help] [--input <filename.rgs>]\n");
-    printf("       [--info] [--output <filename.ext>] [--format <styleformat>]\n");
-    
+#if defined(ENABLE_PRO_FEATURES)
     printf("USAGE:\n\n");
-    printf("    > rguistyler [--version] [--help] --input <filename.rfs> [--output <filename.ext>]\n");
-    printf("                 [--format <type_value>] [--edit-prop <property> <value>]\n");
+    printf("    > rguistyler [--version] [--help] --input <filename.ext> [--output <filename.ext>]\n");
+    printf("                 [--format <styleformat>] [--edit-prop <property> <value>]\n");
     
     printf("\nOPTIONS:\n\n");
-    printf("    -v, --version               Show tool version and command line usage help\n");
-    printf("    -h, --help                    Show tool version and command line usage help\n");
-    printf("    -i, --input <filename.rgs>    Define input style file. Supported extensions: .rgs\n");
-    printf("    -o, --output <filename.ext>    Define output file. Supported extensions: .rgs, .png, .h\n");
-    printf("                                NOTE: Extension could be modified depending on format\n");
-    printf("    -f, --format <type_value>    Define output file format to export style data. Supported values:\n");
-    printf("                                    0 - Style text format (.rgs)  \n");          
-    printf("                                    1 - Style binary format (.rgs)\n");    
-    printf("                                    2 - Palette image (.png)\n");
-    printf("                                    3 - Palette as int array (.h)\n");
-    printf("                                    4 - Controls table image (.png)\n");
+    printf("    -v, --version                   : Show tool version and info\n");
+    printf("    -h, --help                      : Show command line usage help\n");
+    printf("    -i, --input <filename.ext>      : Define input file.\n");
+    printf("                                      Supported extensions: .rgs, .png\n");
+    printf("    -o, --output <filename.ext>     : Define output file.\n");
+    printf("                                      Supported extensions: .rgs, .png, .h\n");
+    printf("                                      NOTE: Extension could be modified depending on format\n\n");
+    printf("    -f, --format <type_value>       : Define output file format to export style data.\n");
+    printf("                                      Supported values:\n");
+    printf("                                          0 - Style text format (.rgs)  \n");          
+    printf("                                          1 - Style binary format (.rgs)\n");    
+    printf("                                          2 - Palette image (.png)\n");
+    printf("                                          3 - Palette as int array (.h)\n");
+    printf("                                          4 - Controls table image (.png)\n\n");
     printf("    -e, --edit-prop <property> <value>\n");
-    printf("                                Edit specific property from input to output.\n");
-
-
+    printf("                                    : Edit specific property from input to output.\n");
+    
     printf("\nEXAMPLES:\n\n");
     printf("    > rguistyler --input tools.rgs --output tools.png\n");
     // Style formats: STYLE_TEXT, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
-    
-    printf("LICENSE: Free Software\n\n");
-    printf("    Copyright (c) 2017-2018 raylib technologies (@raylibtech).\n\n");
+#endif
 }
 
 // Button load style function
