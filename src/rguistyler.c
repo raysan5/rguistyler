@@ -346,10 +346,10 @@ static bool styleSaved = false;                                 // Show save dia
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
-static void ShowUsageInfo(void);    // Show command line usage info
+static void ShowUsageInfo(void);        // Show command line usage info
 
-static void BtnLoadStyle(void);                                 // Button load style function
-static void BtnSaveStyle(const char *defaultName, bool binary); // Button save style function
+static void BtnLoadStyle(void);         // Button load style function
+static void BtnSaveStyle(bool binary);  // Button save style function
 
 static void SaveStyle(const char *fileName, bool binary);       // Save raygui style (.rgs), text or binary
 static void ExportStyle(const char *fileName, int type);        // Export style color palette
@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
     
     // Gui controls data
     //-----------------------------------------------------------
-    bool toggle = false;
+    bool toggleActive = false;
     bool toggleValue = false;
     const char *toggleGuiText[4] = { "toggle", "group", "selection", "options" };
     
@@ -531,13 +531,28 @@ int main(int argc, char *argv[])
     //------------------------------------------------------------
     
     // Main game loop
-    while (!exitWindow)    // Detect window close button or ESC key
+    while (!exitWindow)             // Detect window close button
     {
         // Update
         //----------------------------------------------------------------------------------
-        framesCounter++;
+        if (IsFileDropped())        // Check for dropped files
+        {
+            currentSelectedControl = -1;
+            droppedFiles = GetDroppedFiles(&dropsCount);
+            
+            // Supports loading .rgs style files (text or binary) and .png style palette images
+            if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
+            else if (IsFileExtension(droppedFiles[0], ".png")) GuiLoadStylePaletteImage(droppedFiles[0]);
+            
+            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
+            
+            ClearDroppedFiles();
+        }
         
         if (WindowShouldClose()) exitWindow = true;
+        
+        // General usage frames counter
+        framesCounter++;
         
         // Check for changed controls 
         if ((framesCounter%120) == 0) 
@@ -550,34 +565,19 @@ int main(int argc, char *argv[])
         if (IsKeyPressed(KEY_ESCAPE))
         {
             if (changedControlsCounter <= 0) exitWindow = true;
-            else
-            {
-                closingWindowActive = !closingWindowActive;
-            }
+            else closingWindowActive = !closingWindowActive;
         }
         
         // Get mouse position each frame
         mousePos = GetMousePosition();
         
-        // Export controls table image
+        // Keyboard shortcuts
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) BtnSaveStyle(false);    // Show save style dialog (.rgs text)
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) BtnLoadStyle();         // Show load style dialog (.rgs)
+        //if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) BtnExportStyle(wave);   // Show export style dialog (.rgs, .png, .h)
         // TODO: Support style name definition!
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) ExportStyle("style_table.png", CONTROLS_TABLE_IMAGE);
-
-        // Check for dropped files
-        // NOTE: Supports loading .rgs style files (text or binary) and .png style palette images
-        if (IsFileDropped())
-        {
-            currentSelectedControl = -1;
-            droppedFiles = GetDroppedFiles(&dropsCount);
-            
-            if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
-            else if (IsFileExtension(droppedFiles[0], ".png")) GuiLoadStylePaletteImage(droppedFiles[0]);
-            
-            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
-            
-            ClearDroppedFiles();
-        }
-        
+       
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
         
         if ((currentSelectedControl == 0) && (currentSelectedProperty != -1))
@@ -661,6 +661,7 @@ int main(int argc, char *argv[])
 
             // Draw status bar bottom
             //GuiStatusBar((Rectangle){ anchor01.x + 334, anchor01.y + 616, 386, 24 }, FormatText("EDITION TIME: %02i:%02i:%02i", (framesCounter/60)/(60*60), ((framesCounter/60)/60)%60, (framesCounter/60)%60), 10);
+            // TODO: Review style info...
         #if defined(RAYGUI_STYLE_DEFAULT_LIGHT)
             GuiStatusBar((Rectangle){ anchor01.x + 0, anchor01.y + 616, 150, 24 }, "BASE STYLE: LIGHT", 10);
         #elif defined(RAYGUI_STYLE_DEFAULT_DARK)
@@ -698,15 +699,7 @@ int main(int argc, char *argv[])
 
             if (GuiLabelButton(bounds[LABELBUTTON], "github.com/raysan5/raygui")) {}
             
-            // Draw load style button
-            // if (GuiButton((Rectangle){ anchor02.x + 240, anchor02.y + 35, 115, 25 }, "Load Style")) 
-            // {  
-                // currentSelectedProperty = -1;
-                // BtnLoadStyle();
-                // for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
-            // }
-            
-            toggle = GuiToggleButton(bounds[TOGGLE], "toggle", toggle);
+            toggleActive = GuiToggleButton(bounds[TOGGLE], "toggle", toggleActive);
             
             toggleValue = GuiToggleGroup((Rectangle){ anchor02.x + 90, anchor02.y + 70, 262, 30 }, toggleGuiText, 4, toggleValue);
             
@@ -748,7 +741,7 @@ int main(int argc, char *argv[])
             if (checked) GuiDisable();
             
             // Draw save style button
-            if (GuiButton(bounds[BUTTON], "Save Style")) BtnSaveStyle(guiText, comboActive);
+            if (GuiButton(bounds[BUTTON], "Save Style")) BtnSaveStyle(comboActive);
 
             dropdownBoxActive = GuiDropdownBox((Rectangle){ anchor02.x + 175, anchor02.y + 195, 60, 30 }, dropdownBoxList, 3, dropdownBoxActive);
             
@@ -768,7 +761,7 @@ int main(int argc, char *argv[])
                 if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes")) 
                 { 
                     styleSaved = false;
-                    BtnSaveStyle(guiText, comboActive);
+                    BtnSaveStyle(comboActive);
                     if (styleSaved) exitWindow = true;
                 }
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
@@ -850,7 +843,7 @@ static void BtnLoadStyle(void)
 }
 
 // Button save style function
-static void BtnSaveStyle(const char *defaultName, bool binary)
+static void BtnSaveStyle(bool binary)
 {
     char currentPathFile[256];
 
