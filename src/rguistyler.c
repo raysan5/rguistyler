@@ -8,7 +8,7 @@
 *       Enable PRO features for the tool. Usually command-line and export options related.
 *
 *   DEPENDENCIES:
-*       raylib 2.0              - Windowing/input management and drawing.
+*       raylib 2.1-dev          - Windowing/input management and drawing.
 *       raygui 2.0              - IMGUI controls (based on raylib).
 *       tinyfiledialogs 3.3.7   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
@@ -67,16 +67,22 @@
 //----------------------------------------------------------------------------------
 #define ENABLE_PRO_FEATURES             // Enable PRO version features
 
-#define TOOL_VERSION_TEXT   "2.2"       // Tool version string
+#define TOOL_VERSION_TEXT     "2.2"     // Tool version string
 
-#define NUM_CONTROLS        13
-#define NUM_STYLES_A         4
-#define NUM_STYLES_B         8
-#define NUM_STYLES_C        14
+#define NUM_CONTROLS            13      // Number of GUI controls on the list
+
+// NOTE: Not all controls expose the same number of configurable properties,
+// depending on the control the number of properties available differs
+#define NUM_PROPS_CONTROLS_A     4      // Number of properties for controls type A
+#define NUM_PROPS_CONTROLS_B     8      // Number of properties for controls type B
+#define NUM_PROPS_CONTROLS_C    14      // Number of properties for controls type C
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
 //----------------------------------------------------------------------------------
+
+// Control types available (NUM_CONTROLS)
+// NOTE: Control name to prepend to property type
 typedef enum { 
     DEFAULT = 0, 
     LABELBUTTON,
@@ -95,6 +101,8 @@ typedef enum {
     COLORPICKER
 } GuiControlType;
 
+// Available property types
+// NOTE: Depending on control, name is prepended: BUTTON_BORDER_COLOR_NORMAL
 typedef enum { 
     BORDER_COLOR_NORMAL = 0,
     BASE_COLOR_NORMAL,
@@ -108,28 +116,28 @@ typedef enum {
     BORDER_COLOR_DISABLED,
     BASE_COLOR_DISABLED,
     TEXT_COLOR_DISABLED
-} GuiStyleType;
+} GuiPropertyType;
 
+// Style file type to export
 typedef enum {
     STYLE_TEXT = 0,         // raygui style text file (.rgs)
     STYLE_BINARY,           // raygui style binary file (.rgs)
     PALETTE_IMAGE,
     PALETTE_CODE,
     CONTROLS_TABLE_IMAGE
-} StyleFileType;
+} GuiStyleFileType;
 
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
-static char currentPath[256];       // Path to current working folder
 
-static int styleBackup[NUM_PROPERTIES] = { 0 };  
+// Default Light style backup to check changed properties
+static int styleBackup[NUM_PROPERTIES] = { 0 };
 
-// NOTE: Some styles are shared by multiple controls:
-// LABEL = LABELBUTTON
-// BUTTON = IMAGEBUTTON
-// TOGGLE = TOGGLEGROUP
-const char *guiControlText[NUM_CONTROLS] = { 
+// Controls name text
+// NOTE: Some styles are shared by multiple controls
+// LABEL = LABELBUTTON, BUTTON = IMAGEBUTTON, TOGGLE = TOGGLEGROUP
+static const char *guiControlText[NUM_CONTROLS] = { 
     "DEFAULT", 
     "LABELBUTTON",
     "BUTTON", 
@@ -145,16 +153,18 @@ const char *guiControlText[NUM_CONTROLS] = {
     "COLORPICKER"
 };
 
-// NOTE: Used by controls: Label, LabelButton
-const char *guiStylesTextA[NUM_STYLES_A] = { 
+// Controls type A properties name text
+// NOTE: Used by LABEL, LABELBUTTON
+static const char *guiPropsTextA[NUM_PROPS_CONTROLS_A] = { 
     "TEXT_COLOR_NORMAL",
     "TEXT_COLOR_FOCUSED",
     "TEXT_COLOR_PRESSED",
     "TEXT_COLOR_DISABLED"
 };
 
-//Note: Used by controls: Slider, SliderBar, ProgressBar, Checkbox, ColorPicker
-const char *guiStylesTextB[NUM_STYLES_B] = { 
+// Controls type B properties name text
+// NOTE: Used by SLIDER, SLIDERBAR, PROGRESSBAR, CHECKBOX, COLORPICKER
+static const char *guiPropsTextB[NUM_PROPS_CONTROLS_B] = { 
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "BORDER_COLOR_FOCUSED",
@@ -165,8 +175,9 @@ const char *guiStylesTextB[NUM_STYLES_B] = {
     "BASE_COLOR_DISABLED",
 };
 
-//Note: Used by controls: Button, ImageButton, Toggle, ToggleGroup, Spinner, ComboBox, TextBox, ListView
-const char *guiStylesTextC[NUM_STYLES_C] = { 
+// Controls type C properties name text
+// NOTE: Used by BUTTON, TOGGLE, SPINNER, COMBOBOX, TEXTBOX, LISTVIEW
+static const char *guiPropsTextC[NUM_PROPS_CONTROLS_C] = { 
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "TEXT_COLOR_NORMAL",
@@ -183,7 +194,9 @@ const char *guiStylesTextC[NUM_STYLES_C] = {
     "LINES_COLOR"
 };
 
-const char *guiPropertyText[NUM_PROPERTIES] = {
+// Full property name text
+// NOTE: Only used by SaveStyle() for text mode value comments
+static const char *guiPropertyText[NUM_PROPERTIES] = {
     "DEFAULT_BACKGROUND_COLOR",
     "DEFAULT_LINES_COLOR",
     "DEFAULT_TEXT_FONT",
@@ -341,101 +354,107 @@ const char *guiPropertyText[NUM_PROPERTIES] = {
     "LISTVIEW_TEXT_COLOR_DISABLED"
 };
 
-static bool styleSaved = false;                                 // Show save dialog on closing if not saved
+static bool styleSaved = false;             // Show save dialog on closing if not saved
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
-static void ShowUsageInfo(void);        // Show command line usage info
+static void ShowUsageInfo(void);            // Show command line usage info
 
-static void BtnLoadStyle(void);         // Button load style function
-static void BtnSaveStyle(bool binary);  // Button save style function
+// Load/Save/Export data functions
+static void DialogLoadStyle(void);          // Dialog load style file
+static void DialogSaveStyle(bool binary);   // Dialog save style file
+static void DialogExportStyle(int type);    // Dialog save style file
+static void SaveStyle(const char *fileName, bool binary);   // Save raygui style (.rgs), text or binary
+static void ExportStyle(const char *fileName, int type);    // Export style color palette
 
-static void SaveStyle(const char *fileName, bool binary);       // Save raygui style (.rgs), text or binary
-static void ExportStyle(const char *fileName, int type);        // Export style color palette
-
+// Auxiliar GUI functions
 static int GetGuiStylePropertyIndex(int control, int property);
 static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color);
-
 
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+    char inFileName[256] = { 0 };       // Input file name (required in case of drag & drop over executable)
+    
     // Command-line usage mode
     //--------------------------------------------------------------------------------------
     if (argc > 1)
     {
-        bool inputValidFile = false;
-        bool showVersion = false;
-        bool showInfo = false;
-        bool showHelp = false;
-        bool showUsageInfo = false;
+        // CLI required variables
+        bool showUsageInfo = false;     // Toggle command line usage info
         
-        int outputFormat = 0;       // STYLE_TEXT = 0, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
+        char outFileName[256] = { 0 };  // Output file name
+        int outputFormat = 0;           // Formats: STYLE_TEXT = 0, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
         
-        char inFileName[256] = { 0 };
-        
-        // Arguments scan and processing
-        for (int i = 1; i < argc; i++)
+        if (argc == 2)  // One file dropped over the executable or just one argument
         {
-            if ((strcmp(argv[i], "--input") == 0) || (strcmp(argv[i], "-i") == 0))
+            if (IsFileExtension(argv[1], ".rgs") || 
+                IsFileExtension(argv[1], ".png"))
             {
-                // Read input file
-                strcpy(inFileName, argv[i + 1]);
-                
-                // Verify file provided with supported extension
-                // NOTE: Also checking no "--" is comming after --input
-                if (((i + 1) < argc) && (argv[i + 1][0] != '-') && IsFileExtension(inFileName, ".png")) inputValidFile = true;
-
-                i++;
-            }
-            else if (strcmp(argv[i], "--version") == 0) showUsageInfo = true;
-            else if (strcmp(argv[i], "--help") == 0) showUsageInfo = true;
-            else if (strcmp(argv[i], "--info") == 0) 
-            {
-                if (inputValidFile)
-                {
-
-                }
-                else showUsageInfo = true;
-            }
-            else if (strcmp(argv[i], "--format") == 0) 
-            {
-                if (((i + 1) < argc) && (argv[i + 1][0] != '-'))  // Check if next argument could be readed
-                {
-                    // Check support format string
-                    if (strcmp(argv[i + 1], "STYLE_TEXT") == 0) outputFormat = 0;
-                    else if (strcmp(argv[i + 1], "STYLE_BINARY") == 0) outputFormat = 1;
-                    /* */
-                    else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); showUsageInfo = true; }
-                }
-                else { TraceLog(LOG_WARNING, "Not valid parameter after --format"); showUsageInfo = true; }
+                // Open file with graphic interface
+                strcpy(inFileName, argv[1]);        // Read input filename
             }
             else 
             {
-                TraceLog(LOG_WARNING, "No valid parameter: %s", argv[i]);
-                showUsageInfo = true;
+                ShowUsageInfo();                    // Show command line usage info
+                return 0;
             }
         }
-        
-        if (inputValidFile)
+        else
         {
-            // Process input .rgs file
-            GuiLoadStyle(inFileName);
+            // Arguments scan and processing
+            for (int i = 1; i < argc; i++)
+            {
+                if (strcmp(argv[i], "--help") == 0) showUsageInfo = true;
+                else if ((strcmp(argv[i], "--input") == 0) || (strcmp(argv[i], "-i") == 0))
+                {
+                    // Read input file
+                    strcpy(inFileName, argv[i + 1]);
+                    
+                    // Verify file provided with supported extension
+                    // NOTE: Also checking no "--" is comming after --input
+                    if (((i + 1) < argc) && (argv[i + 1][0] != '-') && IsFileExtension(inFileName, ".png")) inputValidFile = true;
+
+                    i++;
+                }
+                else if (strcmp(argv[i], "--format") == 0) 
+                {
+                    if (((i + 1) < argc) && (argv[i + 1][0] != '-'))  // Check if next argument could be readed
+                    {
+                        int format = atoi(argv[i + 1]);
+                        
+                        if ((format >= 0) && (format <= 4)) outputFormat = format;
+                        else { TraceLog(LOG_WARNING, "Output format not valid"); showUsageInfo = true; }
+                    }
+                    else { TraceLog(LOG_WARNING, "No valid parameter after --format"); showUsageInfo = true; }
+                }
+                else 
+                {
+                    TraceLog(LOG_WARNING, "No valid parameter: %s", argv[i]);
+                    showUsageInfo = true;
+                }
+            }
             
-            // TODO: Setup output file name, based on input
-            char outFileName[256] = { 0 };
-            strcpy(outFileName, inFileName);
+            if (inputValidFile)
+            {
+                // Process input .rgs file
+                GuiLoadStyle(inFileName);
+                
+                // TODO: Setup output file name, based on input
+                char outFileName[256] = { 0 };
+                strcpy(outFileName, inFileName);
+                
+                // Export style files with different formats
+                ExportStyle(outFileName, outputFormat);
+            }
             
-            // Export style files with different formats
-            ExportStyle(outFileName, outputFormat);
+            if (showUsageInfo) ShowUsageInfo();
+            
+            return 0;
         }
-        
-        if (showUsageInfo) ShowUsageInfo();
-        
-        return 0;
     }
     
     // GUI usage mode - Initialization
@@ -443,12 +462,10 @@ int main(int argc, char *argv[])
     const int screenWidth = 720;
     const int screenHeight = 640;
     
-    //SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTraceLog(0);                             // Disable trace log messsages
+    //SetConfigFlags(FLAG_WINDOW_RESIZABLE);    // Window configuration flags
     InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - A simple and easy-to-use raygui styles editor", TOOL_VERSION_TEXT));
     SetExitKey(0);
-
-    int dropsCount = 0;
-    char **droppedFiles;
     
     int framesCounter = 0;
     
@@ -478,7 +495,7 @@ int main(int argc, char *argv[])
     // Keep a backup for style    
     memcpy(styleBackup, style, NUM_PROPERTIES*sizeof(int));
     
-    // Gui controls data
+    // GUI controls data
     //-----------------------------------------------------------
     bool toggleActive = false;
     bool toggleValue = false;
@@ -533,12 +550,12 @@ int main(int argc, char *argv[])
     // Main game loop
     while (!exitWindow)             // Detect window close button
     {
-        // Update
+        // Dropped files logic
         //----------------------------------------------------------------------------------
-        if (IsFileDropped())        // Check for dropped files
+        if (IsFileDropped())        
         {
-            currentSelectedControl = -1;
-            droppedFiles = GetDroppedFiles(&dropsCount);
+            int dropsCount = 0;
+            char **droppedFiles = GetDroppedFiles(&dropsCount);
             
             // Supports loading .rgs style files (text or binary) and .png style palette images
             if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
@@ -547,19 +564,24 @@ int main(int argc, char *argv[])
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
             
             ClearDroppedFiles();
+            
+            // Reset selected control
+            currentSelectedControl = -1;
         }
+        //----------------------------------------------------------------------------------
         
+        // Keyboard shortcuts
+        //----------------------------------------------------------------------------------
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);    // Show save style dialog (.rgs text)
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();         // Show load style dialog (.rgs)
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE); // Show export style dialog (.rgs, .png, .h)        
+        //----------------------------------------------------------------------------------
+    
+        // Basic program flow logic
+        //----------------------------------------------------------------------------------
+        framesCounter++;                    // General usage frames counter
+        mousePos = GetMousePosition();      // Get mouse position each frame
         if (WindowShouldClose()) exitWindow = true;
-        
-        // General usage frames counter
-        framesCounter++;
-        
-        // Check for changed controls 
-        if ((framesCounter%120) == 0) 
-        {
-            changedControlsCounter = 0;
-            for (int i = 0; i < NUM_PROPERTIES; i++) if (styleBackup[i] != style[i]) changedControlsCounter++;
-        }
         
         // Show save layout message window on ESC
         if (IsKeyPressed(KEY_ESCAPE))
@@ -568,16 +590,14 @@ int main(int argc, char *argv[])
             else closingWindowActive = !closingWindowActive;
         }
         
-        // Get mouse position each frame
-        mousePos = GetMousePosition();
-        
-        // Keyboard shortcuts
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) BtnSaveStyle(false);    // Show save style dialog (.rgs text)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) BtnLoadStyle();         // Show load style dialog (.rgs)
-        //if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) BtnExportStyle(wave);   // Show export style dialog (.rgs, .png, .h)
-        // TODO: Support style name definition!
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) ExportStyle("style_table.png", CONTROLS_TABLE_IMAGE);
-       
+        // Check for changed controls 
+        if ((framesCounter%120) == 0) 
+        {
+            changedControlsCounter = 0;
+            for (int i = 0; i < NUM_PROPERTIES; i++) if (styleBackup[i] != style[i]) changedControlsCounter++;
+        }
+
+        // Controls selection on GuiListView logic
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
         
         if ((currentSelectedControl == 0) && (currentSelectedProperty != -1))
@@ -620,11 +640,8 @@ int main(int argc, char *argv[])
         
         colorHSV = ColorToHSV(colorPickerValue);
         
-        if (CheckCollisionPointRec(mousePos, bounds[COLORPICKER]))
-        {
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) selectingColor = true;
-        }
-        
+        // Color picker color selection logic
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePos, bounds[COLORPICKER])) selectingColor = true;
         if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
         {
             selectingColor = false;
@@ -679,12 +696,12 @@ int main(int argc, char *argv[])
             
             switch (currentSelectedControl)
             {
-                case DEFAULT: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiStylesTextC, NUM_STYLES_C, currentSelectedProperty); break;
-                case LABELBUTTON: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiStylesTextA, NUM_STYLES_A, currentSelectedProperty); break;
+                case DEFAULT: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, currentSelectedProperty); break;
+                case LABELBUTTON: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextA, NUM_PROPS_CONTROLS_A, currentSelectedProperty); break;
                 case SLIDER: case SLIDERBAR: case PROGRESSBAR: case CHECKBOX:
-                case COLORPICKER: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiStylesTextB, NUM_STYLES_B, currentSelectedProperty); break;
+                case COLORPICKER: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextB, NUM_PROPS_CONTROLS_B, currentSelectedProperty); break;
                 case BUTTON: case TOGGLE: case COMBOBOX: case TEXTBOX: case SPINNER: case LISTVIEW:
-                default: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiStylesTextC, NUM_STYLES_C - 2, currentSelectedProperty); break;
+                default: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, currentSelectedProperty); break;
             }
 
             GuiEnable();
@@ -741,7 +758,7 @@ int main(int argc, char *argv[])
             if (checked) GuiDisable();
             
             // Draw save style button
-            if (GuiButton(bounds[BUTTON], "Save Style")) BtnSaveStyle(comboActive);
+            if (GuiButton(bounds[BUTTON], "Save Style")) DialogSaveStyle(comboActive);
 
             dropdownBoxActive = GuiDropdownBox((Rectangle){ anchor02.x + 175, anchor02.y + 195, 60, 30 }, dropdownBoxList, 3, dropdownBoxActive);
             
@@ -761,7 +778,7 @@ int main(int argc, char *argv[])
                 if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes")) 
                 { 
                     styleSaved = false;
-                    BtnSaveStyle(comboActive);
+                    DialogSaveStyle(comboActive);
                     if (styleSaved) exitWindow = true;
                 }
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
@@ -772,8 +789,6 @@ int main(int argc, char *argv[])
     }
     // De-Initialization
     //--------------------------------------------------------------------------------------    
-    ClearDroppedFiles();        // Clear internal buffers
-    
     CloseWindow();              // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
     
@@ -822,106 +837,12 @@ static void ShowUsageInfo(void)
     
     printf("\nEXAMPLES:\n\n");
     printf("    > rguistyler --input tools.rgs --output tools.png\n");
-    // Style formats: STYLE_TEXT, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
 #endif
 }
 
-// Button load style function
-static void BtnLoadStyle(void)
-{
-    char currentPath[256];
-
-    // Add sample file name to currentPath
-    strcpy(currentPath, GetWorkingDirectory());
-    strcat(currentPath, "\\\0");
-    
-    // Open file dialog
-    const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_openFileDialog("Load raygui style file", currentPath, 1, filters, "raygui Style Files (*.rgs)", 0);
-
-    if (fileName != NULL) GuiLoadStyle(fileName);
-}
-
-// Button save style function
-static void BtnSaveStyle(bool binary)
-{
-    char currentPathFile[256];
-
-    // Add sample file name to currentPath
-    strcpy(currentPathFile, GetWorkingDirectory());
-    strcat(currentPathFile, "\\style.rgs\0");
-    
-    // Save file dialog
-    const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_saveFileDialog("Save raygui style text file", currentPathFile, 1, filters, "raygui Style Files (*.rgs)");
-
-    if (fileName != NULL)
-    {
-        char outFileName[256] = { 0 };
-        strcpy(outFileName, fileName);
-        if (GetExtension(outFileName) == NULL) strcat(outFileName, ".rgs\0");     // No extension provided
-        if (outFileName != NULL) SaveStyle(outFileName, binary);               // Save style file (text or binary)
-        
-        styleSaved = true;
-    }
-}
-
-static int GetGuiStylePropertyIndex(int control, int property)
-{
-    int guiProp = -1;
-    
-    switch (control)
-    {
-        case DEFAULT: 
-        {
-            if (property == 12) guiProp = 0;
-            else if (property == 13) guiProp = 1;
-            else guiProp = DEFAULT_BORDER_COLOR_NORMAL + property; 
-            
-        } break;
-        case LABELBUTTON: guiProp = LABEL_TEXT_COLOR_NORMAL + property; break;
-        case BUTTON: guiProp = BUTTON_BORDER_COLOR_NORMAL + property; break;
-        //case IMAGEBUTTON: guiProp = BUTTON_BORDER_COLOR_NORMAL + property; break;
-        case TOGGLE: guiProp = TOGGLE_BORDER_COLOR_NORMAL + property; break; 
-        //case TOGGLEGROUP: guiProp = TOGGLE_BORDER_COLOR_NORMAL + property; break;
-        case SLIDER: guiProp = SLIDER_BORDER_COLOR_NORMAL + property; break;
-        case SLIDERBAR: guiProp = SLIDERBAR_BORDER_COLOR_NORMAL + property; break;
-        case PROGRESSBAR: guiProp = PROGRESSBAR_BORDER_COLOR_NORMAL + property; break;
-        case CHECKBOX: guiProp = CHECKBOX_BORDER_COLOR_NORMAL + property; break;
-        case SPINNER: guiProp = VALUEBOX_BORDER_COLOR_NORMAL + property; break;
-        case COMBOBOX: guiProp = COMBOBOX_BORDER_COLOR_NORMAL + property; break;
-        case TEXTBOX: guiProp = TEXTBOX_BORDER_COLOR_NORMAL + property; break;
-        case LISTVIEW: guiProp = LISTVIEW_BORDER_COLOR_NORMAL + property; break;
-        case COLORPICKER: guiProp = COLORPICKER_BORDER_COLOR_NORMAL + property; break;
-        default: break;
-    }
-
-    //guiProp = LABEL_TEXT_COLOR_NORMAL + property/3;                   // type A
-    //guiProp = SLIDER_BORDER_COLOR_NORMAL + property + property/2;     // type B
-    //guiProp = TOGGLE_BORDER_COLOR_NORMAL + property;                  // type C
-
-    return guiProp;
-}
-
-// Color box control to save color samples from color picker
-// NOTE: It requires colorPicker pointer for updating in case of selection
-static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color)
-{
-    Vector2 mousePoint = GetMousePosition();
-    
-    // Update color box
-    if (CheckCollisionPointRec(mousePoint, bounds))
-    {
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) *colorPicker = (Color){ color.r, color.g, color.b, color.a };
-        else if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) color = *colorPicker;
-    }
-    
-    // Draw color box
-    DrawRectangleRec(bounds, color);
-    DrawRectangleLinesEx(bounds, 1, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
-    
-    return color;
-}
+//--------------------------------------------------------------------------------------------
+// Load/Save/Export data functions
+//--------------------------------------------------------------------------------------------
 
 // Save raygui style file (.rgs), text or binary
 static void SaveStyle(const char *fileName, bool binary)
@@ -1055,4 +976,121 @@ static void ExportStyle(const char *fileName, int type)
         }
         default: break;
     }
+}
+
+// Dialog load style file
+static void DialogLoadStyle(void)
+{
+    char currentPath[256];
+
+    // Add sample file name to currentPath
+    strcpy(currentPath, GetWorkingDirectory());
+    strcat(currentPath, "\\\0");
+    
+    // Open file dialog
+    const char *filters[] = { "*.rgs" };
+    const char *fileName = tinyfd_openFileDialog("Load raygui style file", currentPath, 1, filters, "raygui Style Files (*.rgs)", 0);
+
+    if (fileName != NULL) GuiLoadStyle(fileName);
+}
+
+// Dialog save style file
+static void DialogSaveStyle(bool binary)
+{
+    char currentPathFile[256];
+
+    // Add sample file name to currentPath
+    strcpy(currentPathFile, GetWorkingDirectory());
+    strcat(currentPathFile, "\\style.rgs\0");
+    
+    // Save file dialog
+    const char *filters[] = { "*.rgs" };
+    const char *fileName = tinyfd_saveFileDialog("Save raygui style text file", currentPathFile, 1, filters, "raygui Style Files (*.rgs)");
+
+    if (fileName != NULL)
+    {
+        char outFileName[256] = { 0 };
+        strcpy(outFileName, fileName);
+        if (GetExtension(outFileName) == NULL) strcat(outFileName, ".rgs\0");     // No extension provided
+        if (outFileName != NULL) SaveStyle(outFileName, binary);               // Save style file (text or binary)
+        
+        styleSaved = true;
+    }
+}
+
+// Dialog export style file
+static void DialogExportStyle(int type)
+{
+    // Save file dialog
+    const char *filters[] = { "*.rgs", "*.png", "*.h" };
+    const char *fileName = tinyfd_saveFileDialog("Export raygui style file", "", 3, filters, "Style Files (*.rgs, *.png, *.h)");
+
+    // TODO: Check file extension for type?
+    
+    if (fileName != NULL)
+    {
+        ExportStyle(fileName, type);
+    }
+}
+
+//--------------------------------------------------------------------------------------------
+// Auxiliar GUI functions
+//--------------------------------------------------------------------------------------------
+
+// Get GUI property index based on control type
+static int GetGuiStylePropertyIndex(int control, int property)
+{
+    int guiProp = -1;
+    
+    switch (control)
+    {
+        case DEFAULT: 
+        {
+            if (property == 12) guiProp = 0;
+            else if (property == 13) guiProp = 1;
+            else guiProp = DEFAULT_BORDER_COLOR_NORMAL + property; 
+            
+        } break;
+        case LABELBUTTON: guiProp = LABEL_TEXT_COLOR_NORMAL + property; break;
+        case BUTTON: guiProp = BUTTON_BORDER_COLOR_NORMAL + property; break;
+        //case IMAGEBUTTON: guiProp = BUTTON_BORDER_COLOR_NORMAL + property; break;
+        case TOGGLE: guiProp = TOGGLE_BORDER_COLOR_NORMAL + property; break; 
+        //case TOGGLEGROUP: guiProp = TOGGLE_BORDER_COLOR_NORMAL + property; break;
+        case SLIDER: guiProp = SLIDER_BORDER_COLOR_NORMAL + property; break;
+        case SLIDERBAR: guiProp = SLIDERBAR_BORDER_COLOR_NORMAL + property; break;
+        case PROGRESSBAR: guiProp = PROGRESSBAR_BORDER_COLOR_NORMAL + property; break;
+        case CHECKBOX: guiProp = CHECKBOX_BORDER_COLOR_NORMAL + property; break;
+        case SPINNER: guiProp = VALUEBOX_BORDER_COLOR_NORMAL + property; break;
+        case COMBOBOX: guiProp = COMBOBOX_BORDER_COLOR_NORMAL + property; break;
+        case TEXTBOX: guiProp = TEXTBOX_BORDER_COLOR_NORMAL + property; break;
+        case LISTVIEW: guiProp = LISTVIEW_BORDER_COLOR_NORMAL + property; break;
+        case COLORPICKER: guiProp = COLORPICKER_BORDER_COLOR_NORMAL + property; break;
+        default: break;
+    }
+
+    //guiProp = LABEL_TEXT_COLOR_NORMAL + property/3;                   // type A
+    //guiProp = SLIDER_BORDER_COLOR_NORMAL + property + property/2;     // type B
+    //guiProp = TOGGLE_BORDER_COLOR_NORMAL + property;                  // type C
+
+    return guiProp;
+}
+
+// Color box control to save color samples from color picker
+// NOTE: It requires colorPicker pointer for updating in case of selection
+static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color)
+{
+    Vector2 mousePoint = GetMousePosition();
+    
+    // Update color box
+    if (CheckCollisionPointRec(mousePoint, bounds))
+    {
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) *colorPicker = (Color){ color.r, color.g, color.b, color.a };
+        else if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) color = *colorPicker;
+    }
+    
+    // Draw color box
+    DrawRectangleRec(bounds, color);
+    DrawRectangleLinesEx(bounds, 1, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
+    
+    return color;
 }
