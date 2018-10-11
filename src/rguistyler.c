@@ -410,13 +410,14 @@ int main(int argc, char *argv[])
             {
                 if (strcmp(argv[i], "--help") == 0) showUsageInfo = true;
                 else if ((strcmp(argv[i], "--input") == 0) || (strcmp(argv[i], "-i") == 0))
-                {
-                    // Read input file
-                    strcpy(inFileName, argv[i + 1]);
-                    
+                {                   
                     // Verify file provided with supported extension
                     // NOTE: Also checking no "--" is comming after --input
-                    if (((i + 1) < argc) && (argv[i + 1][0] != '-') && IsFileExtension(inFileName, ".png")) inputValidFile = true;
+                    if (((i + 1) < argc) && (argv[i + 1][0] != '-') && 
+                        IsFileExtension(inFileName, ".png"))
+                    {
+                        strcpy(inFileName, argv[i + 1]);    // Read input file
+                    }
 
                     i++;
                 }
@@ -438,7 +439,7 @@ int main(int argc, char *argv[])
                 }
             }
             
-            if (inputValidFile)
+            if (inFileName[0] != '\0')
             {
                 // Process input .rgs file
                 GuiLoadStyle(inFileName);
@@ -814,12 +815,11 @@ static void ShowUsageInfo(void)
 
 #if defined(ENABLE_PRO_FEATURES)
     printf("USAGE:\n\n");
-    printf("    > rguistyler [--version] [--help] --input <filename.ext> [--output <filename.ext>]\n");
+    printf("    > rguistyler [--help] --input <filename.ext> [--output <filename.ext>]\n");
     printf("                 [--format <styleformat>] [--edit-prop <property> <value>]\n");
     
     printf("\nOPTIONS:\n\n");
-    printf("    -v, --version                   : Show tool version and info\n");
-    printf("    -h, --help                      : Show command line usage help\n");
+    printf("    -h, --help                      : Show tool version and command line usage help\n");
     printf("    -i, --input <filename.ext>      : Define input file.\n");
     printf("                                      Supported extensions: .rgs, .png\n");
     printf("    -o, --output <filename.ext>     : Define output file.\n");
