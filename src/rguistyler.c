@@ -13,11 +13,11 @@
 *       tinyfiledialogs 3.3.7   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
 *   COMPILATION (Windows - MinGW):
-*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -Iexternal / 
-*           -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32 -std=c99
+*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99
+*           -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32
 * 
 *   COMPILATION (Linux - GCC):
-*       gcc -o rguistyler rguistyler.c external/tinyfiledialogs.c -s -Iexternal -no-pie -D_DEFAULT_SOURCE /
+*       gcc -o rguistyler rguistyler.c external/tinyfiledialogs.c -s -no-pie -D_DEFAULT_SOURCE /
 *           -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 *
 *   DEVELOPERS:
@@ -52,7 +52,7 @@
 #define RAYGUI_IMPLEMENTATION
 #define RAYGUI_STYLE_SAVE_LOAD
 #define RAYGUI_STYLE_DEFAULT_LIGHT
-#include "raygui.h"                     // Required for: IMGUI controls
+#include "external/raygui.h"            // Required for: IMGUI controls
 
 #include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
 
@@ -201,6 +201,7 @@ static const char *guiPropertyText[NUM_PROPERTIES] = {
     "DEFAULT_LINES_COLOR",
     "DEFAULT_TEXT_FONT",
     "DEFAULT_TEXT_SIZE",
+    "DEFAULT_TEXT_SPACING",
     "DEFAULT_BORDER_WIDTH",
     "DEFAULT_BORDER_COLOR_NORMAL",
     "DEFAULT_BASE_COLOR_NORMAL",
@@ -411,8 +412,7 @@ int main(int argc, char *argv[])
                 if (strcmp(argv[i], "--help") == 0) showUsageInfo = true;
                 else if ((strcmp(argv[i], "--input") == 0) || (strcmp(argv[i], "-i") == 0))
                 {                   
-                    // Verify file provided with supported extension
-                    // NOTE: Also checking no "--" is comming after --input
+                    // Check for valid argumment and valid file extension
                     if (((i + 1) < argc) && (argv[i + 1][0] != '-') && 
                         IsFileExtension(inFileName, ".png"))
                     {
@@ -421,9 +421,20 @@ int main(int argc, char *argv[])
 
                     i++;
                 }
+                else if ((strcmp(argv[i], "--output") == 0) || (strcmp(argv[i], "-o") == 0))
+                {                   
+                    // Check for valid argumment and valid file extension
+                    if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
+                    {
+                        strcpy(outFileName, argv[i + 1]);    // Read output filename
+                    }
+
+                    i++;
+                }
                 else if (strcmp(argv[i], "--format") == 0) 
                 {
-                    if (((i + 1) < argc) && (argv[i + 1][0] != '-'))  // Check if next argument could be readed
+                    // Check for valid argumment and valid file extension
+                    if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
                     {
                         int format = atoi(argv[i + 1]);
                         
@@ -514,6 +525,8 @@ int main(int argc, char *argv[])
     bool selectingColor = false;
     
     int spinnerValue = 28;
+    
+    bool dropDownEditMode = false;
     
     Vector2 mousePos = { 0 };
 
@@ -679,6 +692,7 @@ int main(int argc, char *argv[])
 
             // Draw status bar bottom
             //GuiStatusBar((Rectangle){ anchor01.x + 334, anchor01.y + 616, 386, 24 }, FormatText("EDITION TIME: %02i:%02i:%02i", (framesCounter/60)/(60*60), ((framesCounter/60)/60)%60, (framesCounter/60)%60), 10);
+            
             // TODO: Review style info...
         #if defined(RAYGUI_STYLE_DEFAULT_LIGHT)
             GuiStatusBar((Rectangle){ anchor01.x + 0, anchor01.y + 616, 150, 24 }, "BASE STYLE: LIGHT", 10);
@@ -691,18 +705,18 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ anchor01.x + 334, anchor01.y + 616, 386, 24 }, "powered by raylib and raygui", 226);
             
             // Draw Gui controls
-            currentSelectedControl = GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, currentSelectedControl);
+            GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, &currentSelectedControl, true);
             
             if (currentSelectedControl < 0) GuiDisable();
             
             switch (currentSelectedControl)
             {
-                case DEFAULT: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, currentSelectedProperty); break;
-                case LABELBUTTON: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextA, NUM_PROPS_CONTROLS_A, currentSelectedProperty); break;
+                case DEFAULT: GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, &currentSelectedProperty, true); break;
+                case LABELBUTTON: GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextA, NUM_PROPS_CONTROLS_A, &currentSelectedProperty, true); break;
                 case SLIDER: case SLIDERBAR: case PROGRESSBAR: case CHECKBOX:
-                case COLORPICKER: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextB, NUM_PROPS_CONTROLS_B, currentSelectedProperty); break;
+                case COLORPICKER: GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextB, NUM_PROPS_CONTROLS_B, &currentSelectedProperty, true); break;
                 case BUTTON: case TOGGLE: case COMBOBOX: case TEXTBOX: case SPINNER: case LISTVIEW:
-                default: currentSelectedProperty = GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, currentSelectedProperty); break;
+                default: GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, &currentSelectedProperty, true); break;
             }
 
             GuiEnable();
@@ -727,7 +741,7 @@ int main(int argc, char *argv[])
             
             progressValue = GuiProgressBarEx(bounds[PROGRESSBAR], progressValue, 0, 1, true);
 
-            spinnerValue = GuiSpinner(bounds[SPINNER], spinnerValue, 32, 24);
+            GuiSpinner(bounds[SPINNER], &spinnerValue, 0, 32, 24, true);    // TODO: Review
             
             comboActive = GuiComboBox(bounds[COMBOBOX], comboText, comboNum, comboActive);
 
@@ -761,7 +775,7 @@ int main(int argc, char *argv[])
             // Draw save style button
             if (GuiButton(bounds[BUTTON], "Save Style")) DialogSaveStyle(comboActive);
 
-            dropdownBoxActive = GuiDropdownBox((Rectangle){ anchor02.x + 175, anchor02.y + 195, 60, 30 }, dropdownBoxList, 3, dropdownBoxActive);
+            if (GuiDropdownBox((Rectangle){ anchor02.x + 175, anchor02.y + 195, 60, 30 }, dropdownBoxList, 3, &dropdownBoxActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
             
             GuiEnable();
             
@@ -813,7 +827,6 @@ static void ShowUsageInfo(void)
     printf("//                                                                              //\n");
     printf("//////////////////////////////////////////////////////////////////////////////////\n\n");
 
-#if defined(ENABLE_PRO_FEATURES)
     printf("USAGE:\n\n");
     printf("    > rguistyler [--help] --input <filename.ext> [--output <filename.ext>]\n");
     printf("                 [--format <styleformat>] [--edit-prop <property> <value>]\n");
@@ -837,7 +850,6 @@ static void ShowUsageInfo(void)
     
     printf("\nEXAMPLES:\n\n");
     printf("    > rguistyler --input tools.rgs --output tools.png\n");
-#endif
 }
 
 //--------------------------------------------------------------------------------------------
