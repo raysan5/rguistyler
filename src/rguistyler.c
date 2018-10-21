@@ -361,13 +361,16 @@ static bool styleSaved = false;             // Show save dialog on closing if no
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
 static void ShowUsageInfo(void);            // Show command line usage info
+//static void ShowCommandLineInfo(void);                      // Show command line usage info
+//static void ProcessCommandLine(int argc, char *argv[]);     // Process command line input
 
 // Load/Save/Export data functions
+static void SaveStyle(const char *fileName, bool binary);   // Save raygui style (.rgs), text or binary
+static void ExportStyle(const char *fileName, int type);    // Export style color palette
+
 static void DialogLoadStyle(void);          // Dialog load style file
 static void DialogSaveStyle(bool binary);   // Dialog save style file
 static void DialogExportStyle(int type);    // Dialog save style file
-static void SaveStyle(const char *fileName, bool binary);   // Save raygui style (.rgs), text or binary
-static void ExportStyle(const char *fileName, int type);    // Export style color palette
 
 // Auxiliar GUI functions
 static int GetGuiStylePropertyIndex(int control, int property);
@@ -489,6 +492,7 @@ int main(int argc, char *argv[])
     int changedControlsCounter = 0;
 
     // Gui related variables
+    //-----------------------------------------------------------
     Vector2 anchorMain = { 0, 0 };
     Vector2 anchorControls = { 345, 40 };
 
@@ -510,7 +514,6 @@ int main(int argc, char *argv[])
     };
     
     // GUI controls data
-    //-----------------------------------------------------------
     bool toggleActive = false;
     bool toggleValue = false;
     const char *toggleGuiText[4] = { "toggle", "group", "selection", "options" };
@@ -549,12 +552,12 @@ int main(int argc, char *argv[])
     bool editFilenameText = false;
     bool editHexColorText = false;
     //-----------------------------------------------------------
-    
-    // Keep a backup for style    
+
+    // Keep a backup for base style    
     memcpy(styleBackup, style, NUM_PROPERTIES*sizeof(int));
 
-    Font font = LoadFontEx("pixelpoiiz10.ttf", 10, 0, 0);
-    GuiFont(font);
+    //Font font = LoadFontEx("pixelpoiiz10.ttf", 10, 0, 0);
+    //GuiFont(font);
 
     SetTargetFPS(60);
     //------------------------------------------------------------
@@ -692,13 +695,8 @@ int main(int argc, char *argv[])
             //GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, FormatText("EDITION TIME: %02i:%02i:%02i", (framesCounter/60)/(60*60), ((framesCounter/60)/60)%60, (framesCounter/60)%60), 10);
             
             // TODO: Review style info...
-        #if defined(RAYGUI_STYLE_DEFAULT_LIGHT)
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 616, 150, 24 }, "BASE STYLE: LIGHT", 10);
-        #elif defined(RAYGUI_STYLE_DEFAULT_DARK)
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 616, 150, 24 }, "BASE STYLE: DARK", 10);
-        #else
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 616, 150, 24 }, "BASE STYLE: UNKNOWN", 10);
-        #endif
+            
             GuiStatusBar((Rectangle){ anchorMain.x + 149, anchorMain.y + 616, 186, 24 }, FormatText("CHANGED PROPERTIES: %03i", changedControlsCounter), 10);
             GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, "powered by raylib and raygui", 226);
             
@@ -813,7 +811,7 @@ int main(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 
 // Show command line usage info
-static void ShowUsageInfo(void)
+static void ShowUsageInfo(void)     // ShowCommandLineInfo()
 {
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
@@ -843,12 +841,19 @@ static void ShowUsageInfo(void)
     printf("                                          2 - Palette image (.png)\n");
     printf("                                          3 - Palette as int array (.h)\n");
     printf("                                          4 - Controls table image (.png)\n\n");
-    printf("    -e, --edit-prop <property> <value>\n");
-    printf("                                    : Edit specific property from input to output.\n");
+    //printf("    -e, --edit-prop <property> <value>\n");
+    //printf("                                    : Edit specific property from input to output.\n");
     
     printf("\nEXAMPLES:\n\n");
     printf("    > rguistyler --input tools.rgs --output tools.png\n");
 }
+
+/*
+static void ProcessCommandLine(int argc, char *argv[])
+{
+    
+}
+*/
 
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
@@ -991,39 +996,36 @@ static void ExportStyle(const char *fileName, int type)
 // Dialog load style file
 static void DialogLoadStyle(void)
 {
-    char currentPath[256];
-
-    // Add sample file name to currentPath
-    strcpy(currentPath, GetWorkingDirectory());
-    strcat(currentPath, "\\\0");
-    
     // Open file dialog
     const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_openFileDialog("Load raygui style file", currentPath, 1, filters, "raygui Style Files (*.rgs)", 0);
+    const char *fileName = tinyfd_openFileDialog("Load raygui style file", "", 1, filters, "raygui Style Files (*.rgs)", 0);
 
-    if (fileName != NULL) GuiLoadStyle(fileName);
+    if (fileName != NULL)
+    {
+        GuiLoadStyle(fileName);
+        SetWindowTitle(FormatText("rGuiStyler v%s - %s", TOOL_VERSION_TEXT, GetFileName(fileName)));
+        //loadedStyle = true;
+    }
+    
 }
 
 // Dialog save style file
 static void DialogSaveStyle(bool binary)
 {
-    char currentPathFile[256];
-
-    // Add sample file name to currentPath
-    strcpy(currentPathFile, GetWorkingDirectory());
-    strcat(currentPathFile, "\\style.rgs\0");
-    
     // Save file dialog
     const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_saveFileDialog("Save raygui style text file", currentPathFile, 1, filters, "raygui Style Files (*.rgs)");
+    const char *fileName = tinyfd_saveFileDialog("Save raygui style file", "style.rgs", 1, filters, "raygui Style Files (*.rgs)");
 
     if (fileName != NULL)
     {
         char outFileName[256] = { 0 };
         strcpy(outFileName, fileName);
-        if (GetExtension(outFileName) == NULL) strcat(outFileName, ".rgs\0");     // No extension provided
-        if (outFileName != NULL) SaveStyle(outFileName, binary);               // Save style file (text or binary)
         
+        // Check for valid extension and make sure it is
+        if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+
+        // Save style file (text or binary)
+        SaveStyle(outFileName, binary);
         styleSaved = true;
     }
 }
@@ -1032,8 +1034,8 @@ static void DialogSaveStyle(bool binary)
 static void DialogExportStyle(int type)
 {
     // Save file dialog
-    const char *filters[] = { "*.rgs", "*.png", "*.h" };
-    const char *fileName = tinyfd_saveFileDialog("Export raygui style file", "", 3, filters, "Style Files (*.rgs, *.png, *.h)");
+    const char *filters[] = { "*.png", "*.h" };
+    const char *fileName = tinyfd_saveFileDialog("Export raygui style file", "", 2, filters, "Style Files (*.rgs, *.png, *.h)");
 
     // TODO: Check file extension for type?
     
