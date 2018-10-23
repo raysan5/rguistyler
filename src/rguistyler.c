@@ -360,17 +360,18 @@ static bool styleSaved = false;             // Show save dialog on closing if no
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
-static void ShowUsageInfo(void);            // Show command line usage info
-//static void ShowCommandLineInfo(void);                      // Show command line usage info
-//static void ProcessCommandLine(int argc, char *argv[]);     // Process command line input
+#if defined(ENABLE_PRO_FEATURES)
+static void ShowCommandLineInfo(void);                      // Show command line usage info
+static void ProcessCommandLine(int argc, char *argv[]);     // Process command line input
+#endif
 
 // Load/Save/Export data functions
 static void SaveStyle(const char *fileName, bool binary);   // Save raygui style (.rgs), text or binary
 static void ExportStyle(const char *fileName, int type);    // Export style color palette
 
-static void DialogLoadStyle(void);          // Dialog load style file
-static void DialogSaveStyle(bool binary);   // Dialog save style file
-static void DialogExportStyle(int type);    // Dialog save style file
+static void DialogLoadStyle(void);                          // Show dialog: load style file
+static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
+static void DialogExportStyle(int type);                    // Show dialog: save style file
 
 // Auxiliar GUI functions
 static int GetGuiStylePropertyIndex(int control, int property);
@@ -387,13 +388,9 @@ int main(int argc, char *argv[])
     //--------------------------------------------------------------------------------------
     if (argc > 1)
     {
-        // CLI required variables
-        bool showUsageInfo = false;     // Toggle command line usage info
-        
-        char outFileName[256] = { 0 };  // Output file name
-        int outputFormat = 0;           // Formats: STYLE_TEXT = 0, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
-        
-        if (argc == 2)  // One file dropped over the executable or just one argument
+        if ((argc == 2) &&  
+            (strcmp(argv[1], "-h") != 0) && 
+            (strcmp(argv[1], "--help") != 0))       // One argument (file dropped over executable?)
         {
             if (IsFileExtension(argv[1], ".rgs") || 
                 IsFileExtension(argv[1], ".png"))
@@ -401,75 +398,14 @@ int main(int argc, char *argv[])
                 // Open file with graphic interface
                 strcpy(inFileName, argv[1]);        // Read input filename
             }
-            else 
-            {
-                ShowUsageInfo();                    // Show command line usage info
-                return 0;
-            }
         }
-        else
+#if defined(ENABLE_PRO_FEATURES)
+        else 
         {
-            // Arguments scan and processing
-            for (int i = 1; i < argc; i++)
-            {
-                if (strcmp(argv[i], "--help") == 0) showUsageInfo = true;
-                else if ((strcmp(argv[i], "--input") == 0) || (strcmp(argv[i], "-i") == 0))
-                {                   
-                    // Check for valid argumment and valid file extension
-                    if (((i + 1) < argc) && (argv[i + 1][0] != '-') && 
-                        IsFileExtension(inFileName, ".png"))
-                    {
-                        strcpy(inFileName, argv[i + 1]);    // Read input file
-                    }
-
-                    i++;
-                }
-                else if ((strcmp(argv[i], "--output") == 0) || (strcmp(argv[i], "-o") == 0))
-                {                   
-                    // Check for valid argumment and valid file extension
-                    if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
-                    {
-                        strcpy(outFileName, argv[i + 1]);    // Read output filename
-                    }
-
-                    i++;
-                }
-                else if (strcmp(argv[i], "--format") == 0) 
-                {
-                    // Check for valid argumment and valid file extension
-                    if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
-                    {
-                        int format = atoi(argv[i + 1]);
-                        
-                        if ((format >= 0) && (format <= 4)) outputFormat = format;
-                        else { TraceLog(LOG_WARNING, "Output format not valid"); showUsageInfo = true; }
-                    }
-                    else { TraceLog(LOG_WARNING, "No valid parameter after --format"); showUsageInfo = true; }
-                }
-                else 
-                {
-                    TraceLog(LOG_WARNING, "No valid parameter: %s", argv[i]);
-                    showUsageInfo = true;
-                }
-            }
-            
-            if (inFileName[0] != '\0')
-            {
-                // Process input .rgs file
-                GuiLoadStyle(inFileName);
-                
-                // TODO: Setup output file name, based on input
-                char outFileName[256] = { 0 };
-                strcpy(outFileName, inFileName);
-                
-                // Export style files with different formats
-                ExportStyle(outFileName, outputFormat);
-            }
-            
-            if (showUsageInfo) ShowUsageInfo();
-            
+            ProcessCommandLine(argc, argv);
             return 0;
         }
+#endif      // ENABLE_PRO_FEATURES
     }
     
     // GUI usage mode - Initialization
@@ -810,8 +746,9 @@ int main(int argc, char *argv[])
 // Module Functions Definitions (local)
 //--------------------------------------------------------------------------------------------
 
+#if defined(ENABLE_PRO_FEATURES)
 // Show command line usage info
-static void ShowUsageInfo(void)     // ShowCommandLineInfo()
+static void ShowCommandLineInfo(void)
 {
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
@@ -848,12 +785,79 @@ static void ShowUsageInfo(void)     // ShowCommandLineInfo()
     printf("    > rguistyler --input tools.rgs --output tools.png\n");
 }
 
-/*
+// Process command line input
 static void ProcessCommandLine(int argc, char *argv[])
 {
+    // CLI required variables
+    bool showUsageInfo = false;     // Toggle command line usage info
     
+    char inFileName[256] = { 0 };   // Input file name
+    char outFileName[256] = { 0 };  // Output file name
+    int outputFormat = 0;           // Formats: STYLE_TEXT = 0, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
+
+    // Arguments scan and processing
+    for (int i = 1; i < argc; i++)
+    {
+        if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0))
+        {
+            showUsageInfo = true;
+        }
+        else if ((strcmp(argv[i], "-i") == 0) || (strcmp(argv[i], "--input") == 0))
+        {                   
+            // Check for valid argumment and valid file extension: input
+            if (((i + 1) < argc) && (argv[i + 1][0] != '-') && 
+                IsFileExtension(inFileName, ".png"))
+            {
+                strcpy(inFileName, argv[i + 1]);    // Read input file
+            }
+
+            i++;
+        }
+        else if ((strcmp(argv[i], "-o") == 0) || (strcmp(argv[i], "--output") == 0))
+        {                   
+            // Check for valid argumment and valid file extension: output
+            if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
+            {
+                strcpy(outFileName, argv[i + 1]);    // Read output filename
+            }
+
+            i++;
+        }
+        else if (strcmp(argv[i], "--format") == 0) 
+        {
+            // Check for valid argumment and valid parameters
+            if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
+            {
+                int format = atoi(argv[i + 1]);
+                
+                if ((format >= 0) && (format <= 4)) outputFormat = format;
+                else { TraceLog(LOG_WARNING, "Output format not valid"); showUsageInfo = true; }
+            }
+            else { TraceLog(LOG_WARNING, "No valid parameter after --format"); showUsageInfo = true; }
+        }
+        else 
+        {
+            TraceLog(LOG_WARNING, "No valid parameter: %s", argv[i]);
+            showUsageInfo = true;
+        }
+    }
+    
+    if (inFileName[0] != '\0')
+    {
+        // Process input .rgs file
+        GuiLoadStyle(inFileName);
+        
+        // TODO: Setup output file name, based on input
+        char outFileName[256] = { 0 };
+        strcpy(outFileName, inFileName);
+        
+        // Export style files with different formats
+        ExportStyle(outFileName, outputFormat);
+    }
+    
+    if (showUsageInfo) ShowCommandLineInfo();
 }
-*/
+#endif      // ENABLE_PRO_FEATURES
 
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
