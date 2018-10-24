@@ -376,7 +376,6 @@ static void DialogExportStyle(int type);                    // Show dialog: save
 // Auxiliar GUI functions
 static int GetGuiStylePropertyIndex(int control, int property);
 static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color);
-
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -463,7 +462,6 @@ int main(int argc, char *argv[])
     bool checkedActive = false;
     bool selectingColor = false;
     int spinnerValue = 28;
-    bool dropDownEditMode = false;
 
     int comboNum = 5;
     const char *comboText[5] = { "Text (.rgs)", "Binary (.rgs)", "Palette (.png)", "Palette (.h)", "Controls Table (.png)" };
@@ -485,8 +483,11 @@ int main(int argc, char *argv[])
  
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
     
+    // Edit mode
     bool editFilenameText = false;
     bool editHexColorText = false;
+    bool spinnerEditMode = false;
+    bool dropDownEditMode = false;
     //-----------------------------------------------------------
 
     // Keep a backup for base style    
@@ -609,10 +610,7 @@ int main(int argc, char *argv[])
             else if (mousePos.y > bounds[COLORPICKER].y + bounds[COLORPICKER].height) SetMousePosition((Vector2){ mousePos.x, bounds[COLORPICKER].y + bounds[COLORPICKER].height });
 
         }
-        
-        // Control TextBox edit mode
-        if (CheckCollisionPointRec(GetMousePosition(), bounds[TEXTBOX]) && (IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_LEFT_BUTTON))) editFilenameText = !editFilenameText;
-        if (CheckCollisionPointRec(GetMousePosition(), (Rectangle){ anchorControls.x + 290, anchorControls.y + 530, 65, 20 }) && (IsKeyPressed(KEY_ENTER) || IsMouseButtonPressed(MOUSE_LEFT_BUTTON))) editHexColorText = !editHexColorText;
+
         //----------------------------------------------------------------------------------
         
         // Draw
@@ -639,7 +637,7 @@ int main(int argc, char *argv[])
             // Draw Gui controls
             GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, &currentSelectedControl, true);
             
-            if (currentSelectedControl < 0) GuiDisable();
+            //if (currentSelectedControl < 0) GuiDisable();
             
             switch (currentSelectedControl)
             {
@@ -651,9 +649,14 @@ int main(int argc, char *argv[])
                 default: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, &currentSelectedProperty, true); break;
             }
 
-            GuiEnable();
+            //GuiEnable();
+            
+            if (dropDownEditMode) GuiLock();
             
             GuiWindowBox((Rectangle){ anchorControls.x + 0, anchorControls.y + 0, 365, 560 }, "Sample raygui controls");
+            
+            // Draw selected control rectangles
+            if (currentSelectedControl >= 0) DrawRectangleLinesEx((Rectangle){ bounds[currentSelectedControl].x - 4, bounds[currentSelectedControl].y - 4, bounds[currentSelectedControl].width + 8, bounds[currentSelectedControl].height + 8 }, 2, RED);
             
             checkedActive = GuiCheckBoxEx(bounds[CHECKBOX], checkedActive, "DISABLED");
 
@@ -673,12 +676,11 @@ int main(int argc, char *argv[])
             
             progressValue = GuiProgressBarEx(bounds[PROGRESSBAR], progressValue, 0, 1, true);
 
-            GuiSpinner(bounds[SPINNER], &spinnerValue, 0, 32, 24, true);    // TODO: Review
+            if (GuiSpinner(bounds[SPINNER], &spinnerValue, 0, 32, 24, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
             
             comboActive = GuiComboBox(bounds[COMBOBOX], comboText, comboNum, comboActive);
 
-            GuiTextBox(bounds[TEXTBOX], guiText, spinnerValue, editFilenameText);
-            
+            if (GuiTextBox(bounds[TEXTBOX], guiText, 32, editFilenameText)) editFilenameText = !editFilenameText;
             GuiLine((Rectangle){ anchorControls.x + 10, anchorControls.y + 275, 345, 20 }, 1);
             
             // Draw labels for GuiColorPicker information (RGBA)
@@ -693,27 +695,28 @@ int main(int argc, char *argv[])
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 385, 15, 20 }, FormatText("S:  %.0f%%", colorHSV.y*100));
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 400, 15, 20 }, FormatText("V:  %.0f%%", colorHSV.z*100));
 
-            if (GuiTextBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 520, 60, 20 }, colorHex, 8, editHexColorText)) colorPickerValue = GetColor((int)strtoul(colorHex, NULL, 16));
+            if (GuiTextBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 520, 60, 20 }, colorHex, 8, editHexColorText))
+            {
+                editHexColorText = !editHexColorText;
+                colorPickerValue = GetColor((int)strtoul(colorHex, NULL, 16));
+            }
             
             for (int i = 0; i < 12; i++) colorBoxValue[i] = ColorBox((Rectangle){ anchorControls.x + 295 + 20*(i%3), anchorControls.y + 430 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
             DrawRectangleLinesEx((Rectangle){ anchorControls.x + 295, anchorControls.y + 430, 60, 80 }, 2, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
 
-            GuiEnable();
+            //GuiEnable();
             
             colorPickerValue = GuiColorPicker(bounds[COLORPICKER], colorPickerValue);
             
-            if (checkedActive) GuiDisable();
+            //if (checkedActive) GuiDisable();
             
             // Draw save style button
             if (GuiButton(bounds[BUTTON], "Save Style")) DialogSaveStyle(comboActive);
-
             if (GuiDropdownBox((Rectangle){ anchorControls.x + 175, anchorControls.y + 195, 60, 30 }, dropdownBoxList, 3, &dropdownBoxActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
             
-            GuiEnable();
-            
-            // Draw selected control rectangles
-            if (currentSelectedControl >= 0) DrawRectangleLinesEx((Rectangle){ bounds[currentSelectedControl].x - 2, bounds[currentSelectedControl].y -2, bounds[currentSelectedControl].width + 4, bounds[currentSelectedControl].height + 4 }, 1, RED);
-            
+            GuiUnlock();
+            //GuiEnable();            
+                        
             // Draw ending message window (save)
             if (closingWindowActive)
             {
