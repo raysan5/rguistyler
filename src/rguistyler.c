@@ -371,11 +371,12 @@ static void ExportStyle(const char *fileName, int type);    // Export style colo
 
 static void DialogLoadStyle(void);                          // Show dialog: load style file
 static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
-static void DialogExportStyle(int type);                    // Show dialog: save style file
+static void DialogExportStyle(int type);                    // Show dialog: export style file
 
 // Auxiliar GUI functions
 static int GetGuiStylePropertyIndex(int control, int property);
 static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color);
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -592,14 +593,14 @@ int main(int argc, char *argv[])
         
         colorHSV = ColorToHSV(colorPickerValue);
         
-        // Color picker color selection logic
+        // Color selection cursor show/hide logic
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePos, bounds[COLORPICKER])) selectingColor = true;
         if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
         {
             selectingColor = false;
             ShowCursor();
         }
-        
+
         if (selectingColor)
         {
             HideCursor();
@@ -608,9 +609,7 @@ int main(int argc, char *argv[])
             
             if (mousePos.y < bounds[COLORPICKER].y) SetMousePosition((Vector2){ mousePos.x, bounds[COLORPICKER].y });
             else if (mousePos.y > bounds[COLORPICKER].y + bounds[COLORPICKER].height) SetMousePosition((Vector2){ mousePos.x, bounds[COLORPICKER].y + bounds[COLORPICKER].height });
-
         }
-
         //----------------------------------------------------------------------------------
         
         // Draw
