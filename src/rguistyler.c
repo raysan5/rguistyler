@@ -356,6 +356,7 @@ static const char *guiPropertyText[NUM_PROPERTIES] = {
 };
 
 static bool styleSaved = false;             // Show save dialog on closing if not saved
+static bool styleLoaded = false;            // Register if we are working over a loaded style (auto-save)
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -373,9 +374,9 @@ static void DialogLoadStyle(void);                          // Show dialog: load
 static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
 static void DialogExportStyle(int type);                    // Show dialog: export style file
 
-// Auxiliar GUI functions
-static int GetGuiStylePropertyIndex(int control, int property);
-static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color);
+// Auxiliar functions
+static int GetGuiStylePropertyIndex(int control, int property);                 // Get global property index for a selected control-prop
+static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -395,8 +396,7 @@ int main(int argc, char *argv[])
             if (IsFileExtension(argv[1], ".rgs") || 
                 IsFileExtension(argv[1], ".png"))
             {
-                // Open file with graphic interface
-                strcpy(inFileName, argv[1]);        // Read input filename
+                strcpy(inFileName, argv[1]);        // Read input filename to open with gui interface
             }
         }
 #if defined(ENABLE_PRO_FEATURES)
@@ -700,7 +700,7 @@ int main(int argc, char *argv[])
                 colorPickerValue = GetColor((int)strtoul(colorHex, NULL, 16));
             }
             
-            for (int i = 0; i < 12; i++) colorBoxValue[i] = ColorBox((Rectangle){ anchorControls.x + 295 + 20*(i%3), anchorControls.y + 430 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
+            for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorControls.x + 295 + 20*(i%3), anchorControls.y + 430 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
             DrawRectangleLinesEx((Rectangle){ anchorControls.x + 295, anchorControls.y + 430, 60, 80 }, 2, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
 
             //GuiEnable();
@@ -949,8 +949,11 @@ static void ExportStyle(const char *fileName, int type)
     {
         case STYLE_TEXT: SaveStyle(fileName, false); break;
         case STYLE_BINARY: SaveStyle(fileName, true); break;
+        case PALETTE_CODE: ExportStyleAsCode(fileName); break;
         case PALETTE_IMAGE:
         {
+            // TODO: Generate image directly, do not use embedded data
+            
             // Export style palette image
             // NOTE: We use embedded image image_raygui_style_palette_light
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
@@ -969,13 +972,12 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
         
             ExportImage(image_raygui_style_palette_light, fileName);
-        }
-        case PALETTE_CODE:
-        {
-            // TODO: Export style palette as int colors array code
-        }
+            
+        } break;
         case CONTROLS_TABLE_IMAGE:
         {
+            // TODO: Generate image directly, do not use embedded data
+            
             // Export style controls table image
             // NOTE: We use embedded image raygui_style_table_light 
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
@@ -994,9 +996,52 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
             
             ExportImage(image_raygui_style_table_light, fileName);
-        }
+            
+        } break;
         default: break;
     }
+}
+
+// Export gui style as color palette code
+// NOTE: Currently only default color palette is supported
+static void ExportStyleAsCode(const char *fileName)
+{
+    FILE *txtFile = fopen(fileName, "wt");
+    
+    fprintf(txtFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as an array values           //\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/rguistyler                    //\n");
+    fprintf(txtFile, "// feedback and support:       ray[at]raylib.com                                //\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
+
+    fprintf(txtFile, "// raygui custom color style palette\n");
+    fprintf(txtFile, "// NOTE: Only default colors defined, expanded to all properties\n");
+    fprintf(txtFile, "// NOTE: Use GuiLoadStylePalette(stylePalette);\n");
+
+    // Write byte data as hexadecimal text
+    fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", 14);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BACKGROUND_COLOR\n", style[DEFAULT_BACKGROUND_COLOR]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_LINES_COLOR\n", style[DEFAULT_LINES_COLOR]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_NORMAL\n", style[DEFAULT_BORDER_COLOR_NORMAL]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_NORMAL\n", style[DEFAULT_BASE_COLOR_NORMAL]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_NORMAL\n", style[DEFAULT_TEXT_COLOR_NORMAL]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_FOCUSED\n", style[DEFAULT_BORDER_COLOR_FOCUSED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_FOCUSED\n", style[DEFAULT_BASE_COLOR_FOCUSED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_FOCUSED\n", style[DEFAULT_TEXT_COLOR_FOCUSED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_PRESSED\n", style[DEFAULT_BORDER_COLOR_PRESSED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_PRESSED\n", style[DEFAULT_BASE_COLOR_PRESSED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_PRESSED\n", style[DEFAULT_TEXT_COLOR_PRESSED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_DISABLED\n", style[DEFAULT_BORDER_COLOR_DISABLED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_DISABLED\n", style[DEFAULT_BASE_COLOR_DISABLED]);
+    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_DISABLED\n", style[DEFAULT_TEXT_COLOR_DISABLED]);
+    fprintf(txtFile, "};\n");
+
+    fclose(txtFile);
 }
 
 // Dialog load style file
@@ -1010,9 +1055,10 @@ static void DialogLoadStyle(void)
     {
         GuiLoadStyle(fileName);
         SetWindowTitle(FormatText("rGuiStyler v%s - %s", TOOL_VERSION_TEXT, GetFileName(fileName)));
-        //loadedStyle = true;
+        
+        // TODO: Register input fileName
+        styleLoaded = true;
     }
-    
 }
 
 // Dialog save style file
@@ -1095,7 +1141,7 @@ static int GetGuiStylePropertyIndex(int control, int property)
 
 // Color box control to save color samples from color picker
 // NOTE: It requires colorPicker pointer for updating in case of selection
-static Color ColorBox(Rectangle bounds, Color *colorPicker, Color color)
+static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
 {
     Vector2 mousePoint = GetMousePosition();
     
