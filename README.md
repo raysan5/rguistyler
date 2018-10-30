@@ -34,8 +34,8 @@ Once a style has been created, just save it as a **.rgs** file, it can be saved 
 
 ## License
 
-rGuiStyler is free and open source software. rGuiStyler source code is licensed under an unmodified zlib/libpng license. Check [LICENSE](LICENSE) for further details.
+rGuiStyler is **open source software**. rGuiStyler source code is licensed under an unmodified [zlib/libpng license](LICENSE).
 
-Despite being completely free, consider a small donation for the development efforts or contributing to [raylib patreon](https://www.patreon.com/raysan5) to help the author keep working on free software for games development.
+Despite being open source and free for everybody willing to compile it, [consider a small donation](https://www.paypal.com/donate/?token=Oo3h2bHS9ux4lNzahXhmH3oaAqQpBeeMy2zNoH1lxHuD5Vdi1-B6XlPRlEyEzLmBb7rGwG) for the development efforts or [contributing to raylib patreon](https://www.patreon.com/raylib) to help the author keep working on open source software for games development.
 
-*Copyright (c) 2017-2018 raylib technologies ([@raylibtech](https://twitter.com/raylibtech))*
+*Copyright (c) 2016-2018 Ramon Santamaria ([@raysan5](https://twitter.com/raysan5))*
