@@ -434,18 +434,18 @@ int main(int argc, char *argv[])
 
     // Define gui controls rectangles
     Rectangle bounds[NUM_CONTROLS] = {
-        (Rectangle){ 0 },                                           // DEFAULT
+        (Rectangle){ 0, 0, 0, 0 },                                              // DEFAULT
         (Rectangle){ anchorControls.x + 85, anchorControls.y + 35, 145, 25 },   // LABELBUTTON
         (Rectangle){ anchorControls.x + 195, anchorControls.y + 240, 160, 30 }, // BUTTON
         (Rectangle){ anchorControls.x + 10, anchorControls.y + 70, 65, 30 },    // TOGGLE
         (Rectangle){ anchorControls.x + 75, anchorControls.y + 115, 250, 15 },  // SLIDER
         (Rectangle){ anchorControls.x + 75, anchorControls.y + 140, 250, 15 },  // SLIDERBAR
-        (Rectangle){ anchorControls.x + 10, anchorControls.y + 165, 315, 15 },  // PROGRESSBAR    
-        (Rectangle){ anchorControls.x + 270, anchorControls.y + 38, 20, 20 },  // CHECKBOX
-        (Rectangle){ anchorControls.x + 240, anchorControls.y + 195, 115, 30 },  // SPINNER
+        (Rectangle){ anchorControls.x + 10, anchorControls.y + 165, 315, 15 },  // PROGRESSBAR
+        (Rectangle){ anchorControls.x + 270, anchorControls.y + 38, 20, 20 },   // CHECKBOX
+        (Rectangle){ anchorControls.x + 240, anchorControls.y + 195, 115, 30 }, // SPINNER
         (Rectangle){ anchorControls.x + 10, anchorControls.y + 195, 160, 30 },  // COMBOBOX
-        (Rectangle){ anchorControls.x + 10, anchorControls.y + 240, 180, 30 }, // TEXTBOX
-        (Rectangle){ anchorMain.x + 10, anchorMain.y + 40, 140, 560 },  // LISTVIEW
+        (Rectangle){ anchorControls.x + 10, anchorControls.y + 240, 180, 30 },  // TEXTBOX
+        (Rectangle){ anchorMain.x + 10, anchorMain.y + 40, 140, 560 },          // LISTVIEW
         (Rectangle){ anchorControls.x + 10, anchorControls.y + 300, 240, 240 }  // COLORPICKER
     };
     
@@ -485,8 +485,8 @@ int main(int argc, char *argv[])
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
     
     // Edit mode
-    bool editFilenameText = false;
-    bool editHexColorText = false;
+    bool textBoxEditMode = false;
+    bool hexValueBoxEditMode = false;
     bool spinnerEditMode = false;
     bool dropDownEditMode = false;
     //-----------------------------------------------------------
@@ -589,7 +589,7 @@ int main(int argc, char *argv[])
         if (progressValue > 1.0f) progressValue = 0.0f;
 
         // Get edited color from text box
-        if (!editHexColorText) sprintf(colorHex, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
+        if (!hexValueBoxEditMode) sprintf(colorHex, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
         
         colorHSV = ColorToHSV(colorPickerValue);
         
@@ -679,7 +679,7 @@ int main(int argc, char *argv[])
             
             comboActive = GuiComboBox(bounds[COMBOBOX], comboText, comboNum, comboActive);
 
-            if (GuiTextBox(bounds[TEXTBOX], guiText, 32, editFilenameText)) editFilenameText = !editFilenameText;
+            if (GuiTextBox(bounds[TEXTBOX], guiText, 32, textBoxEditMode)) textBoxEditMode = !textBoxEditMode;
             GuiLine((Rectangle){ anchorControls.x + 10, anchorControls.y + 275, 345, 20 }, 1);
             
             // Draw labels for GuiColorPicker information (RGBA)
@@ -694,9 +694,9 @@ int main(int argc, char *argv[])
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 385, 15, 20 }, FormatText("S:  %.0f%%", colorHSV.y*100));
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 400, 15, 20 }, FormatText("V:  %.0f%%", colorHSV.z*100));
 
-            if (GuiTextBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 520, 60, 20 }, colorHex, 8, editHexColorText))
+            if (GuiTextBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 520, 60, 20 }, colorHex, 8, hexValueBoxEditMode))
             {
-                editHexColorText = !editHexColorText;
+                hexValueBoxEditMode = !hexValueBoxEditMode;
                 colorPickerValue = GetColor((int)strtoul(colorHex, NULL, 16));
             }
             
