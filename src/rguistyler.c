@@ -15,7 +15,7 @@
 *   COMPILATION (Windows - MinGW):
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99
 *           -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32
-* 
+*
 *   COMPILATION (Linux - GCC):
 *       gcc -o rguistyler rguistyler.c external/tinyfiledialogs.c -s -no-pie -D_DEFAULT_SOURCE /
 *           -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
@@ -83,19 +83,19 @@
 
 // Control types available (NUM_CONTROLS)
 // NOTE: Control name to prepend to property type
-typedef enum { 
-    DEFAULT = 0, 
+typedef enum {
+    DEFAULT = 0,
     LABELBUTTON,
-    BUTTON, 
+    BUTTON,
     //IMAGEBUTTON,
-    TOGGLE, 
-    //TOGGLEGROUP, 
-    SLIDER, 
-    SLIDERBAR, 
-    PROGRESSBAR, 
-    CHECKBOX, 
-    SPINNER, 
-    COMBOBOX, 
+    TOGGLE,
+    //TOGGLEGROUP,
+    SLIDER,
+    SLIDERBAR,
+    PROGRESSBAR,
+    CHECKBOX,
+    SPINNER,
+    COMBOBOX,
     TEXTBOX,
     LISTVIEW,
     COLORPICKER
@@ -103,7 +103,7 @@ typedef enum {
 
 // Available property types
 // NOTE: Depending on control, name is prepended: BUTTON_BORDER_COLOR_NORMAL
-typedef enum { 
+typedef enum {
     BORDER_COLOR_NORMAL = 0,
     BASE_COLOR_NORMAL,
     TEXT_COLOR_NORMAL,
@@ -137,17 +137,17 @@ static int styleBackup[NUM_PROPERTIES] = { 0 };
 // Controls name text
 // NOTE: Some styles are shared by multiple controls
 // LABEL = LABELBUTTON, BUTTON = IMAGEBUTTON, TOGGLE = TOGGLEGROUP
-static const char *guiControlText[NUM_CONTROLS] = { 
-    "DEFAULT", 
+static const char *guiControlText[NUM_CONTROLS] = {
+    "DEFAULT",
     "LABELBUTTON",
-    "BUTTON", 
-    "TOGGLE", 
-    "SLIDER", 
-    "SLIDERBAR", 
-    "PROGRESSBAR", 
-    "CHECKBOX", 
-    "SPINNER", 
-    "COMBOBOX", 
+    "BUTTON",
+    "TOGGLE",
+    "SLIDER",
+    "SLIDERBAR",
+    "PROGRESSBAR",
+    "CHECKBOX",
+    "SPINNER",
+    "COMBOBOX",
     "TEXTBOX",
     "LISTVIEW",
     "COLORPICKER"
@@ -155,7 +155,7 @@ static const char *guiControlText[NUM_CONTROLS] = {
 
 // Controls type A properties name text
 // NOTE: Used by LABEL, LABELBUTTON
-static const char *guiPropsTextA[NUM_PROPS_CONTROLS_A] = { 
+static const char *guiPropsTextA[NUM_PROPS_CONTROLS_A] = {
     "TEXT_COLOR_NORMAL",
     "TEXT_COLOR_FOCUSED",
     "TEXT_COLOR_PRESSED",
@@ -164,7 +164,7 @@ static const char *guiPropsTextA[NUM_PROPS_CONTROLS_A] = {
 
 // Controls type B properties name text
 // NOTE: Used by SLIDER, SLIDERBAR, PROGRESSBAR, CHECKBOX, COLORPICKER
-static const char *guiPropsTextB[NUM_PROPS_CONTROLS_B] = { 
+static const char *guiPropsTextB[NUM_PROPS_CONTROLS_B] = {
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "BORDER_COLOR_FOCUSED",
@@ -177,7 +177,7 @@ static const char *guiPropsTextB[NUM_PROPS_CONTROLS_B] = {
 
 // Controls type C properties name text
 // NOTE: Used by BUTTON, TOGGLE, SPINNER, COMBOBOX, TEXTBOX, LISTVIEW
-static const char *guiPropsTextC[NUM_PROPS_CONTROLS_C] = { 
+static const char *guiPropsTextC[NUM_PROPS_CONTROLS_C] = {
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "TEXT_COLOR_NORMAL",
@@ -340,7 +340,7 @@ static const char *guiPropertyText[NUM_PROPERTIES] = {
     "COLORPICKER_BASE_COLOR_DISABLED",
     "LISTVIEW_ELEMENTS_HEIGHT",
     "LISTVIEW_ELEMENTS_PADDING",
-    "LISTVIEW_BAR_WIDTH",       
+    "LISTVIEW_BAR_WIDTH",
     "LISTVIEW_BORDER_COLOR_NORMAL",
     "LISTVIEW_BASE_COLOR_NORMAL",
     "LISTVIEW_TEXT_COLOR_NORMAL",
@@ -384,46 +384,46 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    
 int main(int argc, char *argv[])
 {
     char inFileName[256] = { 0 };       // Input file name (required in case of drag & drop over executable)
-    
+
     // Command-line usage mode
     //--------------------------------------------------------------------------------------
     if (argc > 1)
     {
-        if ((argc == 2) &&  
-            (strcmp(argv[1], "-h") != 0) && 
+        if ((argc == 2) &&
+            (strcmp(argv[1], "-h") != 0) &&
             (strcmp(argv[1], "--help") != 0))       // One argument (file dropped over executable?)
         {
-            if (IsFileExtension(argv[1], ".rgs") || 
+            if (IsFileExtension(argv[1], ".rgs") ||
                 IsFileExtension(argv[1], ".png"))
             {
                 strcpy(inFileName, argv[1]);        // Read input filename to open with gui interface
             }
         }
 #if defined(ENABLE_PRO_FEATURES)
-        else 
+        else
         {
             ProcessCommandLine(argc, argv);
             return 0;
         }
 #endif      // ENABLE_PRO_FEATURES
     }
-    
+
     // GUI usage mode - Initialization
     //--------------------------------------------------------------------------------------
     const int screenWidth = 720;
     const int screenHeight = 640;
-    
+
     SetTraceLog(0);                             // Disable trace log messsages
     //SetConfigFlags(FLAG_WINDOW_RESIZABLE);    // Window configuration flags
     InitWindow(screenWidth, screenHeight, FormatText("rGuiStyler v%s - A simple and easy-to-use raygui styles editor", TOOL_VERSION_TEXT));
     SetExitKey(0);
-    
+
     // General pourpose variables
     Vector2 mousePos = { 0.0f, 0.0f };
     int framesCounter = 0;
     bool exitWindow = false;
     bool closingWindowActive = false;
-    
+
     bool saveColor = false;
     int changedControlsCounter = 0;
 
@@ -448,12 +448,12 @@ int main(int argc, char *argv[])
         (Rectangle){ anchorMain.x + 10, anchorMain.y + 40, 140, 560 },          // LISTVIEW
         (Rectangle){ anchorControls.x + 10, anchorControls.y + 300, 240, 240 }  // COLORPICKER
     };
-    
+
     // GUI controls data
     bool toggleActive = false;
     bool toggleValue = false;
     const char *toggleGuiText[4] = { "toggle", "group", "selection", "options" };
-    
+
     int dropdownBoxActive = false;
     const char *dropdownBoxList[3] = { "A", "B", "C" };
 
@@ -467,23 +467,23 @@ int main(int argc, char *argv[])
     int comboNum = 5;
     const char *comboText[5] = { "Text (.rgs)", "Binary (.rgs)", "Palette (.png)", "Palette (.h)", "Controls Table (.png)" };
     int comboActive = 0;
-    
+
     char guiText[32] =  "custom_style.rgs";
-    
+
     Color colorPickerValue = RED;
     int currentSelectedControl = -1;
     int currentSelectedProperty = -1;
     int previousSelectedProperty = -1;
     int previousSelectedControl = -1;
-    
+
     Color colorBoxValue[12];
-    
+
     for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
-    
+
     char colorHex[9] = "00000000";
- 
+
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
-    
+
     // Edit mode
     bool textBoxEditMode = false;
     bool hexValueBoxEditMode = false;
@@ -491,7 +491,7 @@ int main(int argc, char *argv[])
     bool dropDownEditMode = false;
     //-----------------------------------------------------------
 
-    // Keep a backup for base style    
+    // Keep a backup for base style
     memcpy(styleBackup, style, NUM_PROPERTIES*sizeof(int));
 
     //Font font = LoadFontEx("pixelpoiiz10.ttf", 10, 0, 0);
@@ -499,52 +499,52 @@ int main(int argc, char *argv[])
 
     SetTargetFPS(60);
     //------------------------------------------------------------
-    
+
     // Main game loop
     while (!exitWindow)             // Detect window close button
     {
         // Dropped files logic
         //----------------------------------------------------------------------------------
-        if (IsFileDropped())        
+        if (IsFileDropped())
         {
             int dropsCount = 0;
             char **droppedFiles = GetDroppedFiles(&dropsCount);
-            
+
             // Supports loading .rgs style files (text or binary) and .png style palette images
             if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
             else if (IsFileExtension(droppedFiles[0], ".png")) GuiLoadStylePaletteImage(droppedFiles[0]);
-            
+
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
-            
+
             ClearDroppedFiles();
-            
+
             // Reset selected control
             currentSelectedControl = -1;
         }
         //----------------------------------------------------------------------------------
-        
+
         // Keyboard shortcuts
         //----------------------------------------------------------------------------------
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);    // Show save style dialog (.rgs text)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();         // Show load style dialog (.rgs)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE); // Show export style dialog (.rgs, .png, .h)        
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE); // Show export style dialog (.rgs, .png, .h)
         //----------------------------------------------------------------------------------
-    
+
         // Basic program flow logic
         //----------------------------------------------------------------------------------
         framesCounter++;                    // General usage frames counter
         mousePos = GetMousePosition();      // Get mouse position each frame
         if (WindowShouldClose()) exitWindow = true;
-        
+
         // Show save layout message window on ESC
         if (IsKeyPressed(KEY_ESCAPE))
         {
             if (changedControlsCounter <= 0) exitWindow = true;
             else closingWindowActive = !closingWindowActive;
         }
-        
-        // Check for changed controls 
-        if ((framesCounter%120) == 0) 
+
+        // Check for changed controls
+        if ((framesCounter%120) == 0)
         {
             changedControlsCounter = 0;
             for (int i = 0; i < NUM_PROPERTIES; i++) if (styleBackup[i] != style[i]) changedControlsCounter++;
@@ -552,11 +552,11 @@ int main(int argc, char *argv[])
 
         // Controls selection on GuiListView logic
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
-        
+
         if ((currentSelectedControl == 0) && (currentSelectedProperty != -1))
         {
             if ((previousSelectedProperty != currentSelectedProperty) || (previousSelectedControl != currentSelectedControl)) saveColor = false;
-            
+
             if (!saveColor)
             {
                 colorPickerValue = GetColor(style[GetGuiStylePropertyIndex(currentSelectedControl, currentSelectedProperty)]);
@@ -564,14 +564,14 @@ int main(int argc, char *argv[])
             }
 
             style[GetGuiStylePropertyIndex(currentSelectedControl, currentSelectedProperty)] = ColorToInt(colorPickerValue);
-            
+
             // TODO: REVIEW: Resets all updated controls!
             GuiUpdateStyleComplete();
         }
         else if ((currentSelectedControl != -1) && (currentSelectedProperty != -1))
         {
             if ((previousSelectedProperty != currentSelectedProperty) || (previousSelectedControl != currentSelectedControl)) saveColor = false;
-            
+
             if (!saveColor)
             {
                 colorPickerValue = GetColor(GuiGetStyleProperty(GetGuiStylePropertyIndex(currentSelectedControl, currentSelectedProperty)));
@@ -580,22 +580,22 @@ int main(int argc, char *argv[])
 
             GuiSetStyleProperty(GetGuiStylePropertyIndex(currentSelectedControl, currentSelectedProperty), ColorToInt(colorPickerValue));
         }
-        
+
         previousSelectedProperty = currentSelectedProperty;
         previousSelectedControl = currentSelectedControl;
-        
+
         // Update progress bar automatically
         progressValue += 0.0005f;
         if (progressValue > 1.0f) progressValue = 0.0f;
 
         // Get edited color from text box
         if (!hexValueBoxEditMode) sprintf(colorHex, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
-        
+
         colorHSV = ColorToHSV(colorPickerValue);
-        
+
         // Color selection cursor show/hide logic
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePos, bounds[COLORPICKER])) selectingColor = true;
-        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) 
+        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
         {
             selectingColor = false;
             ShowCursor();
@@ -606,38 +606,38 @@ int main(int argc, char *argv[])
             HideCursor();
             if (mousePos.x < bounds[COLORPICKER].x) SetMousePosition((Vector2){ bounds[COLORPICKER].x, mousePos.y });
             else if (mousePos.x > bounds[COLORPICKER].x + bounds[COLORPICKER].width) SetMousePosition((Vector2){ bounds[COLORPICKER].x + bounds[COLORPICKER].width, mousePos.y });
-            
+
             if (mousePos.y < bounds[COLORPICKER].y) SetMousePosition((Vector2){ mousePos.x, bounds[COLORPICKER].y });
             else if (mousePos.y > bounds[COLORPICKER].y + bounds[COLORPICKER].height) SetMousePosition((Vector2){ mousePos.x, bounds[COLORPICKER].y + bounds[COLORPICKER].height });
         }
         //----------------------------------------------------------------------------------
-        
+
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
-        
+
             ClearBackground(RAYWHITE);
-            
+
             // Draw background rectangle
             DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), GetColor(GuiGetStyleProperty(DEFAULT_BACKGROUND_COLOR)));
-            
+
             // Draw info bar top
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >                            STYLE VIEWER", 35);
 
             // Draw status bar bottom
             //GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, FormatText("EDITION TIME: %02i:%02i:%02i", (framesCounter/60)/(60*60), ((framesCounter/60)/60)%60, (framesCounter/60)%60), 10);
-            
+
             // TODO: Review style info...
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 616, 150, 24 }, "BASE STYLE: UNKNOWN", 10);
-            
+
             GuiStatusBar((Rectangle){ anchorMain.x + 149, anchorMain.y + 616, 186, 24 }, FormatText("CHANGED PROPERTIES: %03i", changedControlsCounter), 10);
             GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, "powered by raylib and raygui", 226);
-            
+
             // Draw Gui controls
             GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, &currentSelectedControl, true);
-            
+
             //if (currentSelectedControl < 0) GuiDisable();
-            
+
             switch (currentSelectedControl)
             {
                 case DEFAULT: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, &currentSelectedProperty, true); break;
@@ -649,14 +649,14 @@ int main(int argc, char *argv[])
             }
 
             //GuiEnable();
-            
+
             if (dropDownEditMode) GuiLock();
-            
+
             GuiWindowBox((Rectangle){ anchorControls.x + 0, anchorControls.y + 0, 365, 560 }, "Sample raygui controls");
-            
+
             // Draw selected control rectangles
             if (currentSelectedControl >= 0) DrawRectangleLinesEx((Rectangle){ bounds[currentSelectedControl].x - 4, bounds[currentSelectedControl].y - 4, bounds[currentSelectedControl].width + 8, bounds[currentSelectedControl].height + 8 }, 2, RED);
-            
+
             checkedActive = GuiCheckBoxEx(bounds[CHECKBOX], checkedActive, "DISABLED");
 
             if (checkedActive) GuiDisable();
@@ -664,30 +664,30 @@ int main(int argc, char *argv[])
             GuiLabel((Rectangle){ anchorControls.x + 11, anchorControls.y + 35, 80, 25 }, "rGuiStyler");
 
             if (GuiLabelButton(bounds[LABELBUTTON], "github.com/raysan5/raygui")) {}
-            
+
             toggleActive = GuiToggleButton(bounds[TOGGLE], "toggle", toggleActive);
-            
+
             toggleValue = GuiToggleGroup((Rectangle){ anchorControls.x + 90, anchorControls.y + 70, 262, 30 }, toggleGuiText, 4, toggleValue);
-            
+
             sliderValue = GuiSliderEx(bounds[SLIDER], sliderValue, 0, 100, "SLIDER", true);
-            
+
             sliderBarValue = GuiSliderBarEx(bounds[SLIDERBAR], sliderBarValue, 0, 100, "SLIDERBAR", true);
-            
+
             progressValue = GuiProgressBarEx(bounds[PROGRESSBAR], progressValue, 0, 1, true);
 
             if (GuiSpinner(bounds[SPINNER], &spinnerValue, 0, 32, 24, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
-            
+
             comboActive = GuiComboBox(bounds[COMBOBOX], comboText, comboNum, comboActive);
 
             if (GuiTextBox(bounds[TEXTBOX], guiText, 32, textBoxEditMode)) textBoxEditMode = !textBoxEditMode;
             GuiLine((Rectangle){ anchorControls.x + 10, anchorControls.y + 275, 345, 20 }, 1);
-            
+
             // Draw labels for GuiColorPicker information (RGBA)
             GuiGroupBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 300, 60, 55 }, "RGBA");
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 305, 15, 20 }, FormatText("R:   %03i", colorPickerValue.r));
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 320, 15, 20 }, FormatText("G:   %03i", colorPickerValue.g));
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 335, 15, 20 }, FormatText("B:   %03i", colorPickerValue.b));
-           
+
             // Draw labels for GuiColorPicker information (HSV)
             GuiGroupBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 365, 60, 55 }, "HSV");
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 370, 15, 20 }, FormatText("H:  %.0f", colorHSV.x));
@@ -699,33 +699,33 @@ int main(int argc, char *argv[])
                 hexValueBoxEditMode = !hexValueBoxEditMode;
                 colorPickerValue = GetColor((int)strtoul(colorHex, NULL, 16));
             }
-            
+
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorControls.x + 295 + 20*(i%3), anchorControls.y + 430 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
             DrawRectangleLinesEx((Rectangle){ anchorControls.x + 295, anchorControls.y + 430, 60, 80 }, 2, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
 
             //GuiEnable();
-            
+
             colorPickerValue = GuiColorPicker(bounds[COLORPICKER], colorPickerValue);
-            
+
             //if (checkedActive) GuiDisable();
-            
+
             // Draw save style button
             if (GuiButton(bounds[BUTTON], "Save Style")) DialogSaveStyle(comboActive);
             if (GuiDropdownBox((Rectangle){ anchorControls.x + 175, anchorControls.y + 195, 60, 30 }, dropdownBoxList, 3, &dropdownBoxActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
-            
+
             GuiUnlock();
-            //GuiEnable();            
-                        
+            //GuiEnable();
+
             // Draw ending message window (save)
             if (closingWindowActive)
             {
                 DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(WHITE, 0.7f));
                 closingWindowActive = !GuiWindowBox((Rectangle){ GetScreenWidth()/2 - 125, GetScreenHeight()/2 - 50, 250, 100 }, "Closing rGuiStyler");
-                
+
                 GuiLabel((Rectangle){ GetScreenWidth()/2 - 95, GetScreenHeight()/2 - 60, 200, 100 }, "Do you want to save before quitting?");
-                
-                if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes")) 
-                { 
+
+                if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes"))
+                {
                     styleSaved = false;
                     DialogSaveStyle(comboActive);
                     if (styleSaved) exitWindow = true;
@@ -737,10 +737,10 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
     }
     // De-Initialization
-    //--------------------------------------------------------------------------------------    
+    //--------------------------------------------------------------------------------------
     CloseWindow();              // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
-    
+
     return 0;
 }
 
@@ -765,7 +765,7 @@ static void ShowCommandLineInfo(void)
     printf("USAGE:\n\n");
     printf("    > rguistyler [--help] --input <filename.ext> [--output <filename.ext>]\n");
     printf("                 [--format <styleformat>] [--edit-prop <property> <value>]\n");
-    
+
     printf("\nOPTIONS:\n\n");
     printf("    -h, --help                      : Show tool version and command line usage help\n");
     printf("    -i, --input <filename.ext>      : Define input file.\n");
@@ -775,14 +775,14 @@ static void ShowCommandLineInfo(void)
     printf("                                      NOTE: Extension could be modified depending on format\n\n");
     printf("    -f, --format <type_value>       : Define output file format to export style data.\n");
     printf("                                      Supported values:\n");
-    printf("                                          0 - Style text format (.rgs)  \n");          
-    printf("                                          1 - Style binary format (.rgs)\n");    
+    printf("                                          0 - Style text format (.rgs)  \n");
+    printf("                                          1 - Style binary format (.rgs)\n");
     printf("                                          2 - Palette image (.png)\n");
     printf("                                          3 - Palette as int array (.h)\n");
     printf("                                          4 - Controls table image (.png)\n\n");
     //printf("    -e, --edit-prop <property> <value>\n");
     //printf("                                    : Edit specific property from input to output.\n");
-    
+
     printf("\nEXAMPLES:\n\n");
     printf("    > rguistyler --input tools.rgs --output tools.png\n");
 }
@@ -792,7 +792,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 {
     // CLI required variables
     bool showUsageInfo = false;     // Toggle command line usage info
-    
+
     char inFileName[256] = { 0 };   // Input file name
     char outFileName[256] = { 0 };  // Output file name
     int outputFormat = 0;           // Formats: STYLE_TEXT = 0, STYLE_BINARY, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
@@ -805,9 +805,9 @@ static void ProcessCommandLine(int argc, char *argv[])
             showUsageInfo = true;
         }
         else if ((strcmp(argv[i], "-i") == 0) || (strcmp(argv[i], "--input") == 0))
-        {                   
+        {
             // Check for valid argumment and valid file extension: input
-            if (((i + 1) < argc) && (argv[i + 1][0] != '-') && 
+            if (((i + 1) < argc) && (argv[i + 1][0] != '-') &&
                 IsFileExtension(inFileName, ".png"))
             {
                 strcpy(inFileName, argv[i + 1]);    // Read input file
@@ -816,7 +816,7 @@ static void ProcessCommandLine(int argc, char *argv[])
             i++;
         }
         else if ((strcmp(argv[i], "-o") == 0) || (strcmp(argv[i], "--output") == 0))
-        {                   
+        {
             // Check for valid argumment and valid file extension: output
             if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
             {
@@ -825,38 +825,38 @@ static void ProcessCommandLine(int argc, char *argv[])
 
             i++;
         }
-        else if (strcmp(argv[i], "--format") == 0) 
+        else if (strcmp(argv[i], "--format") == 0)
         {
             // Check for valid argumment and valid parameters
             if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
             {
                 int format = atoi(argv[i + 1]);
-                
+
                 if ((format >= 0) && (format <= 4)) outputFormat = format;
                 else { TraceLog(LOG_WARNING, "Output format not valid"); showUsageInfo = true; }
             }
             else { TraceLog(LOG_WARNING, "No valid parameter after --format"); showUsageInfo = true; }
         }
-        else 
+        else
         {
             TraceLog(LOG_WARNING, "No valid parameter: %s", argv[i]);
             showUsageInfo = true;
         }
     }
-    
+
     if (inFileName[0] != '\0')
     {
         // Process input .rgs file
         GuiLoadStyle(inFileName);
-        
+
         // TODO: Setup output file name, based on input
         char outFileName[256] = { 0 };
         strcpy(outFileName, inFileName);
-        
+
         // Export style files with different formats
         ExportStyle(outFileName, outputFormat);
     }
-    
+
     if (showUsageInfo) ShowCommandLineInfo();
 }
 #endif      // ENABLE_PRO_FEATURES
@@ -873,9 +873,9 @@ static void SaveStyle(const char *fileName, bool binary)
     if (binary)
     {
         #define RGS_FILE_VERSION_BINARY   200
-        
+
         FILE *rgsFile = fopen(fileName, "wb");
-        
+
         if (rgsFile != NULL)
         {
             // Write some header info (12 bytes)
@@ -884,13 +884,13 @@ static void SaveStyle(const char *fileName, bool binary)
             // reserved              - 2 bytes
             // total properties      - 2 bytes
             // changed properties    - 2 bytes
-            
+
             char signature[5] = "RGS ";
             short version = RGS_FILE_VERSION_BINARY;
             short reserved = 0;
             short numProperties = NUM_COLOR_PROPERTIES;
             short changedProperties = 0;
-            
+
             for (int i = 0; i < NUM_PROPERTIES; i++) if (styleBackup[i] != style[i]) changedProperties++;
 
             fwrite(signature, 1, 4, rgsFile);
@@ -900,32 +900,32 @@ static void SaveStyle(const char *fileName, bool binary)
             fwrite(&changedProperties, 1, sizeof(short), rgsFile);
 
             short id = 0;
-            
+
             for (int i = 0; i < NUM_PROPERTIES; i++)
             {
                 if (styleBackup[i] != style[i])
                 {
                     id = (short)i;
-                    
+
                     fwrite(&id, 1, 2, rgsFile);
                     fwrite(&style[i], 1, sizeof(int), rgsFile);
                 }
             }
-            
+
             fclose(rgsFile);
         }
     }
     else
     {
         #define RGS_FILE_VERSION_TEXT   "2.0"
-        
+
         int counter = 0;
         FILE *rgsFile = fopen(fileName, "wt");
-        
+
         if (rgsFile != NULL)
         {
             for (int i = 0; i < NUM_PROPERTIES; i++) if (styleBackup[i] != style[i]) counter++;
-            
+
             // Write some description comments
             fprintf(rgsFile, "#\n# rgst file (v%s) - raygui style text file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
             fprintf(rgsFile, "# Total number of properties:     %i\n", NUM_COLOR_PROPERTIES);
@@ -934,7 +934,7 @@ static void SaveStyle(const char *fileName, bool binary)
 
             for (int i = 0; i < NUM_PROPERTIES; i++)
             {
-                if (styleBackup[i] != style[i]) fprintf(rgsFile, "%03i 0x%08x // %s\n", i, style[i], guiPropertyText[i]);      
+                if (styleBackup[i] != style[i]) fprintf(rgsFile, "%03i 0x%08x // %s\n", i, style[i], guiPropertyText[i]);
             }
 
             fclose(rgsFile);
@@ -953,7 +953,7 @@ static void ExportStyle(const char *fileName, int type)
         case PALETTE_IMAGE:
         {
             // TODO: Generate image directly, do not use embedded data
-            
+
             // Export style palette image
             // NOTE: We use embedded image image_raygui_style_palette_light
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
@@ -970,16 +970,16 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
-        
+
             ExportImage(image_raygui_style_palette_light, fileName);
-            
+
         } break;
         case CONTROLS_TABLE_IMAGE:
         {
             // TODO: Generate image directly, do not use embedded data
-            
+
             // Export style controls table image
-            // NOTE: We use embedded image raygui_style_table_light 
+            // NOTE: We use embedded image raygui_style_table_light
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
@@ -994,9 +994,9 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
-            
+
             ExportImage(image_raygui_style_table_light, fileName);
-            
+
         } break;
         default: break;
     }
@@ -1007,7 +1007,7 @@ static void ExportStyle(const char *fileName, int type)
 static void ExportStyleAsCode(const char *fileName)
 {
     FILE *txtFile = fopen(fileName, "wt");
-    
+
     fprintf(txtFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
     fprintf(txtFile, "//                                                                              //\n");
     fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as an array values           //\n");
@@ -1055,7 +1055,7 @@ static void DialogLoadStyle(void)
     {
         GuiLoadStyle(fileName);
         SetWindowTitle(FormatText("rGuiStyler v%s - %s", TOOL_VERSION_TEXT, GetFileName(fileName)));
-        
+
         // TODO: Register input fileName
         styleLoaded = true;
     }
@@ -1072,7 +1072,7 @@ static void DialogSaveStyle(bool binary)
     {
         char outFileName[256] = { 0 };
         strcpy(outFileName, fileName);
-        
+
         // Check for valid extension and make sure it is
         if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
 
@@ -1090,7 +1090,7 @@ static void DialogExportStyle(int type)
     const char *fileName = tinyfd_saveFileDialog("Export raygui style file", "", 2, filters, "Style Files (*.rgs, *.png, *.h)");
 
     // TODO: Check file extension for type?
-    
+
     if (fileName != NULL)
     {
         ExportStyle(fileName, type);
@@ -1105,20 +1105,20 @@ static void DialogExportStyle(int type)
 static int GetGuiStylePropertyIndex(int control, int property)
 {
     int guiProp = -1;
-    
+
     switch (control)
     {
-        case DEFAULT: 
+        case DEFAULT:
         {
             if (property == 12) guiProp = 0;
             else if (property == 13) guiProp = 1;
-            else guiProp = DEFAULT_BORDER_COLOR_NORMAL + property; 
-            
+            else guiProp = DEFAULT_BORDER_COLOR_NORMAL + property;
+
         } break;
         case LABELBUTTON: guiProp = LABEL_TEXT_COLOR_NORMAL + property; break;
         case BUTTON: guiProp = BUTTON_BORDER_COLOR_NORMAL + property; break;
         //case IMAGEBUTTON: guiProp = BUTTON_BORDER_COLOR_NORMAL + property; break;
-        case TOGGLE: guiProp = TOGGLE_BORDER_COLOR_NORMAL + property; break; 
+        case TOGGLE: guiProp = TOGGLE_BORDER_COLOR_NORMAL + property; break;
         //case TOGGLEGROUP: guiProp = TOGGLE_BORDER_COLOR_NORMAL + property; break;
         case SLIDER: guiProp = SLIDER_BORDER_COLOR_NORMAL + property; break;
         case SLIDERBAR: guiProp = SLIDERBAR_BORDER_COLOR_NORMAL + property; break;
@@ -1144,17 +1144,17 @@ static int GetGuiStylePropertyIndex(int control, int property)
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
 {
     Vector2 mousePoint = GetMousePosition();
-    
+
     // Update color box
     if (CheckCollisionPointRec(mousePoint, bounds))
     {
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) *colorPicker = (Color){ color.r, color.g, color.b, color.a };
         else if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) color = *colorPicker;
     }
-    
+
     // Draw color box
     DrawRectangleRec(bounds, color);
     DrawRectangleLinesEx(bounds, 1, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
-    
+
     return color;
 }
