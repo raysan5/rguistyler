@@ -369,6 +369,7 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 // Load/Save/Export data functions
 static void SaveStyle(const char *fileName, bool binary);   // Save raygui style (.rgs), text or binary
 static void ExportStyle(const char *fileName, int type);    // Export style color palette
+static void ExportStyleAsCode(const char *fileName);        // Export gui style as color palette code
 
 static void DialogLoadStyle(void);                          // Show dialog: load style file
 static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
@@ -462,7 +463,7 @@ int main(int argc, char *argv[])
     float progressValue = 0.0f;
     bool checkedActive = false;
     bool selectingColor = false;
-    int spinnerValue = 28;
+    int spinnerValue = 10;
 
     int comboNum = 5;
     const char *comboText[5] = { "Text (.rgs)", "Binary (.rgs)", "Palette (.png)", "Palette (.h)", "Controls Table (.png)" };
@@ -471,10 +472,14 @@ int main(int argc, char *argv[])
     char guiText[32] =  "custom_style.rgs";
 
     Color colorPickerValue = RED;
-    int currentSelectedControl = -1;
-    int currentSelectedProperty = -1;
+    
+    int currentSelectedControl = -1;        // listViewActive
+    int currentSelectedProperty = -1;       // listView2Active
     int previousSelectedProperty = -1;
     int previousSelectedControl = -1;
+    
+    int listViewScrollIndex = 1;
+    int listView2ScrollIndex = 1;
 
     Color colorBoxValue[12];
 
@@ -494,8 +499,7 @@ int main(int argc, char *argv[])
     // Keep a backup for base style
     memcpy(styleBackup, style, NUM_PROPERTIES*sizeof(int));
 
-    //Font font = LoadFontEx("pixelpoiiz10.ttf", 10, 0, 0);
-    //GuiFont(font);
+    Font font = { 0 };
 
     SetTargetFPS(60);
     //------------------------------------------------------------
@@ -513,6 +517,12 @@ int main(int argc, char *argv[])
             // Supports loading .rgs style files (text or binary) and .png style palette images
             if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
             else if (IsFileExtension(droppedFiles[0], ".png")) GuiLoadStylePaletteImage(droppedFiles[0]);
+            else if (IsFileExtension(droppedFiles[0], ".ttf"))
+            {
+                UnloadFont(font);
+                font = LoadFontEx(droppedFiles[0], spinnerValue, 0, 0);
+                GuiFont(font);
+            }
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
 
@@ -634,21 +644,19 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, "powered by raylib and raygui", 226);
 
             // Draw Gui controls
-            GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, &currentSelectedControl, true);
+            GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, &listViewScrollIndex, &currentSelectedControl, true);
 
-            //if (currentSelectedControl < 0) GuiDisable();
-
+            // TODO: Replace by GUiListViewEx() with disabled gui elements
+            //if (GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, listViewExElementsEnable, NUM_PROPS_CONTROLS_C, &listViewExScrollIndex, &currentSelectedProperty, &listViewExFocus, listViewExEditMode)) listViewExEditMode = !listViewExEditMode;
             switch (currentSelectedControl)
             {
-                case DEFAULT: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, &currentSelectedProperty, true); break;
-                case LABELBUTTON: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextA, NUM_PROPS_CONTROLS_A, &currentSelectedProperty, true); break;
+                case DEFAULT: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, &listViewScrollIndex, &currentSelectedProperty, true); break;
+                case LABELBUTTON: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextA, NUM_PROPS_CONTROLS_A, &listViewScrollIndex, &currentSelectedProperty, true); break;
                 case SLIDER: case SLIDERBAR: case PROGRESSBAR: case CHECKBOX:
-                case COLORPICKER: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextB, NUM_PROPS_CONTROLS_B, &currentSelectedProperty, true); break;
+                case COLORPICKER: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextB, NUM_PROPS_CONTROLS_B, &listViewScrollIndex, &currentSelectedProperty, true); break;
                 case BUTTON: case TOGGLE: case COMBOBOX: case TEXTBOX: case SPINNER: case LISTVIEW:
-                default: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, &currentSelectedProperty, true); break;
+                default: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, &listViewScrollIndex, &currentSelectedProperty, true); break;
             }
-
-            //GuiEnable();
 
             if (dropDownEditMode) GuiLock();
 
@@ -656,29 +664,20 @@ int main(int argc, char *argv[])
 
             // Draw selected control rectangles
             if (currentSelectedControl >= 0) DrawRectangleLinesEx((Rectangle){ bounds[currentSelectedControl].x - 4, bounds[currentSelectedControl].y - 4, bounds[currentSelectedControl].width + 8, bounds[currentSelectedControl].height + 8 }, 2, RED);
-
+            
             checkedActive = GuiCheckBoxEx(bounds[CHECKBOX], checkedActive, "DISABLED");
 
             if (checkedActive) GuiDisable();
 
             GuiLabel((Rectangle){ anchorControls.x + 11, anchorControls.y + 35, 80, 25 }, "rGuiStyler");
-
             if (GuiLabelButton(bounds[LABELBUTTON], "github.com/raysan5/raygui")) {}
-
             toggleActive = GuiToggleButton(bounds[TOGGLE], "toggle", toggleActive);
-
             toggleValue = GuiToggleGroup((Rectangle){ anchorControls.x + 90, anchorControls.y + 70, 262, 30 }, toggleGuiText, 4, toggleValue);
-
             sliderValue = GuiSliderEx(bounds[SLIDER], sliderValue, 0, 100, "SLIDER", true);
-
             sliderBarValue = GuiSliderBarEx(bounds[SLIDERBAR], sliderBarValue, 0, 100, "SLIDERBAR", true);
-
             progressValue = GuiProgressBarEx(bounds[PROGRESSBAR], progressValue, 0, 1, true);
-
             if (GuiSpinner(bounds[SPINNER], &spinnerValue, 0, 32, 24, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
-
             comboActive = GuiComboBox(bounds[COMBOBOX], comboText, comboNum, comboActive);
-
             if (GuiTextBox(bounds[TEXTBOX], guiText, 32, textBoxEditMode)) textBoxEditMode = !textBoxEditMode;
             GuiLine((Rectangle){ anchorControls.x + 10, anchorControls.y + 275, 345, 20 }, 1);
 
@@ -703,18 +702,20 @@ int main(int argc, char *argv[])
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorControls.x + 295 + 20*(i%3), anchorControls.y + 430 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
             DrawRectangleLinesEx((Rectangle){ anchorControls.x + 295, anchorControls.y + 430, 60, 80 }, 2, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
 
-            //GuiEnable();
-
             colorPickerValue = GuiColorPicker(bounds[COLORPICKER], colorPickerValue);
-
-            //if (checkedActive) GuiDisable();
 
             // Draw save style button
             if (GuiButton(bounds[BUTTON], "Save Style")) DialogSaveStyle(comboActive);
             if (GuiDropdownBox((Rectangle){ anchorControls.x + 175, anchorControls.y + 195, 60, 30 }, dropdownBoxList, 3, &dropdownBoxActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
 
             GuiUnlock();
-            //GuiEnable();
+            
+            // Draw font texture if available
+            if (IsKeyDown(KEY_SPACE) && (font.texture.id > 0))
+            {
+                DrawRectangle(GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, font.texture.width, font.texture.height, BLACK);
+                DrawTexture(font.texture, GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, WHITE);
+            }
 
             // Draw ending message window (save)
             if (closingWindowActive)
@@ -738,6 +739,8 @@ int main(int argc, char *argv[])
     }
     // De-Initialization
     //--------------------------------------------------------------------------------------
+    UnloadFont(font);
+    
     CloseWindow();              // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
