@@ -1,0 +1,51 @@
+#
+# rgl text file (v1.0) - raygui layout text file generated using rGuiLayout
+#
+# Total number of controls:     36
+# Anchor info:   a <id> <posx> <posy> <enabled>
+# Control info:  c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+a 000 0 0 1
+a 001 50 50 1
+a 002 395 90 1
+a 003 0 0 0
+a 004 0 0 0
+a 005 0 0 0
+a 006 0 0 0
+a 007 0 0 0
+c 000 17 statusTop 0 0 720 24 1 CHOSE CONTROL            >
+c 001 18 listViewControls 10 40 140 560 1 
+c 002 18 listViewProps 155 40 180 560 1 
+c 003 0 windowControls 0 0 365 560 2 Sample raygui controls
+c 004 4 lblState 25 35 80 30 2 Default State:
+c 005 10 dropdownState 105 35 120 30 2 
+c 006 5 BtnAbout 235 35 120 30 2 About
+c 007 2 lineTop 10 65 345 20 2 
+c 008 5 BtnLoadFont 10 90 85 30 2 Load Font
+c 009 11 spinner 105 90 120 30 2 
+c 010 13 textBox 235 90 120 30 2 this is a text box
+c 011 14 slider 105 135 220 15 2 SLIDER
+c 012 15 sliderBar 105 155 220 15 2 SLIDERBAR
+c 013 8 checkBox 25 175 15 15 2 PROGRESS
+c 014 16 progressBar 105 175 220 15 2 
+c 015 4 lblButton 15 205 81 30 2 RESET STYLE
+c 016 9 comboFormat 105 205 120 30 2 
+c 017 10 dropdownFormat 235 205 120 30 2 
+c 018 6 toggle 10 245 85 30 2 toggle
+c 019 5 BtnLoadStyle 105 245 120 30 2 Load Style
+c 020 5 BtnSaveStyle 235 245 120 30 2 Save Style
+c 021 2 lineMiddle 10 280 345 20 2 
+c 022 19 colorPicker 10 305 240 240 2 
+c 023 1 groupRGBA 290 305 65 55 2 RGBA
+c 024 4 lblR 300 310 20 20 2 R:
+c 025 4 lblG 300 325 20 20 2 G:
+c 026 4 lblB 300 340 20 20 2 B:
+c 027 1 groupHSV 290 370 65 55 2 HSV
+c 028 4 lblH 300 375 20 20 2 H:
+c 029 4 lblS 300 390 20 20 2 S:
+c 030 4 lblV 300 405 20 20 2 V:
+c 031 20 DummyRec 290 435 65 80 2 Panel
+c 032 13 textHexColor 290 525 65 20 2 AABBCCDD
+c 033 17 statusBottom01 0 616 150 24 1 BASE STYLE: LIGHT
+c 034 17 statusBottom02 149 616 186 24 1 CHANGED PROPERTIES: 77
+c 035 17 statusBottom03 334 616 386 24 1 EDITION TIME: 02:45:30

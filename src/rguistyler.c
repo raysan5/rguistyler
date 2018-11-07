@@ -56,7 +56,7 @@
 
 #include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
 
-#include "raygui_style_light.h"         // Embedded Image: controls table
+//#include "raygui_style_light.h"         // Embedded Image: controls table
 
 #include <stdlib.h>                     // Required for: malloc(), free()
 #include <string.h>                     // Required for: strcmp()
@@ -70,7 +70,9 @@
 #define TOOL_VERSION_TEXT     "2.2"     // Tool version string
 
 #define NUM_CONTROLS            13      // Number of GUI controls on the list
-
+//#define NUM_PROPERTIES          14      // Number of properties (general)
+                                        // NOTE: Not all controls support all properties
+                                        
 // NOTE: Not all controls expose the same number of configurable properties,
 // depending on the control the number of properties available differs
 #define NUM_PROPS_CONTROLS_A     4      // Number of properties for controls type A
@@ -196,7 +198,7 @@ static const char *guiPropsTextC[NUM_PROPS_CONTROLS_C] = {
 
 // Full property name text
 // NOTE: Only used by SaveStyle() for text mode value comments
-static const char *guiPropertyText[NUM_PROPERTIES] = {
+static const char *guiControlPropertyText[NUM_PROPERTIES] = {
     "DEFAULT_BACKGROUND_COLOR",
     "DEFAULT_LINES_COLOR",
     "DEFAULT_TEXT_FONT",
@@ -451,7 +453,6 @@ int main(int argc, char *argv[])
     };
 
     // GUI controls data
-    bool toggleActive = false;
     bool toggleValue = false;
     const char *toggleGuiText[4] = { "toggle", "group", "selection", "options" };
 
@@ -470,24 +471,11 @@ int main(int argc, char *argv[])
     int comboActive = 0;
 
     char guiText[32] =  "custom_style.rgs";
-
-    Color colorPickerValue = RED;
     
     int currentSelectedControl = -1;        // listViewActive
     int currentSelectedProperty = -1;       // listView2Active
     int previousSelectedProperty = -1;
     int previousSelectedControl = -1;
-    
-    int listViewScrollIndex = 1;
-    int listView2ScrollIndex = 1;
-
-    Color colorBoxValue[12];
-
-    for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
-
-    char colorHex[9] = "00000000";
-
-    Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
 
     // Edit mode
     bool textBoxEditMode = false;
@@ -495,6 +483,39 @@ int main(int argc, char *argv[])
     bool spinnerEditMode = false;
     bool dropDownEditMode = false;
     //-----------------------------------------------------------
+    
+    // GUI variables definition
+    //-----------------------------------------------------------
+    int listViewControlsActive = 0;
+    const char *listViewControlsTextList[3] = { "ONE", "TWO", "THREE" };
+    int listViewPropsActive = 0;
+    const char *listViewPropsTextList[3] = { "ONE", "TWO", "THREE" };
+    
+    bool windowControlsActive = true;
+    const char *dropdownStateTextList[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
+    int dropdownStateActive = 0;
+    bool dropdownStateEditMode = false;
+    //int spinnerValue = 0;
+    char textBoxText[64] = "this is a text box";
+    //float sliderValue = 50.0f;
+    //float sliderBarValue = 50.0f;
+    bool checkBoxChecked = false;
+    float progressBarValue = 50.0f;
+    int comboFormatActive = 0;
+    const char *comboFormatTextList[3] = { "ONE", "TWO", "THREE" };
+    
+    const char *dropdownFormatTextList[5] = { "Style Text (.rgs)", "Style Binary (.rgs)", "Palette (.png)", "Palette (.h)", "Controls Table (.png)" };
+    int dropdownFormatActive = 0;
+    bool dropdownFormatEditMode = false;
+
+    bool toggleActive = false;
+    Color colorPickerValue = RED;
+    char hexColorText[9] = "00000000";
+    //----------------------------------------------------------------------------------
+    
+    Color colorBoxValue[12];
+    for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + i]);
+    Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
 
     // Keep a backup for base style
     memcpy(styleBackup, style, NUM_PROPERTIES*sizeof(int));
@@ -538,6 +559,8 @@ int main(int argc, char *argv[])
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);    // Show save style dialog (.rgs text)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();         // Show load style dialog (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE); // Show export style dialog (.rgs, .png, .h)
+            
+        if (IsKeyPressed(KEY_T)) ExportStyle("test_palette.png", PALETTE_IMAGE);
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -599,7 +622,7 @@ int main(int argc, char *argv[])
         if (progressValue > 1.0f) progressValue = 0.0f;
 
         // Get edited color from text box
-        if (!hexValueBoxEditMode) sprintf(colorHex, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
+        if (!hexValueBoxEditMode) sprintf(hexColorText, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
 
         colorHSV = ColorToHSV(colorPickerValue);
 
@@ -626,36 +649,24 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         BeginDrawing();
 
-            ClearBackground(RAYWHITE);
-
-            // Draw background rectangle
-            DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), GetColor(GuiGetStyleProperty(DEFAULT_BACKGROUND_COLOR)));
+            ClearBackground(GetColor(GuiGetStyleProperty(DEFAULT_BACKGROUND_COLOR)));
 
             // Draw info bar top
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >                            STYLE VIEWER", 35);
-
-            // Draw status bar bottom
-            //GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, FormatText("EDITION TIME: %02i:%02i:%02i", (framesCounter/60)/(60*60), ((framesCounter/60)/60)%60, (framesCounter/60)%60), 10);
-
-            // TODO: Review style info...
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 616, 150, 24 }, "BASE STYLE: UNKNOWN", 10);
-
-            GuiStatusBar((Rectangle){ anchorMain.x + 149, anchorMain.y + 616, 186, 24 }, FormatText("CHANGED PROPERTIES: %03i", changedControlsCounter), 10);
-            GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, "powered by raylib and raygui", 226);
+            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >      STYLE VIEWER", 35);
 
             // Draw Gui controls
-            GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, &listViewScrollIndex, &currentSelectedControl, true);
+            GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, NULL, &currentSelectedControl, true);
 
             // TODO: Replace by GUiListViewEx() with disabled gui elements
-            //if (GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, listViewExElementsEnable, NUM_PROPS_CONTROLS_C, &listViewExScrollIndex, &currentSelectedProperty, &listViewExFocus, listViewExEditMode)) listViewExEditMode = !listViewExEditMode;
+            //GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, listViewExElementsEnable, NUM_PROPS_CONTROLS_C, &NULL, &currentSelectedProperty, NULL, true);
             switch (currentSelectedControl)
             {
-                case DEFAULT: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, &listViewScrollIndex, &currentSelectedProperty, true); break;
-                case LABELBUTTON: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextA, NUM_PROPS_CONTROLS_A, &listViewScrollIndex, &currentSelectedProperty, true); break;
+                case DEFAULT: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C, NULL, &currentSelectedProperty, true); break;
+                case LABELBUTTON: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextA, NUM_PROPS_CONTROLS_A, NULL, &currentSelectedProperty, true); break;
                 case SLIDER: case SLIDERBAR: case PROGRESSBAR: case CHECKBOX:
-                case COLORPICKER: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextB, NUM_PROPS_CONTROLS_B, &listViewScrollIndex, &currentSelectedProperty, true); break;
+                case COLORPICKER: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextB, NUM_PROPS_CONTROLS_B, NULL, &currentSelectedProperty, true); break;
                 case BUTTON: case TOGGLE: case COMBOBOX: case TEXTBOX: case SPINNER: case LISTVIEW:
-                default: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, &listViewScrollIndex, &currentSelectedProperty, true); break;
+                default: GuiListView((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsTextC, NUM_PROPS_CONTROLS_C - 2, NULL, &currentSelectedProperty, true); break;
             }
 
             if (dropDownEditMode) GuiLock();
@@ -693,10 +704,10 @@ int main(int argc, char *argv[])
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 385, 15, 20 }, FormatText("S:  %.0f%%", colorHSV.y*100));
             GuiLabel((Rectangle){ anchorControls.x + 305, anchorControls.y + 400, 15, 20 }, FormatText("V:  %.0f%%", colorHSV.z*100));
 
-            if (GuiTextBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 520, 60, 20 }, colorHex, 8, hexValueBoxEditMode))
+            if (GuiTextBox((Rectangle){ anchorControls.x + 295, anchorControls.y + 520, 60, 20 }, hexColorText, 8, hexValueBoxEditMode))
             {
                 hexValueBoxEditMode = !hexValueBoxEditMode;
-                colorPickerValue = GetColor((int)strtoul(colorHex, NULL, 16));
+                colorPickerValue = GetColor((int)strtoul(hexColorText, NULL, 16));
             }
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorControls.x + 295 + 20*(i%3), anchorControls.y + 430 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
@@ -709,6 +720,56 @@ int main(int argc, char *argv[])
             if (GuiDropdownBox((Rectangle){ anchorControls.x + 175, anchorControls.y + 195, 60, 30 }, dropdownBoxList, 3, &dropdownBoxActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
 
             GuiUnlock();
+
+            /*
+            //----------------------------------------------------------------------------------
+            GuiStatusBar((Rectangle){ anchor01.x + 0, anchor01.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >      STYLE VIEWER", 10);
+
+            GuiListView((Rectangle){ anchor01.x + 10, anchor01.y + 40, 140, 560 }, guiControlText, NUM_CONTROLS, NULL, &currentSelectedControl, true);
+            GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, listViewPropsTextList, 3, &listViewPropsScrollIndex, &listViewPropsActive, true);
+            //GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsText, GetEnabledProperties(currentSelectedControl), NUM_PROPERTIES, NULL, &currentSelectedProperty, NULL, true);
+            
+            if (windowControlsActive)
+            {
+                windowControlsActive = !GuiWindowBox((Rectangle){ anchor02.x + 0, anchor02.y + 0, 365, 560 }, "Sample raygui controls");
+
+                GuiLabel((Rectangle){ anchor02.x + 25, anchor02.y + 35, 80, 30 }, "Default State:");
+                if (GuiDropdownBox((Rectangle){ anchor02.x + 105, anchor02.y + 35, 120, 30 }, dropdownStateTextList, 3, &dropdownStateActive, dropdownStateEditMode)) dropdownStateEditMode = !dropdownStateEditMode; 
+                if (GuiButton((Rectangle){ anchor02.x + 235, anchor02.y + 35, 120, 30 }, "About")) BtnAbout(); 
+                GuiLine((Rectangle){ anchor02.x + 10, anchor02.y + 65, 345, 20 }, 1);
+                if (GuiButton((Rectangle){ anchor02.x + 10, anchor02.y + 90, 85, 30 }, "Load Font")) BtnLoadFont(); 
+                if (GuiSpinner((Rectangle){ anchor02.x + 105, anchor02.y + 90, 120, 30 }, spinnerValue, 0, 100, 25, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
+                GuiTextBox((Rectangle){ anchor02.x + 235, anchor02.y + 90, 120, 30 }, textBoxText, 64, true);
+                sliderValue = GuiSliderEx((Rectangle){ anchor02.x + 105, anchor02.y + 135, 220, 15 }, sliderValue, 0, 100, "SLIDER", true);
+                sliderBarValue = GuiSliderBarEx((Rectangle){ anchor02.x + 105, anchor02.y + 155, 220, 15 }, sliderBarValue, 0, 100, "SLIDERBAR", true);
+                checkBoxChecked = GuiCheckBoxEx((Rectangle){ anchor02.x + 25, anchor02.y + 175, 15, 15 }, checkBoxChecked, "PROGRESS");
+                progressBarValue = GuiProgressBarEx((Rectangle){ anchor02.x + 105, anchor02.y + 175, 220, 15 }, progressBarValue, 0, 100, true);
+                GuiLabel((Rectangle){ anchor02.x + 15, anchor02.y + 205, 81, 30 }, "RESET STYLE");
+                comboFormatActive = GuiComboBox((Rectangle){ anchor02.x + 105, anchor02.y + 205, 120, 30 }, comboFormatTextList, 3, comboFormatActive);
+                if (GuiDropdownBox((Rectangle){ anchor02.x + 235, anchor02.y + 205, 120, 30 }, dropdownFormatTextList, 3, &dropdownFormatActive, dropdownFormatEditMode)) dropdownFormatEditMode = !dropdownFormatEditMode; 
+                toggleActive = GuiToggleButton((Rectangle){ anchor02.x + 10, anchor02.y + 245, 85, 30 }, "toggle", toggleActive);
+                if (GuiButton((Rectangle){ anchor02.x + 105, anchor02.y + 245, 120, 30 }, "Load Style")) BtnLoadStyle(); 
+                if (GuiButton((Rectangle){ anchor02.x + 235, anchor02.y + 245, 120, 30 }, "Save Style")) BtnSaveStyle(); 
+                GuiLine((Rectangle){ anchor02.x + 10, anchor02.y + 280, 345, 20 }, 1);
+                colorPickerValue = GuiColorPicker((Rectangle){ anchor02.x + 10, anchor02.y + 305, 240, 240 }, colorPickerValue);
+                GuiGroupBox((Rectangle){ anchor02.x + 290, anchor02.y + 305, 65, 55 }, "RGBA");
+                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 310, 20, 20 }, "R:");
+                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 325, 20, 20 }, "G:");
+                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 340, 20, 20 }, "B:");
+                GuiGroupBox((Rectangle){ anchor02.x + 290, anchor02.y + 370, 65, 55 }, "HSV");
+                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 375, 20, 20 }, "H:");
+                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 390, 20, 20 }, "S:");
+                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 405, 20, 20 }, "V:");
+                GuiDummyRec((Rectangle){ anchor02.x + 290, anchor02.y + 435, 65, 80 }, "Panel");
+                GuiTextBox((Rectangle){ anchor02.x + 290, anchor02.y + 525, 65, 20 }, hexColorText, 64, true);
+            }
+            
+            GuiStatusBar((Rectangle){ anchor01.x + 0, anchor01.y + 616, 150, 24 }, "STYLE LOADED", 10);
+            GuiStatusBar((Rectangle){ anchor01.x + 149, anchor01.y + 616, 186, 24 }, FormatText("CHANGED PROPERTIES: %03i", changedControlsCounter), 10);
+            GuiStatusBar((Rectangle){ anchor01.x + 334, anchor01.y + 616, 386, 24 }, "", 10);
+            //GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, FormatText("EDITION TIME: %02i:%02i:%02i", (framesCounter/60)/(60*60), ((framesCounter/60)/60)%60, (framesCounter/60)%60), 10);
+            //----------------------------------------------------------------------------------
+            */
             
             // Draw font texture if available
             if (IsKeyDown(KEY_SPACE) && (font.texture.id > 0))
@@ -937,7 +998,7 @@ static void SaveStyle(const char *fileName, bool binary)
 
             for (int i = 0; i < NUM_PROPERTIES; i++)
             {
-                if (styleBackup[i] != style[i]) fprintf(rgsFile, "%03i 0x%08x // %s\n", i, style[i], guiPropertyText[i]);
+                if (styleBackup[i] != style[i]) fprintf(rgsFile, "%03i 0x%08x // %s\n", i, style[i], guiControlPropertyText[i]);
             }
 
             fclose(rgsFile);
@@ -955,8 +1016,19 @@ static void ExportStyle(const char *fileName, int type)
         case PALETTE_CODE: ExportStyleAsCode(fileName); break;
         case PALETTE_IMAGE:
         {
-            // TODO: Generate image directly, do not use embedded data
-
+            // Generate palette image by code
+            Image stylePal = GenImageColor(64, 16, GetColor(style[DEFAULT_LINES_COLOR]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 1, 1, 14, 14 }, GetColor(style[DEFAULT_BACKGROUND_COLOR]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 2, 2, 12, 12 }, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 5, 7, 3, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 5, 8, 1, 3 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+            ImageDrawRectangle(&stylePal, (Rectangle){ 10, 10, 1, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+            
+            /*
             // Export style palette image
             // NOTE: We use embedded image image_raygui_style_palette_light
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
@@ -973,14 +1045,16 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
             ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
-
-            ExportImage(image_raygui_style_palette_light, fileName);
+            */
+            
+            ExportImage(stylePal, fileName);
+            UnloadImage(stylePal);
 
         } break;
         case CONTROLS_TABLE_IMAGE:
         {
             // TODO: Generate image directly, do not use embedded data
-
+            /*
             // Export style controls table image
             // NOTE: We use embedded image raygui_style_table_light
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
@@ -999,7 +1073,7 @@ static void ExportStyle(const char *fileName, int type)
             ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
 
             ExportImage(image_raygui_style_table_light, fileName);
-
+            */
         } break;
         default: break;
     }
