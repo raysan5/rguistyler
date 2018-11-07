@@ -56,8 +56,6 @@
 
 #include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
 
-//#include "raygui_style_light.h"         // Embedded Image: controls table
-
 #include <stdlib.h>                     // Required for: malloc(), free()
 #include <string.h>                     // Required for: strcmp()
 #include <stdio.h>                      // Required for: fopen(), fclose(), fread()...
@@ -98,6 +96,7 @@ typedef enum {
     CHECKBOX,
     SPINNER,
     COMBOBOX,
+    //DROPDOWNBOX,
     TEXTBOX,
     LISTVIEW,
     COLORPICKER
@@ -560,7 +559,7 @@ int main(int argc, char *argv[])
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();         // Show load style dialog (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE); // Show export style dialog (.rgs, .png, .h)
             
-        if (IsKeyPressed(KEY_T)) ExportStyle("test_palette.png", PALETTE_IMAGE);
+        if (IsKeyPressed(KEY_T)) ExportStyle("test_palette.png", CONTROLS_TABLE_IMAGE);
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -1018,62 +1017,45 @@ static void ExportStyle(const char *fileName, int type)
         {
             // Generate palette image by code
             Image stylePal = GenImageColor(64, 16, GetColor(style[DEFAULT_LINES_COLOR]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 1, 1, 14, 14 }, GetColor(style[DEFAULT_BACKGROUND_COLOR]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 2, 2, 12, 12 }, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 5, 7, 3, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 5, 8, 1, 3 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-            ImageDrawRectangle(&stylePal, (Rectangle){ 10, 10, 1, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
             
-            /*
-            // Export style palette image
-            // NOTE: We use embedded image image_raygui_style_palette_light
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_NORMAL]), GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_NORMAL]), GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_FOCUSED]), GetColor(style[DEFAULT_BORDER_COLOR_FOCUSED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_FOCUSED]), GetColor(style[DEFAULT_BASE_COLOR_FOCUSED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_FOCUSED]), GetColor(style[DEFAULT_TEXT_COLOR_FOCUSED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_PRESSED]), GetColor(style[DEFAULT_BORDER_COLOR_PRESSED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_PRESSED]), GetColor(style[DEFAULT_BASE_COLOR_PRESSED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_PRESSED]), GetColor(style[DEFAULT_TEXT_COLOR_PRESSED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
-            ImageColorReplace(&image_raygui_style_palette_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
-            */
-            
+            for (int i = 0; i < 4; i++) 
+            {
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 1, 1, 14, 14 }, GetColor(style[DEFAULT_BACKGROUND_COLOR]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 2, 2, 12, 12 }, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + 3*i]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL + 3*i]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL + 3*i]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 5, 7, 3, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 5, 8, 1, 3 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 10, 10, 1, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+            }
+
             ExportImage(stylePal, fileName);
             UnloadImage(stylePal);
 
         } break;
         case CONTROLS_TABLE_IMAGE:
         {
-            // TODO: Generate image directly, do not use embedded data
-            /*
-            // Export style controls table image
-            // NOTE: We use embedded image raygui_style_table_light
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BACKGROUND_COLOR]), GetColor(style[DEFAULT_BACKGROUND_COLOR]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_LINES_COLOR]), GetColor(style[DEFAULT_LINES_COLOR]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_NORMAL]), GetColor(style[DEFAULT_BORDER_COLOR_NORMAL]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_NORMAL]), GetColor(style[DEFAULT_BASE_COLOR_NORMAL]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_NORMAL]), GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_FOCUSED]), GetColor(style[DEFAULT_BORDER_COLOR_FOCUSED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_FOCUSED]), GetColor(style[DEFAULT_BASE_COLOR_FOCUSED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_FOCUSED]), GetColor(style[DEFAULT_TEXT_COLOR_FOCUSED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_PRESSED]), GetColor(style[DEFAULT_BORDER_COLOR_PRESSED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_PRESSED]), GetColor(style[DEFAULT_BASE_COLOR_PRESSED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_PRESSED]), GetColor(style[DEFAULT_TEXT_COLOR_PRESSED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BORDER_COLOR_DISABLED]), GetColor(style[DEFAULT_BORDER_COLOR_DISABLED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_BASE_COLOR_DISABLED]), GetColor(style[DEFAULT_BASE_COLOR_DISABLED]));
-            ImageColorReplace(&image_raygui_style_table_light, GetColor(styleBackup[DEFAULT_TEXT_COLOR_DISABLED]), GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+            RenderTexture2D target = LoadRenderTexture(1365, 190);
+            
+            // TODO: Generate controls table image
+            BeginTextureMode(target);
 
-            ExportImage(image_raygui_style_table_light, fileName);
-            */
+                GuiState(0); GuiButton((Rectangle){ 10, 10, 125, 30 }, "DISABLE");
+                GuiState(1); GuiButton((Rectangle){ 10, 50, 125, 30 }, "NORMAL");
+                GuiState(2); GuiButton((Rectangle){ 10, 90, 125, 30 }, "FOCUSED");
+                GuiState(3); GuiButton((Rectangle){ 10, 130, 125, 30 }, "PRESSED");
+                
+            EndTextureMode();
+            
+            Image styleTable = GetTextureData(target.texture);
+            ImageFlipVertical(&styleTable);
+            ExportImage(styleTable, fileName);
+            UnloadImage(styleTable);
+            UnloadRenderTexture(target);
+            
+            GuiState(1);
         } break;
         default: break;
     }
