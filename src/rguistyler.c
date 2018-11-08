@@ -28,7 +28,7 @@
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2014-2018 raylib technologies (@raysan5).
+*   Copyright (c) 2014-2018 raylib technologies (@raylibtech).
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -380,6 +380,10 @@ static void DialogExportStyle(int type);                    // Show dialog: expo
 static int GetGuiStylePropertyIndex(int control, int property);                 // Get global property index for a selected control-prop
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
 
+
+static Image GenImageStylePalette(void);                    // Generate raygui palette image by code
+static void DrawStyleControlsTable(Texture2D texture, const char *styleName, int width, int height); // Draw controls table image
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -559,7 +563,8 @@ int main(int argc, char *argv[])
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();         // Show load style dialog (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE); // Show export style dialog (.rgs, .png, .h)
             
-        if (IsKeyPressed(KEY_T)) ExportStyle("test_palette.png", CONTROLS_TABLE_IMAGE);
+        if (IsKeyPressed(KEY_T)) ExportStyle("test_controls_table.png", CONTROLS_TABLE_IMAGE);
+        if (IsKeyPressed(KEY_Y)) ExportStyle("test_palette.png", PALETTE_IMAGE);
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -1015,50 +1020,129 @@ static void ExportStyle(const char *fileName, int type)
         case PALETTE_CODE: ExportStyleAsCode(fileName); break;
         case PALETTE_IMAGE:
         {
-            // Generate palette image by code
-            Image stylePal = GenImageColor(64, 16, GetColor(style[DEFAULT_LINES_COLOR]));
-            
-            for (int i = 0; i < 4; i++) 
-            {
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 1, 1, 14, 14 }, GetColor(style[DEFAULT_BACKGROUND_COLOR]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 2, 2, 12, 12 }, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + 3*i]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL + 3*i]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL + 3*i]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 5, 7, 3, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 5, 8, 1, 3 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
-                ImageDrawRectangle(&stylePal, (Rectangle){ 15*i + 10, 10, 1, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
-            }
-
+            Image stylePal = GenImageStylePalette();
             ExportImage(stylePal, fileName);
             UnloadImage(stylePal);
 
         } break;
         case CONTROLS_TABLE_IMAGE:
         {
-            RenderTexture2D target = LoadRenderTexture(1365, 190);
+            Image image = GenImageStylePalette();
+            Texture2D texture = LoadTextureFromImage(image);
+            //UnloadImage(image);
             
-            // TODO: Generate controls table image
+            RenderTexture2D target = LoadRenderTexture(1320, 256);
             BeginTextureMode(target);
-
-                GuiState(0); GuiButton((Rectangle){ 10, 10, 125, 30 }, "DISABLE");
-                GuiState(1); GuiButton((Rectangle){ 10, 50, 125, 30 }, "NORMAL");
-                GuiState(2); GuiButton((Rectangle){ 10, 90, 125, 30 }, "FOCUSED");
-                GuiState(3); GuiButton((Rectangle){ 10, 130, 125, 30 }, "PRESSED");
-                
+                DrawStyleControlsTable(texture, "light", target.texture.width, target.texture.height);
             EndTextureMode();
-            
             Image styleTable = GetTextureData(target.texture);
             ImageFlipVertical(&styleTable);
             ExportImage(styleTable, fileName);
             UnloadImage(styleTable);
             UnloadRenderTexture(target);
             
-            GuiState(1);
         } break;
         default: break;
     }
+}
+
+// Generate raygui palette image by code
+static Image GenImageStylePalette(void)
+{
+    Image image = GenImageColor(64, 16, GetColor(style[DEFAULT_LINES_COLOR]));
+    
+    for (int i = 0; i < 4; i++) 
+    {
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 1, 1, 14, 14 }, GetColor(style[DEFAULT_BACKGROUND_COLOR]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 2, 2, 12, 12 }, GetColor(style[DEFAULT_BORDER_COLOR_NORMAL + 3*i]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL + 3*i]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(style[DEFAULT_BASE_COLOR_NORMAL + 3*i]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 5, 7, 3, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 5, 8, 1, 3 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+        ImageDrawRectangle(&image, (Rectangle){ 15*i + 10, 10, 1, 1 }, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL + 3*i]));
+    }
+    
+    return image;
+}
+
+// Draw controls table image
+static void DrawStyleControlsTable(Texture2D texture, const char *styleName, int width, int height)
+{
+    #define TABLE_LEFT_PADDING      15
+    #define TABLE_TOP_PADDING       20
+    #define TABLE_CELL_WIDTH       100
+    #define TABLE_CELL_HEIGHT       40
+    
+    #define TABLE_CONTROLS_COUNT    12
+    
+    static const char *tableStateName[4] = { "DISABLED", "NORMAL", "FOCUSED", "PRESSED" };
+    static const char *tableControlsName[TABLE_CONTROLS_COUNT] = {
+        "LABEL",        // LABELBUTTON
+        "BUTTON",
+        "TOGGLE",       // TOGGLEGROUP
+        "CHECKBOX",
+        "SLIDER",
+        "SLIDERBAR",
+        "PROGRESSBAR",
+        "SPINNER",
+        "COMBOBOX",
+        "DROPDOWNBOX",
+        "TEXTBOX",
+        //"VALUEBOX",
+        "SPINNER"
+    };
+
+    Rectangle rec = { 0 };      // Current drawing rectangle space
+    Rectangle table = { 0, 0, width, height };
+    
+    // Draw style title
+    DrawText(FormatText("raygui style table: %s", styleName), TABLE_LEFT_PADDING, 20, 10, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+    
+    // Draw left column
+    // Image image = GenImageStylePalette();
+    // Texture2D texture = LoadTextureFromImage(image);     // It seems to fail when loading the texture with render-texture active 
+    // UnloadImage(image);
+    rec = (Rectangle){ TABLE_LEFT_PADDING, TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, TABLE_CELL_WIDTH, TABLE_CELL_HEIGHT };
+    
+    for (int i = 0; i < 4; i++)
+    {
+        GuiGroupBox(rec, NULL);
+        DrawTextureRec(texture, (Rectangle){ 2 + i*15, 2, 12, 12 }, (Vector2){ rec.x + 6, rec.y + TABLE_CELL_HEIGHT/2 - 12/2 }, WHITE);
+        GuiLabelEx(rec, tableStateName[i], 0, 24);     // Image padding
+        rec.y += TABLE_CELL_HEIGHT - 1;         // NOTE: We add/remove 1px to draw lines overlapped!
+    }
+    
+    // Draw basic controls
+    for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
+    {
+        rec = (Rectangle){ TABLE_LEFT_PADDING + TABLE_CELL_WIDTH + i*TABLE_CELL_WIDTH - i - 1, TABLE_TOP_PADDING + 20, TABLE_CELL_WIDTH, TABLE_CELL_HEIGHT/2 + 1 };
+        
+        // Draw grid lines: control name
+        GuiGroupBox(rec, NULL);
+        GuiLabelEx(rec, tableControlsName[i], 1, 0);
+        rec.y += TABLE_CELL_HEIGHT/2;
+        rec.height = TABLE_CELL_HEIGHT;
+        
+        // TODO: Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
+        for (int j = 0; j < 4; j++)
+        {
+            // Draw grid lines: control state
+            GuiGroupBox(rec, NULL);
+            
+            //GuiState(j);
+            // Draw control centered correctly in grid
+            //GuiButton((Rectangle){ 10, 10, 90, 20 }, "BUTTON");
+            //GuiState(1);
+            
+            rec.y += TABLE_CELL_HEIGHT - 1;
+        }
+    }
+    
+    // Draw copyright and software info (bottom-right)
+    DrawText("raygui style table automatically generated with rGuiStyler", TABLE_LEFT_PADDING, table.height - 30, 10, GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+    DrawText("rGuiStyler created by raylib technologies (@raylibtech)", table.width - MeasureText("rGuiStyler created by raylib technologies (@raylibtech)", 10) - 20, table.height - 30, 10, GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
 }
 
 // Export gui style as color palette code
