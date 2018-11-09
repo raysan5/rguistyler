@@ -382,7 +382,7 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    
 
 
 static Image GenImageStylePalette(void);                    // Generate raygui palette image by code
-static void DrawStyleControlsTable(Texture2D texture, const char *styleName, int width, int height); // Draw controls table image
+static Image GenImageStyleControlsTable(const char *styleName, const char *styleCreator); // Draw controls table image
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -1020,26 +1020,16 @@ static void ExportStyle(const char *fileName, int type)
         case PALETTE_CODE: ExportStyleAsCode(fileName); break;
         case PALETTE_IMAGE:
         {
-            Image stylePal = GenImageStylePalette();
-            ExportImage(stylePal, fileName);
-            UnloadImage(stylePal);
+            Image imStylePal = GenImageStylePalette();
+            ExportImage(imStylePal, fileName);
+            UnloadImage(imStylePal);
 
         } break;
         case CONTROLS_TABLE_IMAGE:
         {
-            Image image = GenImageStylePalette();
-            Texture2D texture = LoadTextureFromImage(image);
-            //UnloadImage(image);
-            
-            RenderTexture2D target = LoadRenderTexture(1320, 256);
-            BeginTextureMode(target);
-                DrawStyleControlsTable(texture, "light", target.texture.width, target.texture.height);
-            EndTextureMode();
-            Image styleTable = GetTextureData(target.texture);
-            ImageFlipVertical(&styleTable);
-            ExportImage(styleTable, fileName);
-            UnloadImage(styleTable);
-            UnloadRenderTexture(target);
+            Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
+            ExportImage(imStyleTable, fileName);
+            UnloadImage(imStyleTable);
             
         } break;
         default: break;
@@ -1068,16 +1058,32 @@ static Image GenImageStylePalette(void)
 }
 
 // Draw controls table image
-static void DrawStyleControlsTable(Texture2D texture, const char *styleName, int width, int height)
+static Image GenImageStyleControlsTable(const char *styleName, const char *styleCreator)
 {
     #define TABLE_LEFT_PADDING      15
     #define TABLE_TOP_PADDING       20
-    #define TABLE_CELL_WIDTH       100
+
     #define TABLE_CELL_HEIGHT       40
+    #define TABLE_CELL_PADDING       4
     
     #define TABLE_CONTROLS_COUNT    12
     
-    static const char *tableStateName[4] = { "DISABLED", "NORMAL", "FOCUSED", "PRESSED" };
+    typedef enum {
+        LABEL = 0,
+        BUTTON,
+        TOGGLE,
+        CHECKBOX,
+        SLIDER,
+        SLIDERBAR,
+        PROGRESSBAR,
+        COMBOBOX,
+        DROPDOWNBOX,
+        TEXTBOX,
+        VALUEBOX,
+        SPINNER
+    } TableControlType;
+    
+    static const char *tableStateName[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
     static const char *tableControlsName[TABLE_CONTROLS_COUNT] = {
         "LABEL",        // LABELBUTTON
         "BUTTON",
@@ -1086,63 +1092,143 @@ static void DrawStyleControlsTable(Texture2D texture, const char *styleName, int
         "SLIDER",
         "SLIDERBAR",
         "PROGRESSBAR",
-        "SPINNER",
         "COMBOBOX",
         "DROPDOWNBOX",
-        "TEXTBOX",
-        //"VALUEBOX",
-        "SPINNER"
+        "TEXTBOX",      // TEXTBOXMULTI
+        "VALUEBOX",
+        "SPINNER"       // VALUEBOX + BUTTON
     };
+    
+    // TODO: Controls grid with should be calculated
+    int controlGridWidth[TABLE_CONTROLS_COUNT] = {
+        80,     // LABEL
+        100,    // BUTTON
+        100,    // TOGGLE
+        160,    // CHECKBOX
+        100,    // SLIDER
+        100,    // SLIDERBAR
+        100,    // PROGRESSBAR
+        130,    // COMBOBOX,
+        130,    // DROPDOWNBOX
+        100,    // TEXTBOX
+        100,    // VALUEBOX
+        100,    // SPINNER
+    };
+    
+    int tableControlsNameWidth = 85;
+    
+    int tableWidth = 0;
+    int tableHeight = 256;
+    
+    // TODO: Compute proper texture size depending on font size and controls text!
+    tableWidth = TABLE_LEFT_PADDING*2 + tableControlsNameWidth;
+    for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += (controlGridWidth[i] - 1);
+
+    const char *comboBoxText[2] = { "ComboBox", "ComboBox" };
+    const char *dropdownBoxText[2] = { "DropdownBox", "DropdownBox" };
+    int dropdownActive = 0;
+    int value = 40;
 
     Rectangle rec = { 0 };      // Current drawing rectangle space
-    Rectangle table = { 0, 0, width, height };
+
+    // NOTE: If loading texture when render-texture is active, it seem to fail 
+    Image imStylePal = GenImageStylePalette();
+    Texture2D texStylePal = LoadTextureFromImage(imStylePal);
+    UnloadImage(imStylePal);
     
-    // Draw style title
-    DrawText(FormatText("raygui style table: %s", styleName), TABLE_LEFT_PADDING, 20, 10, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
+    RenderTexture2D target = LoadRenderTexture(tableWidth, tableHeight);
     
-    // Draw left column
-    // Image image = GenImageStylePalette();
-    // Texture2D texture = LoadTextureFromImage(image);     // It seems to fail when loading the texture with render-texture active 
-    // UnloadImage(image);
-    rec = (Rectangle){ TABLE_LEFT_PADDING, TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, TABLE_CELL_WIDTH, TABLE_CELL_HEIGHT };
+    GuiSetStyleProperty(SLIDER_SLIDER_WIDTH, 10);
+
+    // Texture rendering
+    //--------------------------------------------------------------------------------------------
+    BeginTextureMode(target);
     
-    for (int i = 0; i < 4; i++)
-    {
-        GuiGroupBox(rec, NULL);
-        DrawTextureRec(texture, (Rectangle){ 2 + i*15, 2, 12, 12 }, (Vector2){ rec.x + 6, rec.y + TABLE_CELL_HEIGHT/2 - 12/2 }, WHITE);
-        GuiLabelEx(rec, tableStateName[i], 0, 24);     // Image padding
-        rec.y += TABLE_CELL_HEIGHT - 1;         // NOTE: We add/remove 1px to draw lines overlapped!
-    }
-    
-    // Draw basic controls
-    for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
-    {
-        rec = (Rectangle){ TABLE_LEFT_PADDING + TABLE_CELL_WIDTH + i*TABLE_CELL_WIDTH - i - 1, TABLE_TOP_PADDING + 20, TABLE_CELL_WIDTH, TABLE_CELL_HEIGHT/2 + 1 };
+        // Draw style title
+        DrawText("raygui style table: ", TABLE_LEFT_PADDING, 20, 10, GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+        DrawText(FormatText("%s by %s", styleName, styleCreator), TABLE_LEFT_PADDING + MeasureText("raygui style table: ", 10), 20, 10, GetColor(style[DEFAULT_TEXT_COLOR_NORMAL]));
         
-        // Draw grid lines: control name
-        GuiGroupBox(rec, NULL);
-        GuiLabelEx(rec, tableControlsName[i], 1, 0);
-        rec.y += TABLE_CELL_HEIGHT/2;
-        rec.height = TABLE_CELL_HEIGHT;
+        // Draw left column
+        rec = (Rectangle){ TABLE_LEFT_PADDING, TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableControlsNameWidth, TABLE_CELL_HEIGHT };
         
-        // TODO: Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
-        for (int j = 0; j < 4; j++)
+        for (int i = 0; i < 4; i++)
         {
-            // Draw grid lines: control state
             GuiGroupBox(rec, NULL);
-            
-            //GuiState(j);
-            // Draw control centered correctly in grid
-            //GuiButton((Rectangle){ 10, 10, 90, 20 }, "BUTTON");
-            //GuiState(1);
-            
-            rec.y += TABLE_CELL_HEIGHT - 1;
+            DrawTextureRec(texStylePal, (Rectangle){ 2 + i*15, 2, 12, 12 }, (Vector2){ rec.x + 6, rec.y + TABLE_CELL_HEIGHT/2 - 12/2 }, WHITE);
+            GuiState(i); GuiLabelButton((Rectangle){ rec.x + 24, rec.y, rec.width, rec.height }, tableStateName[i]);
+            rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
         }
-    }
+        
+        GuiState(GUI_STATE_NORMAL);
+        
+        int offsetWidth = TABLE_LEFT_PADDING + tableControlsNameWidth;
+        
+        //GuiLock();
+        
+        // Draw basic controls
+        for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
+        {
+            rec = (Rectangle){ offsetWidth - i - 1, TABLE_TOP_PADDING + 20, controlGridWidth[i], TABLE_CELL_HEIGHT/2 + 1 };
+
+            // Draw grid lines: control name
+            GuiGroupBox(rec, NULL);
+            GuiLabelEx(rec, tableControlsName[i], 1, 0);
+            rec.y += TABLE_CELL_HEIGHT/2;
+            rec.height = TABLE_CELL_HEIGHT;
+            
+            // Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
+            for (int j = 0; j < 4; j++)
+            {
+                // Draw grid lines: control state
+                GuiGroupBox(rec, NULL);
+
+                GuiState(j);
+                    // Draw control centered correctly in grid
+                    switch(i)
+                    {
+                        case LABEL: GuiLabelButton((Rectangle){ rec.x + rec.width/2 - MeasureText("Label", 10)/2, rec.y, 80, 40 }, "Label"); break;
+                        case BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, "Button"); break;
+                        case TOGGLE: GuiToggleButton((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, "Toggle", false); break;
+                        case CHECKBOX: 
+                        {
+                            GuiCheckBoxEx((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, false, "NoCheck");
+                            DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(style[DEFAULT_LINES_COLOR]));
+                            GuiCheckBoxEx((Rectangle){ rec.x + 10 + controlGridWidth[i]/2, rec.y + rec.height/2 - 15/2, 15, 15 }, true, "Checked");
+                        } break;
+                        case SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, 40, 0, 100); break;
+                        case SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, 40, 0, 100); break;
+                        case PROGRESSBAR: GuiProgressBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, 60, 0, 100); break;
+                        case COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - 120/2, rec.y + rec.height/2 - 20/2, 120, 20 }, comboBoxText, 2, 0); break;
+                        case DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - 120/2, rec.y + rec.height/2 - 20/2, 120, 20 }, dropdownBoxText, 2, &dropdownActive, false); break;
+                        case TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, "text box", 32, false); break;
+                        case VALUEBOX: GuiValueBox((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, &value, 0, 100, false); break;
+                        case SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, &value, 0, 100, 18, false); break;
+                        default: break;
+                    }
+                GuiState(GUI_STATE_NORMAL);
+                
+                rec.y += TABLE_CELL_HEIGHT - 1;
+            }
+            
+            offsetWidth += controlGridWidth[i];
+        }
+        
+        //GuiUnlock();
+        
+        // Draw copyright and software info (bottom-right)
+        DrawText("raygui style table automatically generated with rGuiStyler", TABLE_LEFT_PADDING, tableHeight - 30, 10, GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+        DrawText("rGuiStyler created by raylib technologies (@raylibtech)", tableWidth - MeasureText("rGuiStyler created by raylib technologies (@raylibtech)", 10) - 20, tableHeight - 30, 10, GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
     
-    // Draw copyright and software info (bottom-right)
-    DrawText("raygui style table automatically generated with rGuiStyler", TABLE_LEFT_PADDING, table.height - 30, 10, GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
-    DrawText("rGuiStyler created by raylib technologies (@raylibtech)", table.width - MeasureText("rGuiStyler created by raylib technologies (@raylibtech)", 10) - 20, table.height - 30, 10, GetColor(style[DEFAULT_TEXT_COLOR_DISABLED]));
+    EndTextureMode();
+    //--------------------------------------------------------------------------------------------
+
+    Image imStyleTable = GetTextureData(target.texture);
+    ImageFlipVertical(&imStyleTable);
+
+    UnloadRenderTexture(target);
+    UnloadTexture(texStylePal);
+    
+    return imStyleTable;
 }
 
 // Export gui style as color palette code
