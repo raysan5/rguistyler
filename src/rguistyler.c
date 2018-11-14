@@ -4,7 +4,7 @@
 *
 *   CONFIGURATION:
 *
-*   #define ENABLE_PRO_FEATURES
+*   #define VERSION_ONE
 *       Enable PRO features for the tool. Usually command-line and export options related.
 *
 *   DEPENDENCIES:
@@ -62,7 +62,7 @@
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
-#define ENABLE_PRO_FEATURES             // Enable PRO version features
+#define VERSION_ONE             // Enable PRO version features
 
 #define TOOL_VERSION_TEXT     "2.5"     // Tool version string
 
@@ -128,12 +128,14 @@ static bool styleLoaded = false;            // Register if we are working over a
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
-#if defined(ENABLE_PRO_FEATURES)
+#if defined(VERSION_ONE)
 static void ShowCommandLineInfo(void);                      // Show command line usage info
 static void ProcessCommandLine(int argc, char *argv[]);     // Process command line input
 #endif
 
 // Load/Save/Export data functions
+static void SaveStyle(const char *fileName);                // Save style file (.rgs)
+
 static void ExportStyle(const char *fileName, int type);    // Export style color palette
 static void ExportStyleAsCode(const char *fileName);        // Export gui style as color palette code
 
@@ -168,13 +170,13 @@ int main(int argc, char *argv[])
                 strcpy(inFileName, argv[1]);        // Read input filename to open with gui interface
             }
         }
-#if defined(ENABLE_PRO_FEATURES)
+#if defined(VERSION_ONE)
         else
         {
             ProcessCommandLine(argc, argv);
             return 0;
         }
-#endif      // ENABLE_PRO_FEATURES
+#endif      // VERSION_ONE
     }
 
     // GUI usage mode - Initialization
@@ -569,7 +571,7 @@ int main(int argc, char *argv[])
 // Module Functions Definitions (local)
 //--------------------------------------------------------------------------------------------
 
-#if defined(ENABLE_PRO_FEATURES)
+#if defined(VERSION_ONE)
 // Show command line usage info
 static void ShowCommandLineInfo(void)
 {
@@ -680,11 +682,104 @@ static void ProcessCommandLine(int argc, char *argv[])
 
     if (showUsageInfo) ShowCommandLineInfo();
 }
-#endif      // ENABLE_PRO_FEATURES
+#endif      // VERSION_ONE
 
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
 //--------------------------------------------------------------------------------------------
+
+// Save raygui style file (.rgs)
+static void SaveStyle(const char *fileName)
+{
+    FILE *rgsFile = NULL;
+#if defined(RAYGUI_STYLE_SAVE_AS_TEXT)
+    rgsFile = fopen(fileName, "wt");
+    
+    if (rgsFile != NULL)
+    {
+        // Write some description comments
+        fprintf(rgsFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
+        fprintf(rgsFile, "//                                                                              //\n");
+        fprintf(rgsFile, "// raygui style exporter v2.0 - Style export as text file                       //\n");
+        fprintf(rgsFile, "// more info and bugs-report: github.com/raysan5/raygui                         //\n");
+        fprintf(rgsFile, "//                                                                              //\n");
+        fprintf(rgsFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
+        fprintf(rgsFile, "//                                                                              //\n");
+        fprintf(rgsFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
+        
+        fprintf(rgsFile, "## Style information\n");
+        fprintf(rgsFile, "NUM_CONTROLS                       %i\n", NUM_CONTROLS);
+        fprintf(rgsFile, "NUM_CONTROL_PROPERTIES_DEFAULT    %i\n", NUM_CONTROL_PROPS_DEFAULT);
+        fprintf(rgsFile, "NUM_CONTROL_PROPERTIES_EXTENDED   %i\n", NUM_CONTROL_PROPS_EX);
+
+        // NOTE: Control properties are just written as hexadecimal values, no control name info provided
+        // To print control properties names, enum values hould be stored as string arrays also;
+        // as long as .rgs text save mode is just intended for debug pourpose, not included that info.
+        for (int i = 0; i < NUM_CONTROLS; i++)
+        {
+            if (i == 0) fprintf(rgsFile, "## DEFAULT properties\n");
+            else fprintf(rgsFile, "## CONTROL %02i default properties\n", i);
+            
+            for (int j = 0; j < NUM_CONTROL_PROPS_DEFAULT + NUM_CONTROL_PROPS_EX; j++) 
+            {
+                if (j == NUM_CONTROL_PROPS_DEFAULT) fprintf(rgsFile, "## CONTROL %02i extended properties\n", i);
+                fprintf(rgsFile, "0x%08x\n", GuiGetStyle(i, j));
+            }
+            
+            fprintf(rgsFile, "\n");
+        }
+    }
+#else
+    rgsFile = fopen(fileName, "wb");
+
+    if (rgsFile != NULL)
+    {
+        // Style File Structure (.rgs)
+        // ------------------------------------------------------
+        // Offset | Size  | Type       | Description
+        // ------------------------------------------------------
+        // 0      | 4     | char       | Signature: "rGS " // ID
+        // 4      | 2     | short      | Version: 200
+        // 6      | 2     | short      | reserved
+        // 8      | 2     | short      | # Controls
+        // 10     | 2     | short      | # Props Default
+        // 12     | 2     | short      | # Props Extended
+        // 14     | 2     | short      | reserved
+        
+        // 16     | N     | int        | Properties Data (NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED))
+        
+        // 16+N   | M     | -          | Custom Font Data
+        // ------------------------------------------------------
+
+        unsigned char value = 0;
+        
+        char signature[5] = "rGS ";
+        short version = 200;
+        short numControls = NUM_CONTROLS;
+        short numPropsDefault = NUM_CONTROL_PROPS_DEFAULT;
+        short numPropsExtended = NUM_CONTROL_PROPS_EX;
+
+        fwrite(signature, 1, 4, rgsFile);
+        fwrite(&version, 1, sizeof(short), rgsFile);
+        fwrite(&numControls, 1, sizeof(short), rgsFile);
+        fwrite(&numPropsDefault, 1, sizeof(short), rgsFile);
+        fwrite(&numPropsExtended, 1, sizeof(short), rgsFile);
+
+        for (int i = 0; i < NUM_CONTROLS; i++)
+        {
+            for (int j = 0; j < NUM_CONTROL_PROPS_DEFAULT + NUM_CONTROL_PROPS_EX; j++) 
+            {
+                value = GuiGetStyle(i, j);
+                fwrite(&value, 1, 4, rgsFile);
+            }
+        }
+        
+        // TODO: Write font data (embedding)
+        // Need to save IMAGE data (GRAYSCALE?) and CHAR data
+    }
+#endif
+    if (rgsFile != NULL) fclose(rgsFile);
+}
 
 // Export style color palette
 static void ExportStyle(const char *fileName, int type)
