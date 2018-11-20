@@ -50,7 +50,7 @@
 #include "raylib.h"
 
 #define RAYGUI_IMPLEMENTATION
-#define RAYGUI_STYLE_SAVE_LOAD
+#define RAYGUI_STYLE_LOADING
 #include "external/raygui.h"            // Required for: IMGUI controls
 
 #include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
@@ -120,6 +120,18 @@ static const char *guiPropsText[NUM_PROPS_DEFAULT] = {
     "INNER_PADDING",
     "RESERVED01",
     "RESERVED02"
+};
+
+// Controls default extended properties
+static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
+    "TEXT_SIZE",
+    "TEXT_SPACING",
+    "LINES_COLOR",
+    "BACKGROUND_COLOR",
+    "RESERVED01",
+    "RESERVED02",
+    "RESERVED03",
+    "RESERVED04",
 };
 
 static bool styleSaved = false;             // Show save dialog on closing if not saved
@@ -678,7 +690,7 @@ static void SaveStyle(const char *fileName)
             {
                 if (j == NUM_PROPS_DEFAULT) fprintf(rgsFile, "## CONTROL %02i extended properties\n", i);
                 
-                if (j < NUM_PROPS_EXTENDED) fprintf(rgsFile, "0x%08x    // %s%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[i + j]);
+                if (j < NUM_PROPS_EXTENDED) fprintf(rgsFile, "0x%08x    // %s_%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[i + j]);
                 else fprintf(rgsFile, "0x%08x    // EXTENDED PROPERTY \n", GuiGetStyle(i, j));
             }
             
@@ -723,7 +735,7 @@ static void SaveStyle(const char *fileName)
         // 52+4*N  | 4       | int        | Image width
         // 56+4*N  | 4       | int        | Image height
         // 60+4*N  | 4       | int        | Image format
-        // 64+4*N  | imSize  | char       | Image data
+        // 64+4*N  | imSize  | *          | Image data
         
         // Custom Font Data : Chars Info (32 bytes * charCount)
         // foreach (charCount)
@@ -760,22 +772,23 @@ static void SaveStyle(const char *fileName)
         }
         
         value = 0;
-        bool customFontLoaded = false;
         
         // Write font data (embedding)
-        if (customFontLoaded)
+        if (useCustomFont)
         {
+            Image imFont = GetTextureData(font.texture);
+            
             // Write font parameters
             int fontParamsSize = 32;
             int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-            int fontCharsDataSize = font.charCount*32;       // 32 bytes by char
-            int fontSize = fontParamsSize + fontImageSize + fontCharsDataSize;
+            int fontCharsDataSize = font.charsCount*32;       // 32 bytes by char
+            int fontDataSize = fontParamsSize + fontImageSize + fontCharsDataSize;
             int fontType = 0;       // 0-NORMAL, 1-SDF
             
-            fwrite(&fontSize, 1, sizeof(int), rgsFile);
+            fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
             fwrite(&font.baseSize, 1, sizeof(int), rgsFile);
             fwrite(&font.charsCount, 1, sizeof(int), rgsFile);
-            fwrite(&value, 1, sizeof(int), rgsFile);
+            fwrite(&fontType, 1, sizeof(int), rgsFile);
             
             // TODO: Define font white rectangle
             Rectangle rec = { 0 }; 
@@ -788,6 +801,8 @@ static void SaveStyle(const char *fileName)
             fwrite(&imFont.format, 1, sizeof(int), rgsFile);
             fwrite(&imFont.data, 1, fontImageSize, rgsFile);
             
+            UnloadImage(imFont);
+                
             // Write font chars data
             for (int i = 0; i < font.charsCount; i++)
             {
@@ -809,7 +824,7 @@ static void ExportStyle(const char *fileName, int type)
 {
     switch (type)
     {
-        case STYLE_FILE: GuiSaveStyle(fileName); break;
+        case STYLE_FILE: SaveStyle(fileName); break;
         case PALETTE_CODE: ExportStyleAsCode(fileName); break;
         case PALETTE_IMAGE:
         {
@@ -1043,26 +1058,17 @@ static void ExportStyleAsCode(const char *fileName)
     fprintf(txtFile, "//                                                                              //\n");
     fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
-    fprintf(txtFile, "// raygui custom color style palette\n");
-    fprintf(txtFile, "// NOTE: Only default colors defined, expanded to all properties\n");
+    fprintf(txtFile, "// raygui custom style palette\n");
+    fprintf(txtFile, "// NOTE: Only DEFAULT style defined, expanded to all controls properties\n");
     fprintf(txtFile, "// NOTE: Use GuiLoadStylePalette(stylePalette);\n");
 
     // Write byte data as hexadecimal text
-    fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", 14);
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BACKGROUND_COLOR\n", GuiGetStyle(DEFAULT, BACKGROUND_COLOR));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_LINES_COLOR\n", GuiGetStyle(DEFAULT, LINES_COLOR));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_NORMAL\n", GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_NORMAL\n", GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_NORMAL\n", GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_FOCUSED\n", GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_FOCUSED\n", GuiGetStyle(DEFAULT, BASE_COLOR_FOCUSED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_FOCUSED\n", GuiGetStyle(DEFAULT, TEXT_COLOR_FOCUSED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_PRESSED\n", GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_PRESSED\n", GuiGetStyle(DEFAULT, BASE_COLOR_PRESSED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_PRESSED\n", GuiGetStyle(DEFAULT, TEXT_COLOR_PRESSED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BORDER_COLOR_DISABLED\n", GuiGetStyle(DEFAULT, BORDER_COLOR_DISABLED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_BASE_COLOR_DISABLED\n", GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED));
-    fprintf(txtFile, "    0x%08x,    // DEFAULT_TEXT_COLOR_DISABLED\n", GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED));
+    fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
+    for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
+    {
+        if (i < NUM_PROPS_EXTENDED) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
+        else fprintf(rgsFile, "0x%08x    // DEFAULT_%s \n", GuiGetStyle(i, j), guiPropsExText[i - NUM_PROPS_DEFAULT]);
+    }
     fprintf(txtFile, "};\n");
 
     fclose(txtFile);
@@ -1101,7 +1107,7 @@ static void DialogSaveStyle(bool binary)
         if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
 
         // Save style file (text or binary)
-        GuiSaveStyle(outFileName);
+        SaveStyle(outFileName);
         styleSaved = true;
     }
 }
