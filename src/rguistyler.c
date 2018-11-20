@@ -83,7 +83,7 @@ typedef enum {
 //----------------------------------------------------------------------------------
 
 // Default Light style backup to check changed properties
-static unsigned int styleBackup[NUM_CONTROLS*(NUM_CONTROL_PROPS_DEFAULT + NUM_CONTROL_PROPS_EX)] = { 0 };
+static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
 
 // Controls name text
 // NOTE: Some styles are shared by multiple controls
@@ -103,7 +103,7 @@ static const char *guiControlText[NUM_CONTROLS] = {
 };
 
 // Controls default properties name text
-static const char *guiPropsText[NUM_CONTROL_PROPS_DEFAULT] = {
+static const char *guiPropsText[NUM_PROPS_DEFAULT] = {
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "TEXT_COLOR_NORMAL",
@@ -116,14 +116,17 @@ static const char *guiPropsText[NUM_CONTROL_PROPS_DEFAULT] = {
     "BORDER_COLOR_DISABLED",
     "BASE_COLOR_DISABLED",
     "TEXT_COLOR_DISABLED",
-    "TEXT_SIZE",
-    "TEXT_SPACING",
     "BORDER_WIDTH",
     "INNER_PADDING",
+    "RESERVED01",
+    "RESERVED02"
 };
 
 static bool styleSaved = false;             // Show save dialog on closing if not saved
 static bool styleLoaded = false;            // Register if we are working over a loaded style (auto-save)
+
+static bool useCustomFont = false;          // Use custom font
+static Font font = { 0 };                   // Custom font
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -285,9 +288,7 @@ int main(int argc, char *argv[])
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
 
     // TODO: Keep a backup for base style
-    //memcpy(styleBackup, GuiGetStyleDefault(), NUM_CONTROLS*(NUM_CONTROL_PROPS_DEFAULT + NUM_CONTROL_PROPS_EX)*sizeof(unsigned int));
-
-    Font font = { 0 };
+    //memcpy(styleBackup, GuiGetStyleDefault(), NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)*sizeof(unsigned int));
 
     SetTargetFPS(60);
     //------------------------------------------------------------
@@ -426,7 +427,7 @@ int main(int argc, char *argv[])
             GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, NULL, &currentSelectedControl, true);
 
             // TODO: Replace by GuiListViewEx() with disabled gui elements
-            GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsText, NULL, NUM_CONTROL_PROPS_DEFAULT - 4, NULL, &currentSelectedProperty, NULL, true);
+            GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsText, NULL, NUM_PROPS_DEFAULT - 4, NULL, &currentSelectedProperty, NULL, true);
 
             if (dropDownEditMode) GuiLock();
 
@@ -480,55 +481,10 @@ int main(int argc, char *argv[])
 
             GuiUnlock();
 
-            /*
-            //----------------------------------------------------------------------------------
-            GuiStatusBar((Rectangle){ anchor01.x + 0, anchor01.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >      STYLE VIEWER", 10);
 
-            GuiListView((Rectangle){ anchor01.x + 10, anchor01.y + 40, 140, 560 }, guiControlText, NUM_CONTROLS, NULL, &currentSelectedControl, true);
-            GuiListView((Rectangle){ anchor01.x + 155, anchor01.y + 40, 180, 560 }, listViewPropsTextList, 3, &listViewPropsScrollIndex, &listViewPropsActive, true);
-            //GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsText, GetEnabledProperties(currentSelectedControl), NUM_PROPERTIES, NULL, &currentSelectedProperty, NULL, true);
-            
-            if (windowControlsActive)
-            {
-                windowControlsActive = !GuiWindowBox((Rectangle){ anchor02.x + 0, anchor02.y + 0, 365, 560 }, "Sample raygui controls");
 
-                GuiLabel((Rectangle){ anchor02.x + 25, anchor02.y + 35, 80, 30 }, "Default State:");
-                if (GuiDropdownBox((Rectangle){ anchor02.x + 105, anchor02.y + 35, 120, 30 }, dropdownStateTextList, 3, &dropdownStateActive, dropdownStateEditMode)) dropdownStateEditMode = !dropdownStateEditMode; 
-                if (GuiButton((Rectangle){ anchor02.x + 235, anchor02.y + 35, 120, 30 }, "About")) BtnAbout(); 
-                GuiLine((Rectangle){ anchor02.x + 10, anchor02.y + 65, 345, 20 }, 1);
-                if (GuiButton((Rectangle){ anchor02.x + 10, anchor02.y + 90, 85, 30 }, "Load Font")) BtnLoadFont(); 
-                if (GuiSpinner((Rectangle){ anchor02.x + 105, anchor02.y + 90, 120, 30 }, spinnerValue, 0, 100, 25, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
-                GuiTextBox((Rectangle){ anchor02.x + 235, anchor02.y + 90, 120, 30 }, textBoxText, 64, true);
-                sliderValue = GuiSliderEx((Rectangle){ anchor02.x + 105, anchor02.y + 135, 220, 15 }, sliderValue, 0, 100, "SLIDER", true);
-                sliderBarValue = GuiSliderBarEx((Rectangle){ anchor02.x + 105, anchor02.y + 155, 220, 15 }, sliderBarValue, 0, 100, "SLIDERBAR", true);
-                checkBoxChecked = GuiCheckBoxEx((Rectangle){ anchor02.x + 25, anchor02.y + 175, 15, 15 }, checkBoxChecked, "PROGRESS");
-                progressBarValue = GuiProgressBarEx((Rectangle){ anchor02.x + 105, anchor02.y + 175, 220, 15 }, progressBarValue, 0, 100, true);
-                GuiLabel((Rectangle){ anchor02.x + 15, anchor02.y + 205, 81, 30 }, "RESET STYLE");
-                comboFormatActive = GuiComboBox((Rectangle){ anchor02.x + 105, anchor02.y + 205, 120, 30 }, comboFormatTextList, 3, comboFormatActive);
-                if (GuiDropdownBox((Rectangle){ anchor02.x + 235, anchor02.y + 205, 120, 30 }, dropdownFormatTextList, 3, &dropdownFormatActive, dropdownFormatEditMode)) dropdownFormatEditMode = !dropdownFormatEditMode; 
-                toggleActive = GuiToggleButton((Rectangle){ anchor02.x + 10, anchor02.y + 245, 85, 30 }, "toggle", toggleActive);
-                if (GuiButton((Rectangle){ anchor02.x + 105, anchor02.y + 245, 120, 30 }, "Load Style")) BtnLoadStyle(); 
-                if (GuiButton((Rectangle){ anchor02.x + 235, anchor02.y + 245, 120, 30 }, "Save Style")) BtnSaveStyle(); 
-                GuiLine((Rectangle){ anchor02.x + 10, anchor02.y + 280, 345, 20 }, 1);
-                colorPickerValue = GuiColorPicker((Rectangle){ anchor02.x + 10, anchor02.y + 305, 240, 240 }, colorPickerValue);
-                GuiGroupBox((Rectangle){ anchor02.x + 290, anchor02.y + 305, 65, 55 }, "RGBA");
-                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 310, 20, 20 }, "R:");
-                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 325, 20, 20 }, "G:");
-                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 340, 20, 20 }, "B:");
-                GuiGroupBox((Rectangle){ anchor02.x + 290, anchor02.y + 370, 65, 55 }, "HSV");
-                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 375, 20, 20 }, "H:");
-                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 390, 20, 20 }, "S:");
-                GuiLabel((Rectangle){ anchor02.x + 300, anchor02.y + 405, 20, 20 }, "V:");
-                GuiDummyRec((Rectangle){ anchor02.x + 290, anchor02.y + 435, 65, 80 }, "Panel");
-                GuiTextBox((Rectangle){ anchor02.x + 290, anchor02.y + 525, 65, 20 }, hexColorText, 64, true);
-            }
-            
-            GuiStatusBar((Rectangle){ anchor01.x + 0, anchor01.y + 616, 150, 24 }, "STYLE LOADED", 10);
-            GuiStatusBar((Rectangle){ anchor01.x + 149, anchor01.y + 616, 186, 24 }, FormatText("CHANGED PROPERTIES: %03i", changedControlsCounter), 10);
-            GuiStatusBar((Rectangle){ anchor01.x + 334, anchor01.y + 616, 386, 24 }, "", 10);
-            //GuiStatusBar((Rectangle){ anchorMain.x + 334, anchorMain.y + 616, 386, 24 }, FormatText("EDITION TIME: %02i:%02i:%02i", (framesCounter/60)/(60*60), ((framesCounter/60)/60)%60, (framesCounter/60)%60), 10);
-            //----------------------------------------------------------------------------------
-            */
+
+
             
             // Draw font texture if available
             if (IsKeyDown(KEY_SPACE) && (font.texture.id > 0))
@@ -708,26 +664,28 @@ static void SaveStyle(const char *fileName)
         fprintf(rgsFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
         
         fprintf(rgsFile, "## Style information\n");
-        fprintf(rgsFile, "NUM_CONTROLS                       %i\n", NUM_CONTROLS);
-        fprintf(rgsFile, "NUM_CONTROL_PROPERTIES_DEFAULT    %i\n", NUM_CONTROL_PROPS_DEFAULT);
-        fprintf(rgsFile, "NUM_CONTROL_PROPERTIES_EXTENDED   %i\n", NUM_CONTROL_PROPS_EX);
+        fprintf(rgsFile, "NUM_CONTROLS         %i\n", NUM_CONTROLS);
+        fprintf(rgsFile, "NUM_PROPS_DEFAULT    %i\n", NUM_PROPS_DEFAULT);
+        fprintf(rgsFile, "NUM_PROPS_EXTENDED   %i\n", NUM_PROPS_EXTENDED);
 
-        // NOTE: Control properties are just written as hexadecimal values, no control name info provided
-        // To print control properties names, enum values hould be stored as string arrays also;
-        // as long as .rgs text save mode is just intended for debug pourpose, not included that info.
+        // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
         for (int i = 0; i < NUM_CONTROLS; i++)
         {
             if (i == 0) fprintf(rgsFile, "## DEFAULT properties\n");
             else fprintf(rgsFile, "## CONTROL %02i default properties\n", i);
             
-            for (int j = 0; j < NUM_CONTROL_PROPS_DEFAULT + NUM_CONTROL_PROPS_EX; j++) 
+            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++) 
             {
-                if (j == NUM_CONTROL_PROPS_DEFAULT) fprintf(rgsFile, "## CONTROL %02i extended properties\n", i);
-                fprintf(rgsFile, "0x%08x\n", GuiGetStyle(i, j));
+                if (j == NUM_PROPS_DEFAULT) fprintf(rgsFile, "## CONTROL %02i extended properties\n", i);
+                
+                if (j < NUM_PROPS_EXTENDED) fprintf(rgsFile, "0x%08x    // %s%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[i + j]);
+                else fprintf(rgsFile, "0x%08x    // EXTENDED PROPERTY \n", GuiGetStyle(i, j));
             }
             
             fprintf(rgsFile, "\n");
         }
+        
+        if (useCustomFont) fprintf(rgsFile, "## NOTE: This style uses a custom font.\n");
     }
 #else
     rgsFile = fopen(fileName, "wb");
@@ -736,19 +694,46 @@ static void SaveStyle(const char *fileName)
     {
         // Style File Structure (.rgs)
         // ------------------------------------------------------
-        // Offset | Size  | Type       | Description
+        // Offset  | Size    | Type       | Description
         // ------------------------------------------------------
-        // 0      | 4     | char       | Signature: "rGS " // ID
-        // 4      | 2     | short      | Version: 200
-        // 6      | 2     | short      | reserved
-        // 8      | 2     | short      | # Controls
-        // 10     | 2     | short      | # Props Default
-        // 12     | 2     | short      | # Props Extended
-        // 14     | 2     | short      | reserved
+        // 0       | 4       | char       | Signature: "rGS "
+        // 4       | 2       | short      | Version: 200
+        // 6       | 2       | short      | reserved
+        // 8       | 2       | short      | # Controls [numControls]
+        // 10      | 2       | short      | # Props Default  [numPropsDefault]
+        // 12      | 2       | short      | # Props Extended [numPropsEx]
+        // 14      | 2       | short      | reserved
+
+        // Properties Data (4 bytes * N)
+        // N = totalProps = (numControls*(numPropsDefault + numPropsEx))
+        // foreach (N)
+        // {
+        //   16+4*i  | 4       | int        | Property data
+        // }
         
-        // 16     | N     | int        | Properties Data (NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED))
+        // Custom Font Data : Parameters (32 bytes)
+        // 16+4*N  | 4       | int        | Font data size (if 0, no font data embedded)
+        // 20+4*N  | 4       | int        | Font base size
+        // 24+4*N  | 4       | int        | Font chars count [charCount]
+        // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
+        // 32+4*N  | 16      | Rectangle  | Font white rectangle
         
-        // 16+N   | M     | -          | Custom Font Data
+        // Custom Font Data : Image (16 bytes + imSize)
+        // 48+4*N  | 4       | int        | Image size [imSize = IS]
+        // 52+4*N  | 4       | int        | Image width
+        // 56+4*N  | 4       | int        | Image height
+        // 60+4*N  | 4       | int        | Image format
+        // 64+4*N  | imSize  | char       | Image data
+        
+        // Custom Font Data : Chars Info (32 bytes * charCount)
+        // foreach (charCount)
+        // {
+        //   68+4*N+IS+32*i  | 16    | Rectangle  | Char rectangle (in image)
+        //   64+4*N+IS+32*i  | 4     | int        | Char value
+        //   84+4*N+IS+32*i  | 4     | int        | Char offset X
+        //   88+4*N+IS+32*i  | 4     | int        | Char offset Y
+        //   92+4*N+IS+32*i  | 4     | int        | Char advance X
+        // }
         // ------------------------------------------------------
 
         unsigned char value = 0;
@@ -756,8 +741,8 @@ static void SaveStyle(const char *fileName)
         char signature[5] = "rGS ";
         short version = 200;
         short numControls = NUM_CONTROLS;
-        short numPropsDefault = NUM_CONTROL_PROPS_DEFAULT;
-        short numPropsExtended = NUM_CONTROL_PROPS_EX;
+        short numPropsDefault = NUM_PROPS_DEFAULT;
+        short numPropsExtended = NUM_PROPS_EXTENDED;
 
         fwrite(signature, 1, 4, rgsFile);
         fwrite(&version, 1, sizeof(short), rgsFile);
@@ -767,15 +752,53 @@ static void SaveStyle(const char *fileName)
 
         for (int i = 0; i < NUM_CONTROLS; i++)
         {
-            for (int j = 0; j < NUM_CONTROL_PROPS_DEFAULT + NUM_CONTROL_PROPS_EX; j++) 
+            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++) 
             {
                 value = GuiGetStyle(i, j);
-                fwrite(&value, 1, 4, rgsFile);
+                fwrite(&value, 1, sizeof(int), rgsFile);
             }
         }
         
-        // TODO: Write font data (embedding)
-        // Need to save IMAGE data (GRAYSCALE?) and CHAR data
+        value = 0;
+        bool customFontLoaded = false;
+        
+        // Write font data (embedding)
+        if (customFontLoaded)
+        {
+            // Write font parameters
+            int fontParamsSize = 32;
+            int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
+            int fontCharsDataSize = font.charCount*32;       // 32 bytes by char
+            int fontSize = fontParamsSize + fontImageSize + fontCharsDataSize;
+            int fontType = 0;       // 0-NORMAL, 1-SDF
+            
+            fwrite(&fontSize, 1, sizeof(int), rgsFile);
+            fwrite(&font.baseSize, 1, sizeof(int), rgsFile);
+            fwrite(&font.charsCount, 1, sizeof(int), rgsFile);
+            fwrite(&value, 1, sizeof(int), rgsFile);
+            
+            // TODO: Define font white rectangle
+            Rectangle rec = { 0 }; 
+            fwrite(&rec, 1, sizeof(Rectangle), rgsFile);
+            
+            // Write font image parameters
+            fwrite(&fontImageSize, 1, sizeof(int), rgsFile);
+            fwrite(&imFont.width, 1, sizeof(int), rgsFile);
+            fwrite(&imFont.height, 1, sizeof(int), rgsFile);
+            fwrite(&imFont.format, 1, sizeof(int), rgsFile);
+            fwrite(&imFont.data, 1, fontImageSize, rgsFile);
+            
+            // Write font chars data
+            for (int i = 0; i < font.charsCount; i++)
+            {
+                fwrite(&font.chars[i].rec, 1, sizeof(Rectangle), rgsFile);
+                fwrite(&font.chars[i].value, 1, sizeof(int), rgsFile);
+                fwrite(&font.chars[i].offsetX, 1, sizeof(int), rgsFile);
+                fwrite(&font.chars[i].offsetY, 1, sizeof(int), rgsFile);
+                fwrite(&font.chars[i].advanceX, 1, sizeof(int), rgsFile);
+            }
+        }
+        else fwrite(&value, 1, sizeof(int), rgsFile);
     }
 #endif
     if (rgsFile != NULL) fclose(rgsFile);
@@ -1144,7 +1167,7 @@ static LoadStyleText(const char *fileName)
                 GuiSetStyle(i, j, value);
                 j++;
                 
-                if (j >= NUM_CONTROL_PROPS_DEFAULT + NUM_CONTROL_PROPS_EX) i++;
+                if (j >= NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) i++;
             }
 
             fgets(buffer, 256, rgsFile);
