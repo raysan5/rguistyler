@@ -317,7 +317,6 @@ int main(int argc, char *argv[])
 
             // Supports loading .rgs style files (text or binary) and .png style palette images
             if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
-            else if (IsFileExtension(droppedFiles[0], ".png")) GuiLoadStylePaletteImage(droppedFiles[0]);
             else if (IsFileExtension(droppedFiles[0], ".ttf"))
             {
                 UnloadFont(font);
