@@ -10,43 +10,43 @@ a 001 50 50 1
 a 002 395 90 1
 a 003 405 230 1
 a 004 405 545 1
-a 005 405 635 1
+a 005 405 640 1
 a 006 405 125 1
 a 007 0 0 0
-c 000 17 statusTop 0 0 740 25 1 CHOSE CONTROL            >
+c 000 17 statusTop 0 0 740 25 1  Status top
 c 001 18 listViewControls 10 40 140 610 1 
 c 002 18 listViewProps 155 40 180 610 1 
 c 003 0 windowControls 0 0 385 610 2 Sample raygui controls
-c 004 1 GroupBox038 0 0 365 80 4 Visual Options
-c 005 4 lblState 10 15 35 30 4 State:
-c 006 10 dropdownState 45 15 120 30 4 
-c 007 5 BtnAbout 285 15 70 30 4 About
-c 008 1 GroupBox036 0 0 365 90 6 Style Load Options
-c 009 5 BtnLoadFont 140 10 115 30 6 Load Font
-c 010 11 spinner 260 10 95 30 6 
-c 011 1 GroupBox039 0 0 365 300 3 Property Edition
-c 012 13 textBox 10 50 345 30 6 sample text
-c 013 2 lineTop 10 30 345 20 3 
-c 014 14 slider 45 15 205 15 3 Value:
-c 015 1 GroupBox039 0 5 365 50 5 Style Save Options
-c 016 9 comboFormat 10 15 115 30 5 
-c 017 5 BtnLoadStyle 10 10 120 30 6 Load Style
-c 018 19 colorPicker 10 50 240 240 3 
-c 019 1 groupRGBA 290 55 65 55 3 RGBA
-c 020 4 lblR 295 60 20 20 3 R:
-c 021 4 lblG 295 75 20 20 3 G:
-c 022 4 lblB 295 90 20 20 3 B:
-c 023 1 groupHSV 290 120 65 55 3 HSV
-c 024 4 lblH 295 125 20 20 3 H:
-c 025 4 lblS 295 140 20 20 3 S:
-c 026 4 lblV 295 155 20 20 3 V:
-c 027 20 DummyRec 290 185 65 80 3 Panel
-c 028 13 textHexColor 290 270 65 20 3 AABBCCDD
-c 029 17 statusBottom01 0 665 150 25 1 style name
-c 030 17 statusBottom02 150 665 186 25 1 CHANGED PROPERTIES: 77
-c 031 5 BtnSaveStyle 240 15 115 30 5 Save Style
-c 032 17 statusBottom03 335 665 405 25 1 EDITION TIME: 02:45:30
-c 033 12 ValueBox038 290 10 65 25 3 
-c 034 5 Button040 170 15 110 30 4 View Style Table
-c 035 8 CheckBox040 135 20 20 20 5 Export Font
-c 036 15 SliderBar039 45 55 275 15 4 Alpha:
+c 004 1 groupStyleLoad 0 0 365 90 6 Style Load Options
+c 005 5 BtnLoadStyle 10 10 120 30 6 Load Style
+c 006 5 BtnLoadFont 140 10 115 30 6 Load Font
+c 007 11 genFontSize 260 10 95 30 6 
+c 008 13 fontSample 10 50 345 30 6 sample text
+c 009 1 groupPropertyEdit 0 0 365 300 3 Property Edition
+c 010 14 property 45 15 205 15 3 Value:
+c 011 12 property 290 10 65 25 3 
+c 012 2 lineTop 10 30 345 20 3 
+c 013 19 colorPicker 10 50 240 240 3 
+c 014 1 groupRGBA 290 55 65 55 3 RGBA
+c 015 4 lblR 295 60 20 20 3 R:
+c 016 4 lblG 295 75 20 20 3 G:
+c 017 4 lblB 295 90 20 20 3 B:
+c 018 1 groupHSV 290 120 65 55 3 HSV
+c 019 4 lblH 295 125 20 20 3 H:
+c 020 4 lblS 295 140 20 20 3 S:
+c 021 4 lblV 295 155 20 20 3 V:
+c 022 20 DummyRec 290 185 65 80 3 Panel
+c 023 13 textHexColor 290 270 65 20 3 AABBCCDD
+c 024 1 groupVisualOptions 0 0 365 80 4 Visual Options
+c 025 4 lblState 10 15 35 30 4 State:
+c 026 10 propsState 45 15 120 30 4 
+c 027 5 BtnViewTable 170 15 110 30 4 View Style Table
+c 028 5 BtnAbout 285 15 70 30 4 About
+c 029 15 alpha 45 55 275 15 4 Alpha:
+c 030 1 groupStyleSave 0 0 365 50 5 Style Save Options
+c 031 9 saveFormat 10 10 120 30 5 
+c 032 8 exportFont 140 15 20 20 5 Export Font
+c 033 5 BtnSaveStyle 240 10 115 30 5 Save Style
+c 034 17 statusBottom01 0 665 150 25 1 style name
+c 035 17 statusBottom02 150 665 186 25 1 CHANGED PROPERTIES: 77
+c 036 17 statusBottom03 335 665 405 25 1 EDITION TIME: 02:45:30
