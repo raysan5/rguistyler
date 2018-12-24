@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
     int comboActive = 0;
 
     char guiText[32] =  "custom_style.rgs";
-    
+
     int currentSelectedControl = -1;        // listViewActive
     int currentSelectedProperty = -1;       // listView2Active
     int previousSelectedProperty = -1;
@@ -264,14 +264,14 @@ int main(int argc, char *argv[])
     bool spinnerEditMode = false;
     bool dropDownEditMode = false;
     //-----------------------------------------------------------
-    
+
     // GUI variables definition
     //-----------------------------------------------------------
     int listViewControlsActive = 0;
     const char *listViewControlsTextList[3] = { "ONE", "TWO", "THREE" };
     int listViewPropsActive = 0;
     const char *listViewPropsTextList[3] = { "ONE", "TWO", "THREE" };
-    
+
     bool windowControlsActive = true;
     const char *dropdownStateTextList[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
     int dropdownStateActive = 0;
@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
     float progressBarValue = 50.0f;
     int comboFormatActive = 0;
     const char *comboFormatTextList[3] = { "ONE", "TWO", "THREE" };
-    
+
     const char *dropdownFormatTextList[5] = { "Style Text (.rgs)", "Style Binary (.rgs)", "Palette (.png)", "Palette (.h)", "Controls Table (.png)" };
     int dropdownFormatActive = 0;
     bool dropdownFormatEditMode = false;
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
     Color colorPickerValue = RED;
     char hexColorText[9] = "00000000";
     //----------------------------------------------------------------------------------
-    
+
     Color colorBoxValue[12];
     for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
@@ -430,7 +430,7 @@ int main(int argc, char *argv[])
 
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
-            
+
             //---------------------------------------------------------------------------------------------------------
             {
             // Draw info bar top
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
 
             // Draw selected control rectangles
             if (currentSelectedControl > 0) DrawRectangleLinesEx((Rectangle){ bounds[currentSelectedControl].x - 4, bounds[currentSelectedControl].y - 4, bounds[currentSelectedControl].width + 8, bounds[currentSelectedControl].height + 8 }, 2, RED);
-            
+
             checkedActive = GuiCheckBoxEx(bounds[CHECKBOX], checkedActive, "DISABLED");
 
             if (checkedActive) GuiDisable();
@@ -528,7 +528,7 @@ int main(int argc, char *argv[])
     // De-Initialization
     //--------------------------------------------------------------------------------------
     UnloadFont(font);
-    
+
     CloseWindow();              // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
@@ -662,7 +662,7 @@ static void SaveStyle(const char *fileName)
     FILE *rgsFile = NULL;
 #if defined(RAYGUI_STYLE_SAVE_AS_TEXT)
     rgsFile = fopen(fileName, "wt");
-    
+
     if (rgsFile != NULL)
     {
         // Write some description comments
@@ -674,7 +674,7 @@ static void SaveStyle(const char *fileName)
         fprintf(rgsFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
         fprintf(rgsFile, "//                                                                              //\n");
         fprintf(rgsFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
-        
+
         fprintf(rgsFile, "## Style information\n");
         fprintf(rgsFile, "NUM_CONTROLS         %i\n", NUM_CONTROLS);
         fprintf(rgsFile, "NUM_PROPS_DEFAULT    %i\n", NUM_PROPS_DEFAULT);
@@ -685,18 +685,18 @@ static void SaveStyle(const char *fileName)
         {
             if (i == 0) fprintf(rgsFile, "## DEFAULT properties\n");
             else fprintf(rgsFile, "## CONTROL %02i default properties\n", i);
-            
-            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++) 
+
+            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++)
             {
                 if (j == NUM_PROPS_DEFAULT) fprintf(rgsFile, "## CONTROL %02i extended properties\n", i);
-                
+
                 if (j < NUM_PROPS_EXTENDED) fprintf(rgsFile, "0x%08x    // %s_%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[i + j]);
                 else fprintf(rgsFile, "0x%08x    // EXTENDED PROPERTY \n", GuiGetStyle(i, j));
             }
-            
+
             fprintf(rgsFile, "\n");
         }
-        
+
         if (useCustomFont) fprintf(rgsFile, "## NOTE: This style uses a custom font.\n");
     }
 #else
@@ -722,21 +722,21 @@ static void SaveStyle(const char *fileName)
         // {
         //   16+4*i  | 4       | int        | Property data
         // }
-        
+
         // Custom Font Data : Parameters (32 bytes)
         // 16+4*N  | 4       | int        | Font data size (if 0, no font data embedded)
         // 20+4*N  | 4       | int        | Font base size
         // 24+4*N  | 4       | int        | Font chars count [charCount]
         // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
         // 32+4*N  | 16      | Rectangle  | Font white rectangle
-        
+
         // Custom Font Data : Image (16 bytes + imSize)
         // 48+4*N  | 4       | int        | Image size [imSize = IS]
         // 52+4*N  | 4       | int        | Image width
         // 56+4*N  | 4       | int        | Image height
         // 60+4*N  | 4       | int        | Image format
         // 64+4*N  | imSize  | *          | Image data
-        
+
         // Custom Font Data : Chars Info (32 bytes * charCount)
         // foreach (charCount)
         // {
@@ -749,7 +749,7 @@ static void SaveStyle(const char *fileName)
         // ------------------------------------------------------
 
         unsigned char value = 0;
-        
+
         char signature[5] = "rGS ";
         short version = 200;
         short numControls = NUM_CONTROLS;
@@ -764,45 +764,45 @@ static void SaveStyle(const char *fileName)
 
         for (int i = 0; i < NUM_CONTROLS; i++)
         {
-            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++) 
+            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++)
             {
                 value = GuiGetStyle(i, j);
                 fwrite(&value, 1, sizeof(int), rgsFile);
             }
         }
-        
+
         value = 0;
-        
+
         // Write font data (embedding)
         if (useCustomFont)
         {
             Image imFont = GetTextureData(font.texture);
-            
+
             // Write font parameters
             int fontParamsSize = 32;
             int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
             int fontCharsDataSize = font.charsCount*32;       // 32 bytes by char
             int fontDataSize = fontParamsSize + fontImageSize + fontCharsDataSize;
             int fontType = 0;       // 0-NORMAL, 1-SDF
-            
+
             fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
             fwrite(&font.baseSize, 1, sizeof(int), rgsFile);
             fwrite(&font.charsCount, 1, sizeof(int), rgsFile);
             fwrite(&fontType, 1, sizeof(int), rgsFile);
-            
+
             // TODO: Define font white rectangle
-            Rectangle rec = { 0 }; 
+            Rectangle rec = { 0 };
             fwrite(&rec, 1, sizeof(Rectangle), rgsFile);
-            
+
             // Write font image parameters
             fwrite(&fontImageSize, 1, sizeof(int), rgsFile);
             fwrite(&imFont.width, 1, sizeof(int), rgsFile);
             fwrite(&imFont.height, 1, sizeof(int), rgsFile);
             fwrite(&imFont.format, 1, sizeof(int), rgsFile);
             fwrite(&imFont.data, 1, fontImageSize, rgsFile);
-            
+
             UnloadImage(imFont);
-                
+
             // Write font chars data
             for (int i = 0; i < font.charsCount; i++)
             {
@@ -838,7 +838,7 @@ static void ExportStyle(const char *fileName, int type)
             Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
             ExportImage(imStyleTable, fileName);
             UnloadImage(imStyleTable);
-            
+
         } break;
         default: break;
     }
@@ -848,14 +848,14 @@ static void ExportStyle(const char *fileName, int type)
 static Image GenImageStylePalette(void)
 {
     Image image = GenImageColor(64, 16, GetColor(GuiGetStyle(DEFAULT, LINES_COLOR)));
-    
-    for (int i = 0; i < 4; i++) 
+
+    for (int i = 0; i < 4; i++)
     {
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 1, 1, 14, 14 }, GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 2, 2, 12, 12 }, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + 3*i)));
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*i)));
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*i)));
-        
+
         // Draw "rl" characters
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 5, 7, 3, 1 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 5, 8, 1, 3 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
@@ -863,7 +863,7 @@ static Image GenImageStylePalette(void)
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
         ImageDrawRectangle(&image, (Rectangle){ 15*i + 10, 10, 1, 1 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
     }
-    
+
     return image;
 }
 
@@ -875,9 +875,9 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 
     #define TABLE_CELL_HEIGHT       40
     #define TABLE_CELL_PADDING       4
-    
+
     #define TABLE_CONTROLS_COUNT    12
-    
+
     typedef enum {
         LABEL = 0,
         BUTTON,
@@ -892,7 +892,7 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
         VALUEBOX,
         SPINNER
     } TableControlType;
-    
+
     static const char *tableStateName[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
     static const char *tableControlsName[TABLE_CONTROLS_COUNT] = {
         "LABEL",        // LABELBUTTON
@@ -908,7 +908,7 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
         "VALUEBOX",
         "SPINNER"       // VALUEBOX + BUTTON
     };
-    
+
     // TODO: Controls grid with should be calculated
     int controlGridWidth[TABLE_CONTROLS_COUNT] = {
         80,     // LABEL
@@ -924,12 +924,12 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
         100,    // VALUEBOX
         100,    // SPINNER
     };
-    
+
     int tableControlsNameWidth = 85;
-    
+
     int tableWidth = 0;
     int tableHeight = 256;
-    
+
     // TODO: Compute proper texture size depending on font size and controls text!
     tableWidth = TABLE_LEFT_PADDING*2 + tableControlsNameWidth;
     for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += (controlGridWidth[i] - 1);
@@ -941,26 +941,26 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 
     Rectangle rec = { 0 };      // Current drawing rectangle space
 
-    // NOTE: If loading texture when render-texture is active, it seem to fail 
+    // NOTE: If loading texture when render-texture is active, it seem to fail
     Image imStylePal = GenImageStylePalette();
     Texture2D texStylePal = LoadTextureFromImage(imStylePal);
     UnloadImage(imStylePal);
-    
+
     RenderTexture2D target = LoadRenderTexture(tableWidth, tableHeight);
-    
+
     GuiSetStyle(SLIDER, SLIDER_WIDTH, 10);
 
     // Texture rendering
     //--------------------------------------------------------------------------------------------
     BeginTextureMode(target);
-    
+
         // Draw style title
         DrawText("raygui style table: ", TABLE_LEFT_PADDING, 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
         DrawText(FormatText("%s by %s", styleName, styleCreator), TABLE_LEFT_PADDING + MeasureText("raygui style table: ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
-        
+
         // Draw left column
         rec = (Rectangle){ TABLE_LEFT_PADDING, TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableControlsNameWidth, TABLE_CELL_HEIGHT };
-        
+
         for (int i = 0; i < 4; i++)
         {
             GuiGroupBox(rec, NULL);
@@ -968,13 +968,13 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
             GuiState(i); GuiLabelButton((Rectangle){ rec.x + 24, rec.y, rec.width, rec.height }, tableStateName[i]);
             rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
         }
-        
+
         GuiState(GUI_STATE_NORMAL);
-        
+
         int offsetWidth = TABLE_LEFT_PADDING + tableControlsNameWidth;
-        
+
         //GuiLock();
-        
+
         // Draw basic controls
         for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
         {
@@ -985,7 +985,7 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
             GuiLabelEx(rec, tableControlsName[i], 1, 0);
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
-            
+
             // Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
             for (int j = 0; j < 4; j++)
             {
@@ -994,12 +994,12 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 
                 GuiState(j);
                     // Draw control centered correctly in grid
-                    switch(i)
+                    switch (i)
                     {
                         case LABEL: GuiLabelButton((Rectangle){ rec.x + rec.width/2 - MeasureText("Label", 10)/2, rec.y, 80, 40 }, "Label"); break;
                         case BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, "Button"); break;
                         case TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, "Toggle", false); break;
-                        case CHECKBOX: 
+                        case CHECKBOX:
                         {
                             GuiCheckBoxEx((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, false, "NoCheck");
                             DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINES_COLOR)));
@@ -1016,19 +1016,19 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
                         default: break;
                     }
                 GuiState(GUI_STATE_NORMAL);
-                
+
                 rec.y += TABLE_CELL_HEIGHT - 1;
             }
-            
+
             offsetWidth += controlGridWidth[i];
         }
-        
+
         //GuiUnlock();
-        
+
         // Draw copyright and software info (bottom-right)
         DrawText("raygui style table automatically generated with rGuiStyler", TABLE_LEFT_PADDING, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
         DrawText("rGuiStyler created by raylib technologies (@raylibtech)", tableWidth - MeasureText("rGuiStyler created by raylib technologies (@raylibtech)", 10) - 20, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-    
+
     EndTextureMode();
     //--------------------------------------------------------------------------------------------
 
@@ -1037,7 +1037,7 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 
     UnloadRenderTexture(target);
     UnloadTexture(texStylePal);
-    
+
     return imStyleTable;
 }
 
@@ -1172,7 +1172,7 @@ static LoadStyleText(const char *fileName)
                 sscanf(buffer, "0x%x", &value);
                 GuiSetStyle(i, j, value);
                 j++;
-                
+
                 if (j >= NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) i++;
             }
 
