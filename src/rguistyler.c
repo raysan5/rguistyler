@@ -8,7 +8,7 @@
 *       Enable PRO features for the tool. Usually command-line and export options related.
 *
 *   DEPENDENCIES:
-*       raylib 2.1-dev          - Windowing/input management and drawing.
+*       raylib 2.3-dev          - Windowing/input management and drawing.
 *       raygui 2.0              - IMGUI controls (based on raylib).
 *       tinyfiledialogs 3.3.7   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
@@ -416,11 +416,11 @@ int main(int argc, char *argv[])
         if (selectingColor)
         {
             HideCursor();
-            if (mousePos.x < bounds[COLORPICKER].x) SetMousePosition((Vector2){ bounds[COLORPICKER].x, mousePos.y });
-            else if (mousePos.x > bounds[COLORPICKER].x + bounds[COLORPICKER].width) SetMousePosition((Vector2){ bounds[COLORPICKER].x + bounds[COLORPICKER].width, mousePos.y });
+            if (mousePos.x < bounds[COLORPICKER].x) SetMousePosition(bounds[COLORPICKER].x, mousePos.y);
+            else if (mousePos.x > bounds[COLORPICKER].x + bounds[COLORPICKER].width) SetMousePosition(bounds[COLORPICKER].x + bounds[COLORPICKER].width, mousePos.y);
 
-            if (mousePos.y < bounds[COLORPICKER].y) SetMousePosition((Vector2){ mousePos.x, bounds[COLORPICKER].y });
-            else if (mousePos.y > bounds[COLORPICKER].y + bounds[COLORPICKER].height) SetMousePosition((Vector2){ mousePos.x, bounds[COLORPICKER].y + bounds[COLORPICKER].height });
+            if (mousePos.y < bounds[COLORPICKER].y) SetMousePosition(mousePos.x, bounds[COLORPICKER].y);
+            else if (mousePos.y > bounds[COLORPICKER].y + bounds[COLORPICKER].height) SetMousePosition(mousePos.x, bounds[COLORPICKER].y + bounds[COLORPICKER].height);
         }
         //----------------------------------------------------------------------------------
 
@@ -495,7 +495,6 @@ int main(int argc, char *argv[])
             GuiUnlock();
             }
             //------------------------------------------------------------------------------------------------------------------------
-
 
 
             // Draw font texture if available
@@ -714,7 +713,8 @@ static void SaveStyle(const char *fileName)
         // 8       | 2       | short      | # Controls [numControls]
         // 10      | 2       | short      | # Props Default  [numPropsDefault]
         // 12      | 2       | short      | # Props Extended [numPropsEx]
-        // 14      | 2       | short      | reserved
+        // 13      | 1       | char       | font embedded type (0 - no font, 1 - raylib font type)
+        // 14      | 1       | char       | reserved
 
         // Properties Data (4 bytes * N)
         // N = totalProps = (numControls*(numPropsDefault + numPropsEx))
@@ -724,7 +724,7 @@ static void SaveStyle(const char *fileName)
         // }
 
         // Custom Font Data : Parameters (32 bytes)
-        // 16+4*N  | 4       | int        | Font data size (if 0, no font data embedded)
+        // 16+4*N  | 4       | int        | Font data size
         // 20+4*N  | 4       | int        | Font base size
         // 24+4*N  | 4       | int        | Font chars count [charCount]
         // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
@@ -1151,7 +1151,7 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
     return color;
 }
 
-/*
+#if 0
 // Load style text file
 static LoadStyleText(const char *fileName)
 {
@@ -1182,4 +1182,97 @@ static LoadStyleText(const char *fileName)
         fclose(rgsFile);
     }
 }
-*/
+#endif
+
+#if 0
+// PNG file management info
+// PNG file-format: https://en.wikipedia.org/wiki/Portable_Network_Graphics#File_format
+
+// PNG Signature
+unsigned char pngSign[8] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
+
+// After signature we have a series of chunks, every chunck has the same structure:
+typedef struct {
+    unsigned int length;    // Big endian!
+    unsigned char type[4];  // Chunck type: IDHR, PLTE, IDAT, IEND  /  gAMA, sRGB, tEXt, tIME...
+    unsigned char *data;    // Chunck data
+    unsigned int crc;       // 32bit CRC (computed over type and data)
+} PNGChunk;
+
+// A minimal PNG only requires: pngSign | PNGChunk(IHDR) | PNGChunk(IDAT) | PNGChunk(IEND)
+
+// IHDR mandatory chunck: image info (13 bytes)
+typedef struct {
+    unsigned int width;         // Image width
+    unsigned int height;        // Image width
+    unsigned char bitDepth;     // Bit depth
+    unsigned char colorType;    // Pixel format: 0 - Grayscale, 2 - RGB, 3 - Indexed, 4 - GrayAlpha, 6 - RGBA
+    unsigned char compression;  // Compression method: 0
+    unsigned char filter;       // Filter method: 0 (default)
+    unsigned char interlace;    // Interlace scheme (optional): 0 (none)
+} IHDRChunkData;
+
+// Embedd gui style inside PNG file as rGSt chunk
+void EmbeddStyleInPNG(const char *fileName, const char *rgsFileName)
+{
+    unsigned char signature[8] = { 0 };
+    
+    FILE *pngFile = fopen(fileName, "rb");
+    
+    if (pngFile != NULL)
+    {
+        fseek(pngFile, 0, SEEK_END);    // Place cursor at the end of file
+        long pngSize = ftell(pngFile);  // Get file size
+        fseek(pngFile, 0, SEEK_SET);    // Reset file pointer to beginning
+        
+        fread(signature, 8, 1, pngFile);
+        
+        if (strcmp(signature, pngSign) == 0)    // Check valid PNG file
+        {
+            unsigned char *pngData = (unsigned char *)malloc(pngSize);
+            fread(pngData, pngSize, 1, pngFile); // Read full PNG file into buffer
+            
+            // Now we can start composing our new PNG file with rGSt chunk
+            char *pngrgsFileName = GetFileNameWithoutExt(fileName);   // Requires manually free
+            FILE *pngrgsFile = fopen(TextFormat("%s.rgs.png", pngrgsFileName), "wb");
+            free(pngrgsFileName);
+            
+            // Write PNG file Signature (8 bytes) + IHDR chunk (4 + 4 + 13 + 4 bytes)
+            fwrite(pngData, 8 + 4 + 4 + 13 + 4, 1, pngrgsFile);
+        
+            // Write rGSt chunk into file
+            //---------------------------------------------------------------------------
+            FILE *rgsFile = fopen(rgsFileName, "rb");
+            
+            // TODO: Verify rGS file is a valid file
+            
+            fseek(rgsFile, 0, SEEK_END);    // Place cursor at the end of file
+            long rgsSize = ftell(rgsFile);  // Get file size
+            fseek(rgsFile, 0, SEEK_SET);    // Reset file pointer to beginning
+            
+            unsigned char *rgsData = (unsigned char *)malloc(rgsSize);
+            fread(rgsData, rgsSize, 1, rgsFile);
+            
+            unsigned char rgsType[4] = { 'r', 'G', 'S', 't' };
+            
+            fwrite(&rgsSize, 4, 1, pngrgsFile);
+            fwrite(&rgsType, 4, 1, pngrgsFile);
+            fwrite(&rgsData, rgsSize, 1, pngrgsFile);
+            
+            unsigned int rgsDataCRC = 0;    // TODO: Compute CRC32 for rgsData
+            fwrite(&rgsDataCRC, 4, 1, pngrgsFile);
+            //---------------------------------------------------------------------------
+            
+            // Write the rest of the original PNG file
+            fwrite(pngData + 33, pngSize - 33, 1, pngrgsFile);
+            
+            fclose(rgsFile);
+            fclose(pngrgsFile);
+            free(pngData);
+            free(rgsData);
+        }
+        
+        fclose(pngFile);
+    }
+}
+#endif
