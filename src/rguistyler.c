@@ -437,10 +437,8 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >      STYLE VIEWER", 35);
 
             // Draw Gui controls
-            GuiListView(bounds[LISTVIEW], guiControlText, NUM_CONTROLS, NULL, &currentSelectedControl, true);
-
-            // TODO: Replace by GuiListViewEx() with disabled gui elements
-            GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsText, NULL, NUM_PROPS_DEFAULT - 4, NULL, &currentSelectedProperty, NULL, true);
+            GuiListView(bounds[LISTVIEW], TextJoin(guiControlText, NUM_CONTROLS), &currentSelectedControl, NULL, true);
+            GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 40, 180, 560 }, guiPropsText, NUM_PROPS_DEFAULT - 4, NULL, &currentSelectedProperty, NULL, NULL, true);
 
             if (dropDownEditMode) GuiLock();
 
@@ -457,9 +455,9 @@ int main(int argc, char *argv[])
             if (GuiLabelButton(bounds[LABEL], "github.com/raysan5/raygui")) {}
             toggleActive = GuiToggle(bounds[TOGGLE], "toggle", toggleActive);
             toggleValue = GuiToggleGroup((Rectangle){ anchorControls.x + 90, anchorControls.y + 70, 262, 30 }, toggleGuiText, 4, toggleValue);
-            sliderValue = GuiSliderEx(bounds[SLIDER], sliderValue, 0, 100, "SLIDER", true);
-            sliderBarValue = GuiSliderBarEx(bounds[SLIDER], sliderBarValue, 0, 100, "SLIDERBAR", true);
-            progressValue = GuiProgressBarEx(bounds[PROGRESSBAR], progressValue, 0, 1, true);
+            sliderValue = GuiSlider(bounds[SLIDER], sliderValue, 0, 100, "SLIDER", true);
+            sliderBarValue = GuiSliderBar(bounds[SLIDER], sliderBarValue, 0, 100, "SLIDERBAR", true);
+            progressValue = GuiProgressBar(bounds[PROGRESSBAR], progressValue, 0, 1, true);
             if (GuiSpinner(bounds[TEXTBOX], &spinnerValue, 0, 32, 24, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
             comboActive = GuiComboBox(bounds[COMBOBOX], comboText, comboNum, comboActive);
             if (GuiTextBox(bounds[TEXTBOX], guiText, 32, textBoxEditMode)) textBoxEditMode = !textBoxEditMode;
@@ -1005,9 +1003,9 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
                             DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINES_COLOR)));
                             GuiCheckBoxEx((Rectangle){ rec.x + 10 + controlGridWidth[i]/2, rec.y + rec.height/2 - 15/2, 15, 15 }, true, "Checked");
                         } break;
-                        case SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, 40, 0, 100); break;
-                        case SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, 40, 0, 100); break;
-                        case PROGRESSBAR: GuiProgressBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, 60, 0, 100); break;
+                        case SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, NULL, 40, 0, 100, false); break;
+                        case SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, NULL, 40, 0, 100, false); break;
+                        case PROGRESSBAR: GuiProgressBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, NULL, 60, 0, 100, false); break;
                         case COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - 120/2, rec.y + rec.height/2 - 20/2, 120, 20 }, comboBoxText, 2, 0); break;
                         case DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - 120/2, rec.y + rec.height/2 - 20/2, 120, 20 }, dropdownBoxText, 2, &dropdownActive, false); break;
                         case TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, "text box", 32, false); break;
