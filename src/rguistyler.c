@@ -458,7 +458,7 @@ int main(int argc, char *argv[])
             sliderValue = GuiSlider(bounds[SLIDER], sliderValue, 0, 100, "SLIDER", true);
             sliderBarValue = GuiSliderBar(bounds[SLIDER], sliderBarValue, 0, 100, "SLIDERBAR", true);
             progressValue = GuiProgressBar(bounds[PROGRESSBAR], progressValue, 0, 1, true);
-            if (GuiSpinner(bounds[TEXTBOX], &spinnerValue, 0, 32, 24, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
+            if (GuiSpinner(bounds[TEXTBOX], &spinnerValue, 0, 32, spinnerEditMode)) spinnerEditMode = !spinnerEditMode;
             comboActive = GuiComboBox(bounds[COMBOBOX], comboText, comboNum, comboActive);
             if (GuiTextBox(bounds[TEXTBOX], guiText, 32, textBoxEditMode)) textBoxEditMode = !textBoxEditMode;
             GuiLine((Rectangle){ anchorControls.x + 10, anchorControls.y + 275, 345, 20 }, 1);
@@ -980,7 +980,7 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 
             // Draw grid lines: control name
             GuiGroupBox(rec, NULL);
-            GuiLabelEx(rec, tableControlsName[i], 1, 0);
+            GuiLabel(rec, tableControlsName[i]);
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
 
@@ -1010,7 +1010,7 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
                         case DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - 120/2, rec.y + rec.height/2 - 20/2, 120, 20 }, dropdownBoxText, 2, &dropdownActive, false); break;
                         case TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, "text box", 32, false); break;
                         case VALUEBOX: GuiValueBox((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, &value, 0, 100, false); break;
-                        case SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, &value, 0, 100, 18, false); break;
+                        case SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 20/2, 90, 20 }, &value, 0, 100, false); break;
                         default: break;
                     }
                 GuiState(GUI_STATE_NORMAL);
