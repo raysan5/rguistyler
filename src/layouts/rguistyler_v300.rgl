@@ -1,5 +1,5 @@
 #
-# rgl text file (v2.0) - raygui layout text file generated using rGuiLayout
+# rgl text file (v1.0) - raygui layout text file generated using rGuiLayout
 #
 # Total number of controls:     37
 # Anchor info:   a <id> <name> <posx> <posy> <enabled>
@@ -7,14 +7,14 @@
 #
 r 0 0 -1 -1
 a 000 anchor00 0 0 1
-a 001 anchor00 50 50 1
-a 002 anchor00 395 90 1
-a 003 anchor00 405 230 1
-a 004 anchor00 405 545 1
-a 005 anchor00 405 640 1
-a 006 anchor00 405 125 1
-a 007 anchor00 0 0 0
-c 000 20 statusTop 0 0 740 25 1  Status top
+a 001 anchor01 50 50 1
+a 002 anchor02 395 90 1
+a 003 anchor03 405 230 1
+a 004 anchor04 405 545 1
+a 005 anchor05 405 640 1
+a 006 anchor06 405 125 1
+a 007 anchor07 0 0 0
+c 000 20 statusTop 0 0 740 25 1 Status top
 c 001 22 listViewControls 10 40 140 610 1 
 c 002 22 listViewProps 155 40 180 610 1 
 c 003 0 windowControls 0 0 385 610 2 Sample raygui controls
@@ -26,7 +26,7 @@ c 008 13 fontSample 10 50 345 30 6 sample text
 c 009 1 groupPropertyEdit 0 0 365 300 3 Property Edition
 c 010 17 property 45 15 205 15 3 Value:
 c 011 15 property 290 10 65 25 3 
-c 012 2 lineTop 10 30 345 20 3 
+c 012 2 lineTop 0 35 365 15 3 
 c 013 23 colorPicker 10 50 240 240 3 
 c 014 1 groupRGBA 290 55 65 55 3 RGBA
 c 015 4 lblR 295 60 20 20 3 R:
