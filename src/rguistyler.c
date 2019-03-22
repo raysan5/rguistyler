@@ -52,6 +52,11 @@
 #define RAYGUI_IMPLEMENTATION
 #include "external/raygui.h"            // Required for: IMGUI controls
 
+#undef RAYGUI_IMPLEMENTATION            // Avoid including raygui implementation again
+
+#define GUI_WINDOW_ABOUT_IMPLEMENTATION
+#include "gui_window_about.h"           // GUI: About Window
+
 #include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
 
 #include <stdlib.h>                     // Required for: malloc(), free()
@@ -65,6 +70,10 @@
 #define TOOL_NAME           "rGuiStyler"
 #define TOOL_VERSION        "2.5"
 #define TOOL_DESCRIPTION    "A simple and easy-to-use raygui styles editor"
+
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib)
+#endif
 
 //----------------------------------------------------------------------------------
 // Types and Structures Definition
@@ -170,8 +179,6 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 //------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-    SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
-
     char inFileName[256] = { 0 };       // Input file name (required in case of drag & drop over executable)
 
     // Command-line usage mode
@@ -182,8 +189,7 @@ int main(int argc, char *argv[])
             (strcmp(argv[1], "-h") != 0) &&
             (strcmp(argv[1], "--help") != 0))       // One argument (file dropped over executable?)
         {
-            if (IsFileExtension(argv[1], ".rgs") ||
-                IsFileExtension(argv[1], ".png"))
+            if (IsFileExtension(argv[1], ".rgs"))
             {
                 strcpy(inFileName, argv[1]);        // Read input filename to open with gui interface
             }
@@ -202,20 +208,19 @@ int main(int argc, char *argv[])
     const int screenWidth = 720;
     const int screenHeight = 640;
 
+    SetTraceLogLevel(LOG_NONE);             // Disable trace log messsages
     InitWindow(screenWidth, screenHeight, FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, TOOL_DESCRIPTION));
     SetExitKey(0);
 
     // General pourpose variables
     Vector2 mousePos = { 0.0f, 0.0f };
     int framesCounter = 0;
-    bool exitWindow = false;
-    bool closingWindowActive = false;
 
     bool saveColor = false;
     int changedControlsCounter = 0;
 
-    // GUI variables definition
-    //-----------------------------------------------------------
+    // GUI: Main Layout
+    //-----------------------------------------------------------------------------------
     Vector2 anchorMain = { 0, 0 };
     Vector2 anchorControls = { 345, 40 };
     
@@ -245,7 +250,18 @@ int main(int argc, char *argv[])
     bool toggleActive = false;
     Color colorPickerValue = RED;
     char hexColorText[9] = "00000000";
-    //----------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------
+    
+    // GUI: About Window
+    //-----------------------------------------------------------------------------------
+    GuiWindowAboutState windowAboutState = InitGuiWindowAbout();
+    //-----------------------------------------------------------------------------------
+    
+    // GUI: Exit Window
+    //-----------------------------------------------------------------------------------
+    bool exitWindow = false;
+    bool windowExitActive = false;
+    //-----------------------------------------------------------------------------------   
 
     Color colorBoxValue[12];
     for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
@@ -287,12 +303,30 @@ int main(int argc, char *argv[])
 
         // Keyboard shortcuts
         //----------------------------------------------------------------------------------
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);    // Show save style dialog (.rgs text)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();         // Show load style dialog (.rgs)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE); // Show export style dialog (.rgs, .png, .h)
+        
+        // Show dialog: load input file (.rgs)
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();
+        
+        // Show dialog: save style file (.rgs)
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);
+        
+        // Show dialog: export style file (.png, .png, .h)
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE);
 
+        // TODO: Change this behaviour for something better...
         if (IsKeyPressed(KEY_T)) ExportStyle("test_controls_table.png", CONTROLS_TABLE_IMAGE);
         if (IsKeyPressed(KEY_Y)) ExportStyle("test_palette.png", PALETTE_IMAGE);
+        
+        // Show window: about
+        if (IsKeyPressed(KEY_F1)) windowAboutState.windowAboutActive = true;
+        
+        // Show closing window on ESC
+        if (IsKeyPressed(KEY_ESCAPE))
+        {
+            if (windowAboutState.windowAboutActive) windowAboutState.windowAboutActive = false;
+            else if (changedControlsCounter > 0) windowExitActive = !windowExitActive;
+            else exitWindow = true;
+        }
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -301,13 +335,6 @@ int main(int argc, char *argv[])
         mousePos = GetMousePosition();      // Get mouse position each frame
         if (WindowShouldClose()) exitWindow = true;
 
-        // Show save layout message window on ESC
-        if (IsKeyPressed(KEY_ESCAPE))
-        {
-            if (changedControlsCounter <= 0) exitWindow = true;
-            else closingWindowActive = !closingWindowActive;
-        }
-
         // TODO: Check for changed controls
         if ((framesCounter%120) == 0)
         {
@@ -315,7 +342,8 @@ int main(int argc, char *argv[])
             //for (int i = 0; i < NUM_PROPERTIES; i++) if (styleBackup[i] != style[i)) changedControlsCounter++;
         }
 
-        // Controls selection on GuiListView logic
+        // Controls selection on list view logic
+        //----------------------------------------------------------------------------------
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
 
         if ((currentSelectedControl == 0) && (currentSelectedProperty != -1))
@@ -348,12 +376,10 @@ int main(int argc, char *argv[])
 
         previousSelectedProperty = currentSelectedProperty;
         previousSelectedControl = currentSelectedControl;
+        //----------------------------------------------------------------------------------
 
-        // Update progress bar automatically
-        progressValue += 0.0005f;
-        if (progressValue > 1.0f) progressValue = 0.0f;
-
-        // Get edited color from text box
+        // Color selection logic (text box and color picker)
+        //----------------------------------------------------------------------------------
         if (!hexValueBoxEditMode) sprintf(hexColorText, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
 
         colorHSV = ColorToHSV(colorPickerValue);
@@ -376,6 +402,11 @@ int main(int argc, char *argv[])
             if (mousePos.y < colorPickerRec.y) SetMousePosition(mousePos.x, colorPickerRec.y);
             else if (mousePos.y > colorPickerRec.y + colorPickerRec.height) SetMousePosition(mousePos.x, colorPickerRec.y + colorPickerRec.height);
         }
+        //----------------------------------------------------------------------------------
+        
+        // Update progress bar automatically
+        progressValue += 0.0005f;
+        if (progressValue > 1.0f) progressValue = 0.0f;
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -447,18 +478,17 @@ int main(int argc, char *argv[])
             }
             //------------------------------------------------------------------------------------------------------------------------
 
-            // Draw font texture if available
-            if (IsKeyDown(KEY_SPACE) && (font.texture.id > 0))
-            {
-                DrawRectangle(GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, font.texture.width, font.texture.height, BLACK);
-                DrawTexture(font.texture, GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, WHITE);
-            }
+            // GUI: About Window
+            //----------------------------------------------------------------------------------------
+            GuiWindowAbout(&windowAboutState);
+            //----------------------------------------------------------------------------------------
 
-            // Draw ending message window (save)
-            if (closingWindowActive)
+            // GUI: Exit Window
+            //----------------------------------------------------------------------------------------
+            if (windowExitActive)
             {
                 DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(WHITE, 0.7f));
-                closingWindowActive = !GuiWindowBox((Rectangle){ GetScreenWidth()/2 - 125, GetScreenHeight()/2 - 50, 250, 100 }, "Closing rGuiStyler");
+                windowExitActive = !GuiWindowBox((Rectangle){ GetScreenWidth()/2 - 125, GetScreenHeight()/2 - 50, 250, 100 }, "Closing rGuiStyler");
 
                 GuiLabel((Rectangle){ GetScreenWidth()/2 - 95, GetScreenHeight()/2 - 60, 200, 100 }, "Do you want to save before quitting?");
 
@@ -469,6 +499,14 @@ int main(int argc, char *argv[])
                     if (styleSaved) exitWindow = true;
                 }
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
+            }
+            //----------------------------------------------------------------------------------------
+            
+            // Draw font texture if available
+            if (IsKeyDown(KEY_SPACE) && (font.texture.id > 0))
+            {
+                DrawRectangle(GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, font.texture.width, font.texture.height, BLACK);
+                DrawTexture(font.texture, GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, WHITE);
             }
 
         EndDrawing();
@@ -494,11 +532,11 @@ static void ShowCommandLineInfo(void)
 {
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
-    printf("// rGuiStyler v%s - A simple and easy-to-use raygui styles editor              //\n", TOOL_VERSION_TEXT);
-    printf("// powered by raylib v2.0 (www.raylib.com) and raygui v2.0                      //\n");
+    printf("// %s v%s ONE - %s             //\n", TOOL_NAME, TOOL_VERSION, TOOL_DESCRIPTION);
+    printf("// powered by raylib v2.4 (www.raylib.com) and raygui v2.0                      //\n");
     printf("// more info and bugs-report: github.com/raysan5/rguistyler                     //\n");
     printf("//                                                                              //\n");
-    printf("// Copyright (c) 2017-2018 raylib technologies (@raylibtech)                    //\n");
+    printf("// Copyright (c) 2017-2019 raylib technologies (@raylibtech)                    //\n");
     printf("//                                                                              //\n");
     printf("//////////////////////////////////////////////////////////////////////////////////\n\n");
 
