@@ -1,0 +1,53 @@
+#
+# rgl text file (v1.0) - raygui layout text file generated using rGuiLayout
+#
+# Total number of controls:     37
+# Anchor info:   a <id> <name> <posx> <posy> <enabled>
+# Control info:  c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+r 0 0 -1 -1
+a 000 anchor00 0 0 1
+a 001 anchor01 50 50 1
+a 002 anchor02 395 90 1
+a 003 anchor03 405 230 1
+a 004 anchor04 405 545 1
+a 005 anchor05 405 640 1
+a 006 anchor06 405 125 1
+a 007 anchor07 0 0 0
+c 000 20 statusTop 0 0 740 25 1 Status top
+c 001 22 listViewControls 10 40 140 610 1 
+c 002 22 listViewProps 155 40 180 610 1 
+c 003 0 windowControls 0 0 385 610 2 Sample raygui controls
+c 004 1 groupStyleLoad 0 0 365 90 6 Style Load Options
+c 005 5 BtnLoadStyle 10 10 120 30 6 Load Style
+c 006 5 BtnLoadFont 140 10 115 30 6 Load Font
+c 007 16 genFontSize 260 10 95 30 6 
+c 008 13 fontSample 10 50 345 30 6 sample text
+c 009 1 groupPropertyEdit 0 0 365 300 3 Property Edition
+c 010 17 property 45 15 205 15 3 Value:
+c 011 15 property 290 10 65 25 3 
+c 012 2 lineTop 0 35 365 15 3 
+c 013 23 colorPicker 10 50 240 240 3 
+c 014 1 groupRGBA 290 55 65 55 3 RGBA
+c 015 4 lblR 295 60 20 20 3 R:
+c 016 4 lblG 295 75 20 20 3 G:
+c 017 4 lblB 295 90 20 20 3 B:
+c 018 1 groupHSV 290 120 65 55 3 HSV
+c 019 4 lblH 295 125 20 20 3 H:
+c 020 4 lblS 295 140 20 20 3 S:
+c 021 4 lblV 295 155 20 20 3 V:
+c 022 24 DummyRec 290 185 65 80 3 Panel
+c 023 13 textHexColor 290 270 65 20 3 AABBCCDD
+c 024 1 groupVisualOptions 0 0 365 80 4 Visual Options
+c 025 4 lblState 10 15 35 30 4 State:
+c 026 12 propsState 45 15 120 30 4 NORMAL;FOCUSED;PRESSED;DISABLED
+c 027 5 BtnViewTable 170 15 110 30 4 View Style Table
+c 028 5 BtnAbout 285 15 70 30 4 About
+c 029 18 alpha 45 55 275 15 4 Alpha:
+c 030 1 groupStyleSave 0 0 365 50 5 Style Save Options
+c 031 11 saveFormat 10 10 120 30 5 STYLE (.rgs);TABLE (.png); CODE (.h)
+c 032 8 exportFont 140 15 20 20 5 Export Font
+c 033 5 BtnSaveStyle 240 10 115 30 5 Save Style
+c 034 20 statusBottom01 0 665 150 25 1 style name
+c 035 20 statusBottom02 150 665 186 25 1 CHANGED PROPERTIES: 77
+c 036 20 statusBottom03 335 665 405 25 1 EDITION TIME: 02:45:30
