@@ -81,18 +81,17 @@ bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib
 
 // Style file type to export
 typedef enum {
-    STYLE_FILE = 0,         // style binary file (.rgs)
-    PALETTE_IMAGE,          // style color palette image (only default style)
-    PALETTE_CODE,           // style color code
-    CONTROLS_TABLE_IMAGE    // style controls table (for reference)
+    STYLE_BINARY = 0,       // Style binary file (.rgs)
+    STYLE_AS_CODE,          // Style as (ready-to-use) code (.h)
+    STYLE_TABLE_IMAGE       // Style controls table image (for reference)
 } GuiStyleFileType;
 
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
 
-// Default Light style backup to check changed properties
-//static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
+// Default style backup to check changed properties
+static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
 
 // Controls name text
 // NOTE: Some styles are shared by multiple controls
@@ -160,19 +159,17 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 
 // Load/Save/Export data functions
 static void SaveStyle(const char *fileName);                // Save style file (.rgs)
-
-static void ExportStyle(const char *fileName, int type);    // Export style color palette
 static void ExportStyleAsCode(const char *fileName);        // Export gui style as color palette code
 
 static void DialogLoadStyle(void);                          // Show dialog: load style file
 static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
 static void DialogExportStyle(int type);                    // Show dialog: export style file
 
-// Auxiliar functions
-static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
-
 static Image GenImageStylePalette(void);                    // Generate raygui palette image by code
 static Image GenImageStyleControlsTable(const char *styleName, const char *styleCreator); // Draw controls table image
+
+// Auxiliar functions
+static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -267,8 +264,12 @@ int main(int argc, char *argv[])
     for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
 
-    // TODO: Keep a backup for base style
-    //memcpy(styleBackup, GuiGetStyleDefault(), NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)*sizeof(unsigned int));
+    // Keep a backup for base style
+    GuiLoadStyleDefault();
+    for (int i = 0; i < NUM_CONTROLS; i++)
+    {
+        for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
+    }
 
     SetTargetFPS(60);
     //------------------------------------------------------------
@@ -296,14 +297,12 @@ int main(int argc, char *argv[])
 
             ClearDroppedFiles();
 
-            // Reset selected control
-            currentSelectedControl = -1;
+            currentSelectedControl = -1;    // Reset selected control
         }
         //----------------------------------------------------------------------------------
 
         // Keyboard shortcuts
         //----------------------------------------------------------------------------------
-        
         // Show dialog: load input file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();
         
@@ -311,12 +310,8 @@ int main(int argc, char *argv[])
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);
         
         // Show dialog: export style file (.png, .png, .h)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(CONTROLS_TABLE_IMAGE);
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(STYLE_TABLE_IMAGE);
 
-        // TODO: Change this behaviour for something better...
-        if (IsKeyPressed(KEY_T)) ExportStyle("test_controls_table.png", CONTROLS_TABLE_IMAGE);
-        if (IsKeyPressed(KEY_Y)) ExportStyle("test_palette.png", PALETTE_IMAGE);
-        
         // Show window: about
         if (IsKeyPressed(KEY_F1)) windowAboutState.windowAboutActive = true;
         
@@ -326,7 +321,7 @@ int main(int argc, char *argv[])
             if (windowAboutState.windowAboutActive) windowAboutState.windowAboutActive = false;
             else if (changedControlsCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
-        }
+        }        
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -335,14 +330,15 @@ int main(int argc, char *argv[])
         mousePos = GetMousePosition();      // Get mouse position each frame
         if (WindowShouldClose()) exitWindow = true;
 
-        // TODO: Check for changed controls
-        if ((framesCounter%120) == 0)
+        // Check for changed controls
+        changedControlsCounter = 0;
+        for (int i = 0; i < NUM_CONTROLS; i++)
         {
-            changedControlsCounter = 0;
-            //for (int i = 0; i < NUM_PROPERTIES; i++) if (styleBackup[i] != style[i)) changedControlsCounter++;
+            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) changedControlsCounter++;
         }
 
         // Controls selection on list view logic
+        // TODO: Review all this logic!
         //----------------------------------------------------------------------------------
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
 
@@ -359,7 +355,7 @@ int main(int argc, char *argv[])
             GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
 
             // TODO: REVIEW: Resets all updated controls!
-            GuiUpdateStyleComplete();
+            //GuiUpdateStyleComplete();
         }
         else if ((currentSelectedControl != -1) && (currentSelectedProperty != -1))
         {
@@ -472,7 +468,7 @@ int main(int argc, char *argv[])
             if (GuiButton((Rectangle){ anchorControls.x + 195, anchorControls.y + 240, 160, 30 }, "Save Style")) DialogSaveStyle(comboActive);
             if (GuiDropdownBox((Rectangle){ anchorControls.x + 115, anchorControls.y + 195, 105, 30 }, "ONE;TWO;THREE", &dropdownBoxActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
 
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, GetScreenHeight() - 24, 720, 24 }, "STATUSBAR");
+            GuiStatusBar((Rectangle){ anchorMain.x + 0, GetScreenHeight() - 24, 720, 24 }, FormatText("CHANGED: %i", changedControlsCounter));
             
             GuiUnlock();
             }
@@ -514,7 +510,7 @@ int main(int argc, char *argv[])
     }
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    UnloadFont(font);
+    UnloadFont(font);           // Unload font data
 
     CloseWindow();              // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
@@ -569,11 +565,11 @@ static void ShowCommandLineInfo(void)
 static void ProcessCommandLine(int argc, char *argv[])
 {
     // CLI required variables
-    bool showUsageInfo = false;     // Toggle command line usage info
+    bool showUsageInfo = false;         // Toggle command line usage info
 
-    char inFileName[256] = { 0 };   // Input file name
-    char outFileName[256] = { 0 };  // Output file name
-    int outputFormat = 0;           // Formats: STYLE_FILE, PALETTE_IMAGE, CONTROLS_TABLE_IMAGE, PALETTE_CODE
+    char inFileName[256] = { 0 };       // Input file name
+    char outFileName[256] = { 0 };      // Output file name
+    int outputFormat = STYLE_BINARY;    // Formats: STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
 
     // Arguments scan and processing
     for (int i = 1; i < argc; i++)
@@ -632,7 +628,18 @@ static void ProcessCommandLine(int argc, char *argv[])
         strcpy(outFileName, inFileName);
 
         // Export style files with different formats
-        ExportStyle(outFileName, outputFormat);
+        switch (outputFormat)
+        {
+            case STYLE_BINARY: SaveStyle(outFileName); break;
+            case STYLE_AS_CODE: ExportStyleAsCode(outFileName); break;
+            case STYLE_TABLE_IMAGE:
+            {
+                Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
+                ExportImage(imStyleTable, outFileName);
+                UnloadImage(imStyleTable);
+            } break;
+            default: break;
+        }
     }
 
     if (showUsageInfo) ShowCommandLineInfo();
@@ -807,28 +814,154 @@ static void SaveStyle(const char *fileName)
     if (rgsFile != NULL) fclose(rgsFile);
 }
 
-// Export style color palette
-static void ExportStyle(const char *fileName, int type)
+// Export gui style as (ready-to-use) code file
+// NOTE: Code file already implements a function to load style 
+static void ExportStyleAsCode(const char *fileName)
 {
-    switch (type)
+    FILE *txtFile = fopen(fileName, "wt");
+
+    fprintf(txtFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as an array values           //\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/rguistyler                    //\n");
+    fprintf(txtFile, "// feedback and support:       ray[at]raylib.com                                //\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
+    fprintf(txtFile, "//                                                                              //\n");
+    fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
+
+    fprintf(txtFile, "// raygui custom style palette\n");
+    fprintf(txtFile, "// NOTE: Only DEFAULT style defined, expanded to all controls properties\n");
+    fprintf(txtFile, "// NOTE: Use GuiLoadStylePalette(stylePalette);\n");
+
+    // Write byte data as hexadecimal text
+    fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
+    for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
     {
-        case STYLE_FILE: SaveStyle(fileName); break;
-        case PALETTE_CODE: ExportStyleAsCode(fileName); break;
-        case PALETTE_IMAGE:
-        {
-            Image imStylePal = GenImageStylePalette();
-            ExportImage(imStylePal, fileName);
-            UnloadImage(imStylePal);
+        //if (i < NUM_PROPS_EXTENDED) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
+        //else fprintf(txtFile, "0x%08x    // DEFAULT_%s \n", GuiGetStyle(i, j), guiPropsExText[i - NUM_PROPS_DEFAULT]);
+    }
+    fprintf(txtFile, "};\n");
+    
+    /*
+    // Reference:
+    // raygui style palette: Light
+    static const int styleLight[20] = {
+        
+        0x838383ff,     // DEFAULT_BORDER_COLOR_NORMAL
+        0xc9c9c9ff,     // DEFAULT_BASE_COLOR_NORMAL
+        0x686868ff,     // DEFAULT_TEXT_COLOR_NORMAL
+        0x5bb2d9ff,     // DEFAULT_BORDER_COLOR_FOCUSED
+        0xc9effeff,     // DEFAULT_BASE_COLOR_FOCUSED
+        0x6c9bbcff,     // DEFAULT_TEXT_COLOR_FOCUSED
+        0x0492c7ff,     // DEFAULT_BORDER_COLOR_PRESSED
+        0x97e8ffff,     // DEFAULT_BASE_COLOR_PRESSED
+        0x368bafff,     // DEFAULT_TEXT_COLOR_PRESSED
+        0xb5c1c2ff,     // DEFAULT_BORDER_COLOR_DISABLED
+        0xe6e9e9ff,     // DEFAULT_BASE_COLOR_DISABLED
+        0xaeb7b8ff,     // DEFAULT_TEXT_COLOR_DISABLED
+        1,              // DEFAULT_BORDER_WIDTH
+        1,              // DEFAULT_INNER_PADDING;
+        1,              // DEFAULT_TEXT_ALIGNMENT
+        0,              // DEFAULT_RESERVED02
+        10,             // DEFAULT_TEXT_SIZE
+        1,              // DEFAULT_TEXT_SPACING
+        0x90abb5ff,     // DEFAULT_LINE_COLOR
+        0xf5f5f5ff,     // DEFAULT_BACKGROUND_COLOR
+    };
+    
+    // TODO: Expose custom style loading function
+    void LoadStyleLight(void)
+    {
+        GuiLoadStyleProps(styleLight, 20);
+        GuiUpdateStyleComplete();
+        
+        // TODO: Set additional properties
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
+        GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
+    }
+    */
 
-        } break;
-        case CONTROLS_TABLE_IMAGE:
-        {
-            Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
-            ExportImage(imStyleTable, fileName);
-            UnloadImage(imStyleTable);
+    fclose(txtFile);
+}
 
-        } break;
-        default: break;
+// Dialog load style file
+static void DialogLoadStyle(void)
+{
+    // Open file dialog
+    const char *filters[] = { "*.rgs" };
+    const char *fileName = tinyfd_openFileDialog("Load raygui style file", "", 1, filters, "raygui Style Files (*.rgs)", 0);
+
+    if (fileName != NULL)
+    {
+        GuiLoadStyle(fileName);
+        SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(fileName)));
+
+        // TODO: Register input fileName
+        styleLoaded = true;
+    }
+}
+
+// Dialog save style file
+static void DialogSaveStyle(bool binary)
+{
+    // Save file dialog
+    const char *filters[] = { "*.rgs" };
+    const char *fileName = tinyfd_saveFileDialog("Save raygui style file", "style.rgs", 1, filters, "raygui Style Files (*.rgs)");
+
+    if (fileName != NULL)
+    {
+        char outFileName[256] = { 0 };
+        strcpy(outFileName, fileName);
+
+        // Check for valid extension and make sure it is
+        if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+
+        // Save style file (text or binary)
+        SaveStyle(outFileName);
+        styleSaved = true;
+    }
+}
+
+// Dialog export style file
+static void DialogExportStyle(int type)
+{
+    const char *fileName = NULL;
+
+#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
+    // Save file dialog
+    if (type == STYLE_BINARY)
+    {
+        const char *filters[] = { "*.rgs" };
+        fileName = tinyfd_saveFileDialog("Export raygui style file", "style.rgs", 1, filters, "Style File (*.rgs)");
+    }
+    else if (type == STYLE_AS_CODE)
+    {
+        const char *filters[] = { "*.h" };
+        fileName = tinyfd_saveFileDialog("Export raygui style code file", "style.h", 1, filters, "Style As Code (*.h)");
+    }
+    else if (type == STYLE_TABLE_IMAGE)
+    {
+        const char *filters[] = { "*.png" };
+        fileName = tinyfd_saveFileDialog("Export raygui style table image file", "style.png", 1, filters, "Style Table Image (*.png)");
+    }
+#endif
+
+    if (fileName != NULL)
+    {
+        switch (type)
+        {
+            case STYLE_BINARY: SaveStyle(fileName); break;
+            case STYLE_AS_CODE: ExportStyleAsCode(fileName); break;
+            case STYLE_TABLE_IMAGE:
+            {
+                Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
+                ExportImage(imStyleTable, fileName);
+                UnloadImage(imStyleTable);
+            } break;
+            default: break;
+        }
     }
 }
 
@@ -1026,92 +1159,6 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
     return imStyleTable;
 }
 
-// Export gui style as color palette code
-// NOTE: Currently only default color palette is supported
-static void ExportStyleAsCode(const char *fileName)
-{
-    FILE *txtFile = fopen(fileName, "wt");
-
-    fprintf(txtFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as an array values           //\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/rguistyler                    //\n");
-    fprintf(txtFile, "// feedback and support:       ray[at]raylib.com                                //\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
-
-    fprintf(txtFile, "// raygui custom style palette\n");
-    fprintf(txtFile, "// NOTE: Only DEFAULT style defined, expanded to all controls properties\n");
-    fprintf(txtFile, "// NOTE: Use GuiLoadStylePalette(stylePalette);\n");
-
-    // Write byte data as hexadecimal text
-    fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
-    for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
-    {
-        //if (i < NUM_PROPS_EXTENDED) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
-        //else fprintf(txtFile, "0x%08x    // DEFAULT_%s \n", GuiGetStyle(i, j), guiPropsExText[i - NUM_PROPS_DEFAULT]);
-    }
-    fprintf(txtFile, "};\n");
-
-    fclose(txtFile);
-}
-
-// Dialog load style file
-static void DialogLoadStyle(void)
-{
-    // Open file dialog
-    const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_openFileDialog("Load raygui style file", "", 1, filters, "raygui Style Files (*.rgs)", 0);
-
-    if (fileName != NULL)
-    {
-        GuiLoadStyle(fileName);
-        SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(fileName)));
-
-        // TODO: Register input fileName
-        styleLoaded = true;
-    }
-}
-
-// Dialog save style file
-static void DialogSaveStyle(bool binary)
-{
-    // Save file dialog
-    const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_saveFileDialog("Save raygui style file", "style.rgs", 1, filters, "raygui Style Files (*.rgs)");
-
-    if (fileName != NULL)
-    {
-        char outFileName[256] = { 0 };
-        strcpy(outFileName, fileName);
-
-        // Check for valid extension and make sure it is
-        if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
-
-        // Save style file (text or binary)
-        SaveStyle(outFileName);
-        styleSaved = true;
-    }
-}
-
-// Dialog export style file
-static void DialogExportStyle(int type)
-{
-    // Save file dialog
-    const char *filters[] = { "*.png", "*.h" };
-    const char *fileName = tinyfd_saveFileDialog("Export raygui style file", "", 2, filters, "Style Files (*.rgs, *.png, *.h)");
-
-    // TODO: Check file extension for type?
-
-    if (fileName != NULL)
-    {
-        ExportStyle(fileName, type);
-    }
-}
-
 //--------------------------------------------------------------------------------------------
 // Auxiliar GUI functions
 //--------------------------------------------------------------------------------------------
@@ -1198,7 +1245,7 @@ typedef struct {
 } IHDRChunkData;
 
 // Embedd gui style inside PNG file as rGSt chunk
-void EmbeddStyleInPNG(const char *fileName, const char *rgsFileName)
+void ExportStyleInPNG(const char *fileName, const char *rgsFileName)
 {
     unsigned char signature[8] = { 0 };
     
