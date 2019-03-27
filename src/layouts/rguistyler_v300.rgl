@@ -1,53 +1,57 @@
 #
 # rgl text file (v1.0) - raygui layout text file generated using rGuiLayout
 #
-# Total number of controls:     37
+# Total number of controls:     41
 # Anchor info:   a <id> <name> <posx> <posy> <enabled>
 # Control info:  c <id> <type> <name> <rectangle> <anchor_id> <text>
 #
-r 0 0 -1 -1
-a 000 anchor00 0 0 1
-a 001 anchor01 50 30 1
-a 002 anchor02 395 90 1
-a 003 anchor03 405 235 1
-a 004 anchor04 0 0 0
-a 005 anchor05 0 0 0
-a 006 anchor06 405 125 1
-a 007 anchor07 0 0 0
-c 000 3 Panel037 50 30 740 50 0 
-c 001 22 listViewControls 10 60 140 610 1 
-c 002 22 listViewProps 155 60 180 610 1 
-c 003 0 windowControls 0 0 385 610 2 Sample raygui controls
-c 004 1 groupStyleLoad 0 0 365 95 6 Style Load Options
-c 005 5 BtnLoadStyle -345 -85 65 30 6 #1#Load
-c 006 5 BtnLoadFont 10 15 90 30 6 Load Font
-c 007 16 genFontSize 135 15 90 30 6 
-c 008 13 fontSample 10 55 345 30 6 sample text
-c 009 1 groupPropertyEdit 0 0 365 305 3 Property Edition
-c 010 17 property 45 15 205 15 3 Value:
-c 011 15 property 290 10 65 25 3 
-c 012 2 lineTop 0 35 365 15 3 
-c 013 23 colorPicker 10 50 240 240 3 
-c 014 1 groupRGBA 290 55 65 55 3 RGBA
-c 015 4 lblR 295 60 20 20 3 R:
-c 016 4 lblG 295 75 20 20 3 G:
-c 017 4 lblB 295 90 20 20 3 B:
-c 018 1 groupHSV 290 120 65 55 3 HSV
-c 019 4 lblH 295 125 20 20 3 H:
-c 020 4 lblS 295 140 20 20 3 S:
-c 021 4 lblV 295 155 20 20 3 V:
-c 022 24 DummyRec 290 185 65 80 3 Panel
-c 023 13 textHexColor 290 270 65 20 3 AABBCCDD
-c 024 4 lblState 395 40 35 30 0 State:
-c 025 12 propsState 435 40 120 30 0 NORMAL;FOCUSED;PRESSED;DISABLED
-c 026 5 BtnViewTable 570 570 110 30 0 View Style Table
-c 027 5 BtnAbout 690 40 90 30 0 About
-c 028 18 alpha 450 645 275 15 0 Alpha:
-c 029 11 saveFormat 240 40 145 30 0 STYLE (.rgs);TABLE (.png); CODE (.h)
-c 030 8 exportFont 670 145 20 20 0 Export Font
-c 031 5 BtnSaveStyle 130 40 70 30 0 #2#Save
-c 032 20 statusBottom01 0 685 150 25 1 style name
-c 033 20 statusBottom02 150 685 186 25 1 CHANGED PROPERTIES: 77
-c 034 20 statusBottom03 335 685 405 25 1 EDITION TIME: 02:45:30
-c 035 5 Button036 205 40 30 30 0 #7#
-c 036 4 Label036 105 15 40 30 6 Size:
+r 50 30 1 -1
+a 000 anchor00 50 30 1
+a 001 anchorMain 0 0 1
+a 002 anchorWindow 345 60 1
+a 003 anchorPropEditor 355 95 1
+a 004 anchorFontOptions 355 465 1
+a 005 anchor05 -50 -30 0
+a 006 anchor06 -50 -30 0
+a 007 anchor07 -50 -30 0
+c 000 3 mainPanel 50 30 740 50 0 
+c 001 5 BtnLoadStyle 10 10 30 30 1 #1#
+c 002 5 BtnSaveStyle 95 40 30 30 0 #2#
+c 003 5 BtnAbout 130 40 70 30 0 #191#ABOUT
+c 004 9 viewStyleTable 395 40 30 30 0 #101#
+c 005 9 viewFont 430 40 30 30 0 #31#
+c 006 4 lblState 620 40 35 30 0 State:
+c 007 12 propsState 660 40 120 30 0 NORMAL;FOCUSED;PRESSED;DISABLED
+c 008 22 control 10 60 140 560 1 
+c 009 22 property 155 60 180 560 1 
+c 010 0 windowControls 0 0 385 560 2 Sample raygui controls
+c 011 1 groupPropertyEdit 0 0 365 357 3 Property Editor
+c 012 17 property 45 15 205 15 3 Value:
+c 013 15 property 290 10 65 25 3 
+c 014 2 lineTop 0 35 365 15 3 
+c 015 23 colorPicker 10 55 240 240 3 
+c 016 1 groupRGBA 290 60 65 55 3 RGBA
+c 017 4 lblR 295 65 20 20 3 R:
+c 018 4 lblG 295 80 20 20 3 G:
+c 019 4 lblB 295 95 20 20 3 B:
+c 020 1 groupHSV 290 125 65 55 3 HSV
+c 021 4 lblH 295 130 20 20 3 H:
+c 022 4 lblS 295 145 20 20 3 S:
+c 023 4 lblV 295 160 20 20 3 V:
+c 024 24 DummyRec 290 190 65 80 3 Panel
+c 025 13 textHexColor 290 275 65 20 3 AABBCCDD
+c 026 2 lineText 0 300 365 15 3 
+c 027 4 lblTextAlign 10 320 85 25 3 Text Alignment:
+c 028 10 textAlignment 95 320 85 25 3 LEFT;CENTER;RIGHT
+c 029 1 groupFont 0 0 365 100 4 Font Options
+c 030 5 BtnLoadFont 10 15 85 30 4 #30#Load
+c 031 4 lblFontSize 105 15 30 30 4 Size:
+c 032 16 genFontSize 135 15 80 30 4 
+c 033 4 lblFontSpacing 225 15 50 30 4 Spacing:
+c 034 16 fontSpacing 275 15 80 30 4 
+c 035 13 fontSample 10 55 345 35 4 sample text
+c 036 11 exportFormat 500 605 160 30 0 STYLE (.rgs);TABLE (.png);CODE (.h)
+c 037 5 BtnExport 670 605 100 30 0 #7#Export Style
+c 038 20 status01 0 635 151 25 1 style name
+c 039 20 status02 150 635 186 25 1 CHANGED PROPERTIES: 77
+c 040 20 status03 335 635 405 25 1 EDITION TIME: 02:45:30
