@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v2.2 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v2.1 - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
 *
@@ -67,7 +67,7 @@
 //----------------------------------------------------------------------------------
 #define ENABLE_PRO_FEATURES             // Enable PRO version features
 
-#define TOOL_VERSION_TEXT     "2.2"     // Tool version string
+#define TOOL_VERSION_TEXT     "2.1"     // Tool version string
 
 #define NUM_CONTROLS            13      // Number of GUI controls on the list
 
