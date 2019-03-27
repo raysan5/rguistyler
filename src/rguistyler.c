@@ -338,36 +338,23 @@ int main(int argc, char *argv[])
         }
 
         // Controls selection on list view logic
-        // TODO: Review all this logic!
         //----------------------------------------------------------------------------------
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
 
-        if ((currentSelectedControl == 0) && (currentSelectedProperty != -1))
+        if ((currentSelectedControl != -1) && (currentSelectedProperty != -1))
         {
-            if ((previousSelectedProperty != currentSelectedProperty) || (previousSelectedControl != currentSelectedControl)) saveColor = false;
-
-            if (!saveColor)
+            if (previousSelectedProperty != currentSelectedProperty) saveColor = true;
+            
+            if (saveColor)
             {
                 colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
-                saveColor = true;
+                saveColor = false;
             }
 
-            GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
-
-            // TODO: REVIEW: Resets all updated controls!
-            //GuiUpdateStyleComplete();
-        }
-        else if ((currentSelectedControl != -1) && (currentSelectedProperty != -1))
-        {
-            if ((previousSelectedProperty != currentSelectedProperty) || (previousSelectedControl != currentSelectedControl)) saveColor = false;
-
-            if (!saveColor)
-            {
-                colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
-                saveColor = true;
-            }
-
-            GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
+            // Update control property
+            // NOTE: In case DEFAULT control selected, we propagate changes to all controls
+            if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, ColorToInt(colorPickerValue));
+            else GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
         }
 
         previousSelectedProperty = currentSelectedProperty;
@@ -414,7 +401,7 @@ int main(int argc, char *argv[])
             //---------------------------------------------------------------------------------------------------------
             {
             // Draw info bar top
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >      STYLE VIEWER");
+            //GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 0, 720, 24 }, "CHOOSE CONTROL     >      CHOOSE PROPERTY STYLE      >      STYLE VIEWER");
 
             // Draw Gui controls
             GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 40, 140, 560 }, TextJoin(guiControlText, NUM_CONTROLS, ";"), &currentSelectedControl, NULL, true);
