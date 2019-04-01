@@ -246,6 +246,9 @@ int main(int argc, char *argv[])
     bool propsStateEditMode = false;
     int propsStateActive = 0;
     
+    bool styleNameEditMode = false;
+    unsigned char styleNameText[32] = "light_style";
+    
     bool prevViewStyleTableState = viewStyleTableActive;
     
     int currentSelectedControl = -1;
@@ -333,7 +336,7 @@ int main(int argc, char *argv[])
             if (windowAboutState.windowAboutActive) windowAboutState.windowAboutActive = false;
             else if (changedPropsCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
-        }        
+        }
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -346,7 +349,14 @@ int main(int argc, char *argv[])
         changedPropsCounter = 0;
         for (int i = 0; i < NUM_CONTROLS; i++)
         {
-            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) changedPropsCounter++;
+            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) 
+            {
+                if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) 
+                {
+                    changedPropsCounter++;
+                    printf("Changed control prop: %i - %i\n", i, j);
+                }
+            }
         }
         
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
@@ -446,6 +456,8 @@ int main(int argc, char *argv[])
             if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) DialogSaveStyle(true);
             if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowAboutActive = true;
             
+            if (GuiTextBox((Rectangle){ 155, 10, 180, 30 }, styleNameText, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
+            
             viewStyleTableActive = GuiToggle((Rectangle){ 345, 10, 30, 30 }, "#101#", viewStyleTableActive);
             viewFontActive = GuiToggle((Rectangle){ 380, 10, 30, 30 }, "#31#", viewFontActive);
             windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
@@ -460,8 +472,12 @@ int main(int argc, char *argv[])
                 windowControlsActive = !GuiWindowBox((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 560 }, "Sample raygui controls");
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
-                propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 205, 15 }, "Value:", propertyValue, 0, 20, true);
-                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, &propertyValue, 0, 20, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
+                propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", propertyValue, 0, 20, false);
+                
+                int valueBoxTextAlignment = GuiGetStyle(TEXTBOX, TEXT_ALIGNMENT);
+                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
+                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
+                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, valueBoxTextAlignment);
                 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
