@@ -235,6 +235,7 @@ int main(int argc, char *argv[])
     int styleTablePositionX = 0;
     
     float fontScale = 1.0f;
+    char fontFileName[128] = { 0 };
 
     // GUI: Main Layout
     //-----------------------------------------------------------------------------------
@@ -308,6 +309,8 @@ int main(int argc, char *argv[])
                 // NOTE: Font generation size depends on spinner size selection
                 font = LoadFontEx(droppedFiles[0], genFontSizeValue, 0, 0);
                 GuiFont(font);
+                
+                strcpy(fontFileName, GetFileName(droppedFiles[0]));
             }
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
@@ -522,9 +525,9 @@ int main(int argc, char *argv[])
                 if (GuiButton((Rectangle){ 620, 575, 100, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
             }
             
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, "style name");
+            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
             GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, FormatText("CHANGED PROPERTIES: %i", changedPropsCounter));
-            GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, "EDITION TIME: 02:45:30");
+            GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s", (fontFileName[0] == 0)? "raylib default" : fontFileName));
             GuiState(GUI_STATE_NORMAL);
             
             GuiLabel((Rectangle){ 570, 10, 35, 30 }, "State:");
