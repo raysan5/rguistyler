@@ -165,8 +165,8 @@ static void DialogLoadStyle(void);                          // Show dialog: load
 static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
 static void DialogExportStyle(int type);                    // Show dialog: export style file
 
-static Image GenImageStylePalette(void);                    // Generate raygui palette image by code
-static Image GenImageStyleControlsTable(const char *styleName, const char *styleCreator); // Draw controls table image
+static Image GenImageStylePalette(void);                        // Generate raygui palette image by code
+static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
 // Auxiliar functions
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
@@ -233,6 +233,8 @@ int main(int argc, char *argv[])
     
     Texture texStyleTable = { 0 };
     int styleTablePositionX = 0;
+    
+    float fontScale = 1.0f;
 
     // GUI: Main Layout
     //-----------------------------------------------------------------------------------
@@ -349,14 +351,7 @@ int main(int argc, char *argv[])
         changedPropsCounter = 0;
         for (int i = 0; i < NUM_CONTROLS; i++)
         {
-            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) 
-            {
-                if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) 
-                {
-                    changedPropsCounter++;
-                    printf("Changed control prop: %i - %i\n", i, j);
-                }
-            }
+            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) changedPropsCounter++;
         }
         
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
@@ -419,7 +414,7 @@ int main(int argc, char *argv[])
         {
             UnloadTexture(texStyleTable);
 
-            Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
+            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
             texStyleTable = LoadTextureFromImage(imStyleTable);
             UnloadImage(imStyleTable);
         }
@@ -440,6 +435,13 @@ int main(int argc, char *argv[])
         
         prevViewStyleTableState = viewStyleTableActive;
         //----------------------------------------------------------------------------------
+
+        if (viewFontActive)
+        {
+            fontScale += GetMouseWheelMove();
+            if (fontScale < 1.0f) fontScale = 1.0f;
+            if (font.texture.width*fontScale > GetScreenWidth()) fontScale = GetScreenWidth()/font.texture.width;
+        }
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -507,9 +509,13 @@ int main(int argc, char *argv[])
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) { /* BtnLoadFont(); */ } 
                 GuiLabel((Rectangle){ anchorFontOptions.x + 105, anchorFontOptions.y + 15, 30, 30 }, "Size:");
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 15, 80, 30 }, &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 GuiLabel((Rectangle){ anchorFontOptions.x + 225, anchorFontOptions.y + 15, 50, 30 }, "Spacing:");
+                
+                int spinnerTextAlignment = GuiGetStyle(TEXTBOX, TEXT_ALIGNMENT);
+                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 15, 80, 30 }, &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, &fontSpacingValue, 0, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
+                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, spinnerTextAlignment);
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
                 
                 exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "STYLE (.rgs);TABLE (.png);CODE (.h)", exportFormatActive);
@@ -531,9 +537,9 @@ int main(int argc, char *argv[])
             if (viewFontActive)
             {
                 DrawRectangle(0, 50, GetScreenWidth(), GetScreenHeight() - 75, Fade(GRAY, 0.8f));
-                DrawRectangle(GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, font.texture.width, font.texture.height, BLACK);
-                DrawRectangleLines(GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, font.texture.width, font.texture.height, RED);
-                DrawTexture(font.texture, GetScreenWidth()/2 - font.texture.width/2, GetScreenHeight()/2 - font.texture.height/2, WHITE);
+                DrawRectangle(GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2, font.texture.width*fontScale, font.texture.height*fontScale, BLACK);
+                DrawRectangleLines(GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2, font.texture.width*fontScale, font.texture.height*fontScale, RED);
+                DrawTextureEx(font.texture, (Vector2){ GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2 }, 0.0f, fontScale, WHITE);
                 // TODO: Draw font info below image
             }
             
@@ -697,7 +703,7 @@ static void ProcessCommandLine(int argc, char *argv[])
             case STYLE_AS_CODE: ExportStyleAsCode(outFileName); break;
             case STYLE_TABLE_IMAGE:
             {
-                Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
+                Image imStyleTable = GenImageStyleControlsTable("raygui_light");
                 ExportImage(imStyleTable, outFileName);
                 UnloadImage(imStyleTable);
             } break;
@@ -1019,7 +1025,7 @@ static void DialogExportStyle(int type)
             case STYLE_AS_CODE: ExportStyleAsCode(fileName); break;
             case STYLE_TABLE_IMAGE:
             {
-                Image imStyleTable = GenImageStyleControlsTable("raygui_light", "@raysan5");
+                Image imStyleTable = GenImageStyleControlsTable("style_name");
                 ExportImage(imStyleTable, fileName);
                 UnloadImage(imStyleTable);
             } break;
@@ -1052,7 +1058,7 @@ static Image GenImageStylePalette(void)
 }
 
 // Draw controls table image
-static Image GenImageStyleControlsTable(const char *styleName, const char *styleCreator)
+static Image GenImageStyleControlsTable(const char *styleName)
 {
     #define TABLE_LEFT_PADDING      15
     #define TABLE_TOP_PADDING       20
@@ -1140,7 +1146,7 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 
         // Draw style title
         DrawText("raygui style table: ", TABLE_LEFT_PADDING, 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-        DrawText(FormatText("%s by %s", styleName, styleCreator), TABLE_LEFT_PADDING + MeasureText("raygui style table: ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
+        DrawText(FormatText("%s", styleName), TABLE_LEFT_PADDING + MeasureText("raygui style table: ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
 
         // Draw left column
         rec = (Rectangle){ TABLE_LEFT_PADDING, TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableControlsNameWidth, TABLE_CELL_HEIGHT };
@@ -1164,8 +1170,11 @@ static Image GenImageStyleControlsTable(const char *styleName, const char *style
 
             // Draw grid lines: control name
             GuiGroupBox(rec, NULL);
+            int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
             GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
             GuiLabel(rec, tableControlsName[i]);
+            GuiSetStyle(LABEL, TEXT_ALIGNMENT, labelTextAlignment);
+            
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
 
