@@ -14,19 +14,18 @@ Useful for imgui style customization. The best mate for [rGuiLayout](https://git
 
  - **Global style editing or control specific**
  - Preview new style in real time and test controls
- - Disabled control mode editing included (checkbox)
- - Import your **image style palette** (drag&drop)
+ - Select controls state: NORMAL, FOCUSED, PRESSED, DISABLED
+ - Import custom style font, configure size and spacing 
  - Save/Load your style as **.rgs (text or binary mode)**
- - Export your style as **image style palette** or **controls table**
+ - Export your style as **code file (.h)** or **controls table (.png)**
  - Color palette menu for quick save/selection
  - **Completely portable (single file)**
- - Free and open source
  
 ## Usage
 
-The tool is pretty intuitive and easy-to-use, just choose the control to edit, the property to edit and select a color. Changes can be tested in real time in the same tool. Actually, updated style is directly applied to the same tool.
+The tool is pretty intuitive and easy-to-use, just choose the control to edit, the property to edit and select a value/color. Changes can be tested in real time in the same tool. Actually, updated style is directly applied to the same tool.
 
-Once a style has been created, just save it as a **.rgs** file, it can be saved as text or binary mode.
+Once a style has been created, just save it as **.rgs** or export as **code (.h)** or **style table (.png)**.
 
 ## Screenshots
 
