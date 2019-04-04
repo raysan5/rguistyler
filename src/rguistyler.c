@@ -719,19 +719,20 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Process input .rgs file
         GuiLoadStyle(inFileName);
 
-        // TODO: Setup output file name, based on input
+        // Setup output file name, based on input
         char outFileName[256] = { 0 };
         strcpy(outFileName, inFileName);
+        outFileName[strlen(inFileName) - 4] = '\0';
 
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_BINARY: SaveStyle(outFileName); break;
-            case STYLE_AS_CODE: ExportStyleAsCode(outFileName); break;
+            case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgs")); break;
+            case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h")); break;
             case STYLE_TABLE_IMAGE:
             {
                 Image imStyleTable = GenImageStyleControlsTable("raygui_light");
-                ExportImage(imStyleTable, outFileName);
+                ExportImage(imStyleTable, FormatText("%s%s", outFileName, ".png"));
                 UnloadImage(imStyleTable);
             } break;
             default: break;
