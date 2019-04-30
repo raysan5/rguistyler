@@ -50,18 +50,20 @@
 #include "raylib.h"
 
 #define RAYGUI_IMPLEMENTATION
-#include "external/raygui.h"            // Required for: IMGUI controls
+#include "external/raygui.h"                // Required for: IMGUI controls
 
-#undef RAYGUI_IMPLEMENTATION            // Avoid including raygui implementation again
+#undef RAYGUI_IMPLEMENTATION                // Avoid including raygui implementation again
 
 #define GUI_WINDOW_ABOUT_IMPLEMENTATION
-#include "gui_window_about.h"           // GUI: About Window
+#include "gui_window_about.h"               // GUI: About Window
 
-#include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
+#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
+    #include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
+#endif
 
-#include <stdlib.h>                     // Required for: malloc(), free()
-#include <string.h>                     // Required for: strcmp()
-#include <stdio.h>                      // Required for: fopen(), fclose(), fread()...
+#include <stdlib.h>                         // Required for: malloc(), free()
+#include <string.h>                         // Required for: strcmp()
+#include <stdio.h>                          // Required for: fopen(), fclose(), fread()...
 
 //----------------------------------------------------------------------------------
 // Defines and Macros
@@ -72,7 +74,7 @@
 #define TOOL_DESCRIPTION    "A simple and easy-to-use raygui styles editor"
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib)
+bool __stdcall FreeConsole(void);           // Close console from code (kernel32.lib)
 #endif
 
 //----------------------------------------------------------------------------------
@@ -751,6 +753,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 static void SaveStyle(const char *fileName)
 {
     FILE *rgsFile = NULL;
+    
 #if defined(RAYGUI_STYLE_SAVE_AS_TEXT)
     rgsFile = fopen(fileName, "wt");
 
@@ -986,9 +989,13 @@ static void ExportStyleAsCode(const char *fileName)
 // Dialog load style file
 static void DialogLoadStyle(void)
 {
+    const char *fileName = NULL;
+    
+#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Open file dialog
     const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_openFileDialog("Load raygui style file", "", 1, filters, "raygui Style Files (*.rgs)", 0);
+    fileName = tinyfd_openFileDialog("Load raygui style file", "", 1, filters, "raygui Style Files (*.rgs)", 0);
+#endif
 
     if (fileName != NULL)
     {
@@ -1004,9 +1011,13 @@ static void DialogLoadStyle(void)
 // Dialog load font file
 static void DialogLoadFont(void)
 {
+    const char *fileName = NULL;
+    
+#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Open file dialog
     const char *filters[] = { "*.ttf" };
-    const char *fileName = tinyfd_openFileDialog("Load raygui style font", "", 1, filters, "Font Files (*.ttf)", 0);
+    fileName = tinyfd_openFileDialog("Load raygui style font", "", 1, filters, "Font Files (*.ttf)", 0);
+#endif
 
     if (fileName != NULL)
     {
@@ -1020,9 +1031,13 @@ static void DialogLoadFont(void)
 // Dialog save style file
 static void DialogSaveStyle(bool binary)
 {
+    const char *fileName = NULL;
+    
+#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Save file dialog
     const char *filters[] = { "*.rgs" };
-    const char *fileName = tinyfd_saveFileDialog("Save raygui style file", "style.rgs", 1, filters, "raygui Style Files (*.rgs)");
+    fileName = tinyfd_saveFileDialog("Save raygui style file", "style.rgs", 1, filters, "raygui Style Files (*.rgs)");
+#endif
 
     if (fileName != NULL)
     {
