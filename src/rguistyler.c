@@ -365,6 +365,9 @@ int main(int argc, char *argv[])
         }
         
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
+        
+        if (viewStyleTableActive || viewFontActive) lockBackground = true;
+        else lockBackground = false;
 
         // Controls selection on list view logic
         //----------------------------------------------------------------------------------
@@ -384,16 +387,16 @@ int main(int argc, char *argv[])
 
             // Update control property
             // NOTE: In case DEFAULT control selected, we propagate changes to all controls
-            if (currentSelectedProperty < TEXT_COLOR_DISABLED)
+            if (currentSelectedProperty <= TEXT_COLOR_DISABLED)
             {
-                if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, ColorToInt(colorPickerValue));
+                if (currentSelectedControl == DEFAULT) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, ColorToInt(colorPickerValue));
                 else GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
             }
             else
             {
                 //if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
                 //else 
-                if (currentSelectedControl > 0) GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
+                if (currentSelectedControl > DEFAULT) GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
             }
             
             // TODO: Review, propertyValue is reseted
@@ -460,9 +463,6 @@ int main(int argc, char *argv[])
             if (font.texture.width*fontScale > GetScreenWidth()) fontScale = GetScreenWidth()/font.texture.width;
         }
         //----------------------------------------------------------------------------------
-        
-        if (viewStyleTableActive || viewFontActive) lockBackground = true;
-        else lockBackground = false;
 
         // Draw
         //----------------------------------------------------------------------------------
