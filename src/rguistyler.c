@@ -104,7 +104,7 @@ static const char *guiControlText[NUM_CONTROLS] = {
     "CHECKBOX",
     "COMBOBOX",
     "DROPDOWNBOX",
-    "TEXTBOX",      // VALUEBOX, SPINNER
+    "TEXTBOX",      // TEXTBOXMULTI, VALUEBOX, SPINNER
     "LISTVIEW",
     "COLORPICKER",
     "SCROLLBAR"
@@ -130,6 +130,7 @@ static const char *guiPropsText[NUM_PROPS_DEFAULT] = {
     "RESERVED02"
 };
 
+/*
 // Controls default extended properties
 static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
     "TEXT_SIZE",
@@ -141,19 +142,20 @@ static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
     "RESERVED03",
     "RESERVED04",
 };
+*/
 
 // Default style backup to check changed properties
 static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
 
-static bool styleSaved = false;     // Show save dialog on closing if not saved
-static bool styleLoaded = false;    // Register if we are working over a loaded style (auto-save)
+static bool styleSaved = false;         // Show save dialog on closing if not saved
+static bool styleLoaded = false;        // Register if we are working over a loaded style (auto-save)
 
-static bool useCustomFont = false;  // Use custom font
-static Font font = { 0 };           // Custom font
-static int genFontSizeValue = 10;   // Generation font size
+static Font font = { 0 };               // Custom font
+static bool useCustomFont = false;      // Use custom font
+static int genFontSizeValue = 10;       // Generation font size
+static char fontFileName[256] = { 0 };  // Font file name (register font name for reloading)
 
-static char fontFileName[256] = { 0 };
-static char inFileName[256] = { 0 };       // Input file name (required in case of drag & drop over executable)
+static char inFileName[256] = { 0 };    // Input file name (required in case of drag & drop over executable)
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -172,7 +174,6 @@ static void DialogLoadFont(void);                           // Show dialog: load
 static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
 static void DialogExportStyle(int type);                    // Show dialog: export style file
 
-static Image GenImageStylePalette(void);                        // Generate raygui palette image by code
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
 // Auxiliar functions
@@ -241,6 +242,8 @@ int main(int argc, char *argv[])
     
     float fontScale = 1.0f;
     char fontFileName[128] = { 0 };
+    
+    bool lockBackground = false;
 
     // GUI: Main Layout
     //-----------------------------------------------------------------------------------
@@ -255,7 +258,7 @@ int main(int argc, char *argv[])
     int propsStateActive = 0;
     
     bool styleNameEditMode = false;
-    unsigned char styleNameText[32] = "light_style";
+    unsigned char styleNameText[32] = "light";
     
     bool prevViewStyleTableState = viewStyleTableActive;
     
@@ -388,8 +391,9 @@ int main(int argc, char *argv[])
             }
             else
             {
-                if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
-                else GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
+                //if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
+                //else 
+                if (currentSelectedControl > 0) GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
             }
             
             // TODO: Review, propertyValue is reseted
@@ -440,16 +444,8 @@ int main(int argc, char *argv[])
         
         if (viewStyleTableActive)
         {
-            if (IsKeyDown(KEY_RIGHT)) 
-            {
-                styleTablePositionX -= 5;
-                if (styleTablePositionX <= (GetScreenWidth() - texStyleTable.width)) styleTablePositionX = GetScreenWidth() - texStyleTable.width;
-            }
-            else if (IsKeyDown(KEY_LEFT))
-            {
-                styleTablePositionX += 5;
-                if (styleTablePositionX > 0) styleTablePositionX = 0;
-            }
+            if (IsKeyDown(KEY_RIGHT)) styleTablePositionX += 5;
+            else if (IsKeyDown(KEY_LEFT)) styleTablePositionX -= 5;
         }
         
         prevViewStyleTableState = viewStyleTableActive;
@@ -464,6 +460,9 @@ int main(int argc, char *argv[])
             if (font.texture.width*fontScale > GetScreenWidth()) fontScale = GetScreenWidth()/font.texture.width;
         }
         //----------------------------------------------------------------------------------
+        
+        if (viewStyleTableActive || viewFontActive) lockBackground = true;
+        else lockBackground = false;
 
         // Draw
         //----------------------------------------------------------------------------------
@@ -487,21 +486,28 @@ int main(int argc, char *argv[])
             windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
             
             GuiState(propsStateActive);
+            
+            if (lockBackground) GuiLock();
 
             GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 60, 140, 560 }, TextJoin(guiControlText, NUM_CONTROLS, ";"), &currentSelectedControl, NULL, true);
-            GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, NUM_PROPS_DEFAULT, NULL, &currentSelectedProperty, NULL, NULL, true);
+            
+            if (currentSelectedControl == -1) GuiDisable();
+            GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, NUM_PROPS_DEFAULT - 1, NULL, &currentSelectedProperty, NULL, NULL, true);
+            GuiEnable();
             
             if (windowControlsActive)
             {
                 windowControlsActive = !GuiWindowBox((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 560 }, "Sample raygui controls");
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
-                propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", propertyValue, 0, 20, false);
                 
+                if ((currentSelectedProperty != INNER_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
+                propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", propertyValue, 0, 20, false);
                 int valueBoxTextAlignment = GuiGetStyle(TEXTBOX, TEXT_ALIGNMENT);
                 GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, valueBoxTextAlignment);
+                GuiEnable();
                 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
@@ -525,8 +531,11 @@ int main(int argc, char *argv[])
                 DrawRectangleLinesEx((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 190, 60, 80 }, 2, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL)));
                 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 300, 365, 15 }, NULL);
+                
+                if (currentSelectedProperty != TEXT_ALIGNMENT) GuiDisable();
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 25 }, "Text Alignment:");
                 textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 85, 25 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
+                GuiEnable();
                 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) DialogLoadFont();
@@ -576,7 +585,9 @@ int main(int argc, char *argv[])
             if (viewStyleTableActive && (prevViewStyleTableState == viewStyleTableActive))
             {
                 DrawRectangle(0, 50, GetScreenWidth(), GetScreenHeight() - 75, Fade(GRAY, 0.8f));
-                DrawTexture(texStyleTable, styleTablePositionX, GetScreenHeight()/2 - texStyleTable.height/2, WHITE);
+                DrawTexture(texStyleTable, -styleTablePositionX, GetScreenHeight()/2 - texStyleTable.height/2, WHITE);
+                
+                styleTablePositionX = GuiSlider((Rectangle){ 0, GetScreenHeight()/2 + texStyleTable.height/2, GetScreenWidth(), 15 }, NULL, styleTablePositionX, 0, texStyleTable.width - GetScreenWidth(), false);
             }
 
             // GUI: About Window
@@ -986,6 +997,185 @@ static void ExportStyleAsCode(const char *fileName)
     fclose(txtFile);
 }
 
+// Draw rectangle with centered text at specific style state
+static void DrawStyleRectangle(Rectangle rec, const char *text, int state)
+{
+    DrawRectangleRec(rec, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + 3*state)));
+    DrawRectangle(rec.x + 1, rec.y + 1, rec.width - 2, rec.height - 2, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*state)));
+    DrawText(text, rec.x + rec.width/2 - MeasureText(text, 10)/2, rec.y + rec.height/2 - 10/2, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*state)));
+}
+
+// Draw controls table image
+static Image GenImageStyleControlsTable(const char *styleName)
+{
+    #define TABLE_LEFT_PADDING      15
+    #define TABLE_TOP_PADDING       20
+
+    #define TABLE_CELL_HEIGHT       40
+    #define TABLE_CELL_PADDING       5          // Control padding inside cell
+    
+    #define TABLE_CONTROLS_COUNT    12
+
+    typedef enum {
+        TYPE_LABEL = 0,
+        TYPE_BUTTON,
+        TYPE_TOGGLE,
+        TYPE_CHECKBOX,
+        TYPE_SLIDER,
+        TYPE_SLIDERBAR,
+        TYPE_PROGRESSBAR,
+        TYPE_COMBOBOX,
+        TYPE_DROPDOWNBOX,
+        TYPE_TEXTBOX,
+        TYPE_VALUEBOX,
+        TYPE_SPINNER
+    } TableControlType;
+
+    static const char *tableStateName[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
+    static const char *tableControlsName[TABLE_CONTROLS_COUNT] = {
+        "LABEL",        // LABELBUTTON
+        "BUTTON",
+        "TOGGLE",       // TOGGLEGROUP
+        "CHECKBOX",
+        "SLIDER",
+        "SLIDERBAR",
+        "PROGRESSBAR",
+        "COMBOBOX",
+        "DROPDOWNBOX",
+        "TEXTBOX",      // TEXTBOXMULTI
+        "VALUEBOX",
+        "SPINNER"       // VALUEBOX + BUTTON
+    };
+
+    // TODO: Controls grid with should be calculated depending on font size and controls text!
+    int controlWidth[TABLE_CONTROLS_COUNT] = {
+        80,     // LABEL
+        90,     // BUTTON
+        90,     // TOGGLE
+        160,    // CHECKBOX
+        90,     // SLIDER
+        90,     // SLIDERBAR
+        90,     // PROGRESSBAR
+        120,    // COMBOBOX,
+        110,    // DROPDOWNBOX
+        90,     // TEXTBOX
+        90,     // VALUEBOX
+        100,    // SPINNER
+    };
+
+    int tableStateNameWidth = 100;   // First column with state name width
+
+    int tableWidth = 0;
+    int tableHeight = 256;
+
+    tableWidth = TABLE_LEFT_PADDING*2 + tableStateNameWidth;
+    for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += ((controlWidth[i] + TABLE_CELL_PADDING*2) - 1);
+
+    // Controls required variables
+    int dropdownActive = 0;
+    int value = 40;
+
+    Rectangle rec = { 0 };      // Current drawing rectangle space
+
+    RenderTexture2D target = LoadRenderTexture(tableWidth, tableHeight);
+
+    GuiSetStyle(SLIDER, SLIDER_WIDTH, 10);
+
+    // Texture rendering
+    //--------------------------------------------------------------------------------------------
+    BeginTextureMode(target);
+    
+        ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+
+        // Draw style title
+        DrawText("raygui style:  ", TABLE_LEFT_PADDING, 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
+        DrawText(FormatText("%s", styleName), TABLE_LEFT_PADDING + MeasureText("raygui style:  ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
+
+        // Draw left column
+        //----------------------------------------------------------------------------------------
+        rec = (Rectangle){ TABLE_LEFT_PADDING, TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableStateNameWidth, TABLE_CELL_HEIGHT };
+
+        for (int i = 0; i < 4; i++)
+        {
+            GuiGroupBox(rec, NULL);
+            DrawStyleRectangle((Rectangle){ rec.x + 8, rec.y + TABLE_CELL_HEIGHT/2 - 16/2, 16, 16 }, "rl", i);
+            GuiState(i); GuiLabelButton((Rectangle){ rec.x + 28, rec.y, rec.width, rec.height }, tableStateName[i]);
+            rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
+        }
+        //----------------------------------------------------------------------------------------
+
+        GuiState(GUI_STATE_NORMAL);
+
+        int offsetWidth = TABLE_LEFT_PADDING + tableStateNameWidth;
+
+        // Draw basic controls
+        for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
+        {
+            rec = (Rectangle){ offsetWidth - i - 1, TABLE_TOP_PADDING + 20, (controlWidth[i] + TABLE_CELL_PADDING*2), TABLE_CELL_HEIGHT/2 + 1 };
+
+            // Draw grid lines: control name
+            GuiGroupBox(rec, NULL);
+            int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
+            GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
+            GuiLabel(rec, tableControlsName[i]);
+            
+            rec.y += TABLE_CELL_HEIGHT/2;
+            rec.height = TABLE_CELL_HEIGHT;
+
+            // Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
+            for (int j = 0; j < 4; j++)
+            {
+                // Draw grid lines: control state
+                GuiGroupBox(rec, NULL);
+
+                GuiState(j);
+                    // Draw control centered correctly in grid
+                    switch (i)
+                    {
+                        case TYPE_LABEL: GuiLabelButton((Rectangle){ rec.x, rec.y, controlWidth[i], 40 }, "Label"); break;
+                        case TYPE_BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "Button"); break;
+                        case TYPE_TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "Toggle", false); break;
+                        case TYPE_CHECKBOX:
+                        {
+                            GuiCheckBox((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "NoCheck", false);
+                            DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+                            GuiCheckBox((Rectangle){ rec.x + rec.width/2 + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "Checked", true);
+                        } break;
+                        case TYPE_SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, 40, 0, 100, false); break;
+                        case TYPE_SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, 40, 0, 100, false); break;
+                        case TYPE_PROGRESSBAR: GuiProgressBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, 60, 0, 100, false); break;
+                        case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "ComboBox;ComboBox", 0); break;
+                        case TYPE_DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "DropdownBox;DropdownBox", &dropdownActive, false); break;
+                        case TYPE_TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "text box", 32, false); break;
+                        case TYPE_VALUEBOX: GuiValueBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, &value, 0, 100, false); break;
+                        case TYPE_SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, &value, 0, 100, false); break;
+                        default: break;
+                    }
+                GuiState(GUI_STATE_NORMAL);
+
+                rec.y += TABLE_CELL_HEIGHT - 1;
+            }
+            
+            GuiSetStyle(LABEL, TEXT_ALIGNMENT, labelTextAlignment);
+
+            offsetWidth += (controlWidth[i] + TABLE_CELL_PADDING*2);
+        }
+
+        // Draw copyright and software info (bottom-right)
+        DrawText("raygui style table automatically generated with rGuiStyler", TABLE_LEFT_PADDING, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
+        DrawText("rGuiStyler created by raylib technologies (@raylibtech)", tableWidth - MeasureText("rGuiStyler created by raylib technologies (@raylibtech)", 10) - 20, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
+
+    EndTextureMode();
+    //--------------------------------------------------------------------------------------------
+
+    Image imStyleTable = GetTextureData(target.texture);
+    ImageFlipVertical(&imStyleTable);
+
+    UnloadRenderTexture(target);
+
+    return imStyleTable;
+}
+
 // Dialog load style file
 static void DialogLoadStyle(void)
 {
@@ -1092,204 +1282,6 @@ static void DialogExportStyle(int type)
             default: break;
         }
     }
-}
-
-// Generate raygui palette image by code
-// TODO: Review this function
-static Image GenImageStylePalette(void)
-{
-    Image image = GenImageColor(64, 16, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
-
-    for (int i = 0; i < 4; i++)
-    {
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 1, 1, 14, 14 }, GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 2, 2, 12, 12 }, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + 3*i)));
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*i)));
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 3, 3, 10, 10 }, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*i)));
-
-        // Draw "rl" characters
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 5, 7, 3, 1 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 5, 8, 1, 3 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 9, 4, 1, 7 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
-        ImageDrawRectangle(&image, (Rectangle){ 15*i + 10, 10, 1, 1 }, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
-    }
-
-    return image;
-}
-
-// Draw controls table image
-static Image GenImageStyleControlsTable(const char *styleName)
-{
-    #define TABLE_LEFT_PADDING      15
-    #define TABLE_TOP_PADDING       20
-
-    #define TABLE_CELL_HEIGHT       40
-    #define TABLE_CELL_PADDING       4
-
-    #define TABLE_CONTROLS_COUNT    12
-
-    typedef enum {
-        TYPE_LABEL = 0,
-        TYPE_BUTTON,
-        TYPE_TOGGLE,
-        TYPE_CHECKBOX,
-        TYPE_SLIDER,
-        TYPE_SLIDERBAR,
-        TYPE_PROGRESSBAR,
-        TYPE_COMBOBOX,
-        TYPE_DROPDOWNBOX,
-        TYPE_TEXTBOX,
-        TYPE_VALUEBOX,
-        TYPE_SPINNER
-    } TableControlType;
-
-    static const char *tableStateName[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
-    static const char *tableControlsName[TABLE_CONTROLS_COUNT] = {
-        "LABEL",        // LABELBUTTON
-        "BUTTON",
-        "TOGGLE",       // TOGGLEGROUP
-        "CHECKBOX",
-        "SLIDER",
-        "SLIDERBAR",
-        "PROGRESSBAR",
-        "COMBOBOX",
-        "DROPDOWNBOX",
-        "TEXTBOX",      // TEXTBOXMULTI
-        "VALUEBOX",
-        "SPINNER"       // VALUEBOX + BUTTON
-    };
-
-    // TODO: Controls grid with should be calculated
-    int controlGridWidth[TABLE_CONTROLS_COUNT] = {
-        80,     // LABEL
-        100,    // BUTTON
-        100,    // TOGGLE
-        160,    // CHECKBOX
-        100,    // SLIDER
-        100,    // SLIDERBAR
-        100,    // PROGRESSBAR
-        130,    // COMBOBOX,
-        130,    // DROPDOWNBOX
-        100,    // TEXTBOX
-        100,    // VALUEBOX
-        100,    // SPINNER
-    };
-
-    int tableControlsNameWidth = 85;
-
-    int tableWidth = 0;
-    int tableHeight = 256;
-
-    // TODO: Compute proper texture size depending on font size and controls text!
-    tableWidth = TABLE_LEFT_PADDING*2 + tableControlsNameWidth;
-    for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += (controlGridWidth[i] - 1);
-
-    int dropdownActive = 0;
-    int value = 40;
-
-    Rectangle rec = { 0 };      // Current drawing rectangle space
-
-    // NOTE: If loading texture when render-texture is active, it seem to fail
-    Image imStylePal = GenImageStylePalette();
-    Texture2D texStylePal = LoadTextureFromImage(imStylePal);
-    UnloadImage(imStylePal);
-
-    RenderTexture2D target = LoadRenderTexture(tableWidth, tableHeight);
-
-    GuiSetStyle(SLIDER, SLIDER_WIDTH, 10);
-
-    // Texture rendering
-    //--------------------------------------------------------------------------------------------
-    BeginTextureMode(target);
-    
-        ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-
-        // Draw style title
-        DrawText("raygui style table: ", TABLE_LEFT_PADDING, 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-        DrawText(FormatText("%s", styleName), TABLE_LEFT_PADDING + MeasureText("raygui style table: ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
-
-        // Draw left column
-        rec = (Rectangle){ TABLE_LEFT_PADDING, TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableControlsNameWidth, TABLE_CELL_HEIGHT };
-
-        for (int i = 0; i < 4; i++)
-        {
-            GuiGroupBox(rec, NULL);
-            DrawTextureRec(texStylePal, (Rectangle){ 2 + i*15, 2, 12, 12 }, (Vector2){ rec.x + 6, rec.y + TABLE_CELL_HEIGHT/2 - 12/2 }, WHITE);
-            GuiState(i); GuiLabelButton((Rectangle){ rec.x + 24, rec.y, rec.width, rec.height }, tableStateName[i]);
-            rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
-        }
-
-        GuiState(GUI_STATE_NORMAL);
-
-        int offsetWidth = TABLE_LEFT_PADDING + tableControlsNameWidth;
-
-        // Draw basic controls
-        for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
-        {
-            rec = (Rectangle){ offsetWidth - i - 1, TABLE_TOP_PADDING + 20, controlGridWidth[i], TABLE_CELL_HEIGHT/2 + 1 };
-
-            // Draw grid lines: control name
-            GuiGroupBox(rec, NULL);
-            int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
-            GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
-            GuiLabel(rec, tableControlsName[i]);
-            GuiSetStyle(LABEL, TEXT_ALIGNMENT, labelTextAlignment);
-            
-            rec.y += TABLE_CELL_HEIGHT/2;
-            rec.height = TABLE_CELL_HEIGHT;
-
-            // Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
-            for (int j = 0; j < 4; j++)
-            {
-                // Draw grid lines: control state
-                GuiGroupBox(rec, NULL);
-
-                GuiState(j);
-                    // Draw control centered correctly in grid
-                    switch (i)
-                    {
-                        case TYPE_LABEL: GuiLabelButton((Rectangle){ rec.x, rec.y, 80, 40 }, "Label"); break;
-                        case TYPE_BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 24/2, 90, 24 }, "Button"); break;
-                        case TYPE_TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 24/2, 90, 24 }, "Toggle", false); break;
-                        case TYPE_CHECKBOX:
-                        {
-                            GuiCheckBox((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "NoCheck", false);
-                            DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
-                            GuiCheckBox((Rectangle){ rec.x + 10 + controlGridWidth[i]/2, rec.y + rec.height/2 - 15/2, 15, 15 }, "Checked", true);
-                        } break;
-                        case TYPE_SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, NULL, 40, 0, 100, false); break;
-                        case TYPE_SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, NULL, 40, 0, 100, false); break;
-                        case TYPE_PROGRESSBAR: GuiProgressBar((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 10/2, 90, 10 }, NULL, 60, 0, 100, false); break;
-                        case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - 120/2, rec.y + rec.height/2 - 24/2, 120, 24 }, "ComboBox;ComboBox", 0); break;
-                        case TYPE_DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - 120/2, rec.y + rec.height/2 - 24/2, 120, 24 }, "DropdownBox;DropdownBox", &dropdownActive, false); break;
-                        case TYPE_TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 24/2, 90, 24 }, "text box", 32, false); break;
-                        case TYPE_VALUEBOX: GuiValueBox((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 24/2, 90, 24 }, &value, 0, 100, false); break;
-                        case TYPE_SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - 90/2, rec.y + rec.height/2 - 24/2, 90, 24 }, &value, 0, 100, false); break;
-                        default: break;
-                    }
-                GuiState(GUI_STATE_NORMAL);
-
-                rec.y += TABLE_CELL_HEIGHT - 1;
-            }
-
-            offsetWidth += controlGridWidth[i];
-        }
-
-        // Draw copyright and software info (bottom-right)
-        DrawText("raygui style table automatically generated with rGuiStyler", TABLE_LEFT_PADDING, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-        DrawText("rGuiStyler created by raylib technologies (@raylibtech)", tableWidth - MeasureText("rGuiStyler created by raylib technologies (@raylibtech)", 10) - 20, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-
-    EndTextureMode();
-    //--------------------------------------------------------------------------------------------
-
-    Image imStyleTable = GetTextureData(target.texture);
-    ImageFlipVertical(&imStyleTable);
-
-    UnloadRenderTexture(target);
-    UnloadTexture(texStylePal);
-
-    return imStyleTable;
 }
 
 //--------------------------------------------------------------------------------------------
