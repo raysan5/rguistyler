@@ -373,9 +373,9 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
 
-        if ((currentSelectedControl != -1) && (currentSelectedProperty != -1))
+        if ((currentSelectedControl > 0) && (currentSelectedProperty > 0))
         {
-            if (previousSelectedProperty != currentSelectedProperty) obtainProperty = true;
+            if ((previousSelectedProperty != currentSelectedProperty) && !obtainProperty) obtainProperty = true;
             
             if (obtainProperty)
             {
@@ -394,12 +394,9 @@ int main(int argc, char *argv[])
             }
             else
             {
-                //if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
-                //else 
-                if (currentSelectedControl > DEFAULT) GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
+                if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
+                else GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
             }
-            
-            // TODO: Review, propertyValue is reseted
             
             // TODO: TEXT_ALIGNMENT selected property options
         }
