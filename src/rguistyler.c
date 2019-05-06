@@ -148,7 +148,6 @@ static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
 static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
 
 static bool styleSaved = false;         // Show save dialog on closing if not saved
-static bool styleLoaded = false;        // Register if we are working over a loaded style (auto-save)
 
 static Font font = { 0 };               // Custom font
 static bool useCustomFont = false;      // Use custom font
@@ -169,10 +168,10 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 static void SaveStyle(const char *fileName);                // Save style file (.rgs)
 static void ExportStyleAsCode(const char *fileName);        // Export gui style as color palette code
 
-static void DialogLoadStyle(void);                          // Show dialog: load style file
-static void DialogLoadFont(void);                           // Show dialog: load font file
-static void DialogSaveStyle(bool binary);                   // Show dialog: save style file
-static void DialogExportStyle(int type);                    // Show dialog: export style file
+static bool DialogLoadStyle(void);                          // Show dialog: load style file
+static bool DialogLoadFont(void);                           // Show dialog: load font file
+static bool DialogSaveStyle(bool binary);                   // Show dialog: save style file
+static bool DialogExportStyle(int type);                    // Show dialog: export style file
 
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
@@ -535,7 +534,7 @@ int main(int argc, char *argv[])
                 GuiEnable();
                 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
-                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) DialogLoadFont();
+                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) useCustomFont = DialogLoadFont();
                 GuiLabel((Rectangle){ anchorFontOptions.x + 105, anchorFontOptions.y + 15, 30, 30 }, "Size:");
                 GuiLabel((Rectangle){ anchorFontOptions.x + 225, anchorFontOptions.y + 15, 50, 30 }, "Spacing:");
                 
@@ -603,9 +602,7 @@ int main(int argc, char *argv[])
 
                 if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes"))
                 {
-                    styleSaved = false;
-                    DialogExportStyle(STYLE_BINARY);
-                    if (styleSaved) exitWindow = true;
+                    if (DialogExportStyle(STYLE_BINARY)) exitWindow = true;
                 }
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
             }
@@ -1174,8 +1171,9 @@ static Image GenImageStyleControlsTable(const char *styleName)
 }
 
 // Dialog load style file
-static void DialogLoadStyle(void)
+static bool DialogLoadStyle(void)
 {
+    bool success = false;
     const char *fileName = NULL;
     
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
@@ -1191,13 +1189,16 @@ static void DialogLoadStyle(void)
 
         strcpy(inFileName, fileName);   // Register input fileName
         
-        styleLoaded = true;
+        success = true;
     }
+    
+    return success;
 }
 
 // Dialog load font file
-static void DialogLoadFont(void)
+static bool DialogLoadFont(void)
 {
+    bool success = false;
     const char *fileName = NULL;
     
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
@@ -1210,14 +1211,17 @@ static void DialogLoadFont(void)
     {
         font = LoadFontEx(fileName, genFontSizeValue, NULL, 0);
         strcpy(fontFileName, fileName);   // Register font fileName
-        useCustomFont = true;
+        success = true;
     }
+    
+    return success;
 }
 
 
 // Dialog save style file
-static void DialogSaveStyle(bool binary)
+static bool DialogSaveStyle(bool binary)
 {
+    bool success = false;
     const char *fileName = NULL;
     
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
@@ -1236,13 +1240,16 @@ static void DialogSaveStyle(bool binary)
 
         // Save style file (text or binary)
         SaveStyle(outFileName);
-        styleSaved = true;
+        success = true;
     }
+    
+    return success;
 }
 
 // Dialog export style file
-static void DialogExportStyle(int type)
+static bool DialogExportStyle(int type)
 {
+    bool success = false;
     const char *fileName = NULL;
 
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
@@ -1268,17 +1275,20 @@ static void DialogExportStyle(int type)
     {
         switch (type)
         {
-            case STYLE_BINARY: SaveStyle(fileName); break;
-            case STYLE_AS_CODE: ExportStyleAsCode(fileName); break;
+            case STYLE_BINARY: SaveStyle(fileName); success = true; break;
+            case STYLE_AS_CODE: ExportStyleAsCode(fileName); success = true; break;
             case STYLE_TABLE_IMAGE:
             {
                 Image imStyleTable = GenImageStyleControlsTable("style_name");
                 ExportImage(imStyleTable, fileName);
                 UnloadImage(imStyleTable);
+                success = true;
             } break;
             default: break;
         }
     }
+    
+    return success;
 }
 
 //--------------------------------------------------------------------------------------------
