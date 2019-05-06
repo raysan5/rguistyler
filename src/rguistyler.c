@@ -104,10 +104,13 @@ static const char *guiControlText[NUM_CONTROLS] = {
     "CHECKBOX",
     "COMBOBOX",
     "DROPDOWNBOX",
-    "TEXTBOX",      // TEXTBOXMULTI, VALUEBOX, SPINNER
+    "TEXTBOX",      // TEXTBOXMULTI
+    "VALUEBOX",
+    "SPINNER",
     "LISTVIEW",
     "COLORPICKER",
-    "SCROLLBAR"
+    "SCROLLBAR",
+    "RESERVED"
 };
 
 // Controls default properties name text
@@ -127,7 +130,7 @@ static const char *guiPropsText[NUM_PROPS_DEFAULT] = {
     "BORDER_WIDTH",
     "INNER_PADDING",
     "TEXT_ALIGNMENT",
-    "RESERVED02"
+    "RESERVED"
 };
 
 /*
@@ -378,7 +381,11 @@ int main(int argc, char *argv[])
             
             if (obtainProperty)
             {
-                if (currentSelectedProperty > TEXT_COLOR_DISABLED) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                if (currentSelectedProperty > TEXT_COLOR_DISABLED) 
+                {
+                    if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == INNER_PADDING)) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                    else if (currentSelectedProperty == TEXT_ALIGNMENT) textAlignmentActive = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                }
                 else colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
             
                 obtainProperty = false;
@@ -391,13 +398,16 @@ int main(int argc, char *argv[])
                 if (currentSelectedControl == DEFAULT) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, ColorToInt(colorPickerValue));
                 else GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
             }
-            else
+            else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == INNER_PADDING))
             {
-                if (currentSelectedControl == 0) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
+                if (currentSelectedControl == DEFAULT) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
                 else GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
             }
-            
-            // TODO: TEXT_ALIGNMENT selected property options
+            else if (currentSelectedProperty == TEXT_ALIGNMENT)
+            {
+                if (currentSelectedControl == DEFAULT) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, textAlignmentActive);
+                else GuiSetStyle(currentSelectedControl, currentSelectedProperty, textAlignmentActive);
+            }
         }
 
         previousSelectedProperty = currentSelectedProperty;
@@ -499,10 +509,7 @@ int main(int argc, char *argv[])
                 
                 if ((currentSelectedProperty != INNER_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", propertyValue, 0, 20, false);
-                int valueBoxTextAlignment = GuiGetStyle(TEXTBOX, TEXT_ALIGNMENT);
-                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, valueBoxTextAlignment);
                 GuiEnable();
                 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
@@ -538,11 +545,9 @@ int main(int argc, char *argv[])
                 GuiLabel((Rectangle){ anchorFontOptions.x + 105, anchorFontOptions.y + 15, 30, 30 }, "Size:");
                 GuiLabel((Rectangle){ anchorFontOptions.x + 225, anchorFontOptions.y + 15, 50, 30 }, "Spacing:");
                 
-                int spinnerTextAlignment = GuiGetStyle(TEXTBOX, TEXT_ALIGNMENT);
-                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 15, 80, 30 }, &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, &fontSpacingValue, 0, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
-                GuiSetStyle(TEXTBOX, TEXT_ALIGNMENT, spinnerTextAlignment);
+
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
                 
                 exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "STYLE (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
