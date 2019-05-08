@@ -375,7 +375,7 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         if ((previousSelectedControl != currentSelectedControl)) currentSelectedProperty = -1;
 
-        if ((currentSelectedControl > 0) && (currentSelectedProperty > 0))
+        if ((currentSelectedControl >= 0) && (currentSelectedProperty >= 0))
         {
             if ((previousSelectedProperty != currentSelectedProperty) && !obtainProperty) obtainProperty = true;
 
@@ -494,9 +494,9 @@ int main(int argc, char *argv[])
 
             GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 60, 140, 560 }, TextJoin(guiControlText, NUM_CONTROLS, ";"), &currentSelectedControl, NULL, true);
 
-            if (currentSelectedControl == -1) GuiDisable();
+            if ((currentSelectedControl == -1) && (propsStateActive == 0)) GuiDisable();
             GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, NUM_PROPS_DEFAULT - 1, NULL, &currentSelectedProperty, NULL, NULL, true);
-            GuiEnable();
+            if (propsStateActive == 0) GuiEnable();
 
             if (windowControlsActive)
             {
@@ -504,10 +504,10 @@ int main(int argc, char *argv[])
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
 
-                if ((currentSelectedProperty != INNER_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
+                if ((currentSelectedProperty != INNER_PADDING) && (currentSelectedProperty != BORDER_WIDTH) && (propsStateActive == 0)) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", propertyValue, 0, 20, false);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-                GuiEnable();
+                if (propsStateActive == 0) GuiEnable();
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
@@ -532,10 +532,10 @@ int main(int argc, char *argv[])
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 300, 365, 15 }, NULL);
 
-                if (currentSelectedProperty != TEXT_ALIGNMENT) GuiDisable();
+                if ((currentSelectedProperty != TEXT_ALIGNMENT) && (propsStateActive == 0)) GuiDisable();
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 25 }, "Text Alignment:");
                 textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 85, 25 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
-                GuiEnable();
+                if (propsStateActive == 0) GuiEnable();
 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) useCustomFont = DialogLoadFont();
