@@ -224,9 +224,9 @@ int main(int argc, char *argv[])
     int changedPropsCounter = 0;
     bool obtainProperty = false;
     bool selectingColor = false;
-    
+
     font = GetFontDefault();
-    
+
     // Keep a backup for base style
     GuiLoadStyleDefault();
     for (int i = 0; i < NUM_CONTROLS; i++)
@@ -238,13 +238,13 @@ int main(int argc, char *argv[])
     Color colorBoxValue[12];
     for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
-    
+
     Texture texStyleTable = { 0 };
     int styleTablePositionX = 0;
-    
+
     float fontScale = 1.0f;
     char fontFileName[128] = { 0 };
-    
+
     bool lockBackground = false;
 
     // GUI: Main Layout
@@ -253,26 +253,26 @@ int main(int argc, char *argv[])
     Vector2 anchorWindow = { 345, 60 };
     Vector2 anchorPropEditor = { 355, 95 };
     Vector2 anchorFontOptions = { 355, 465 };
-    
+
     bool viewStyleTableActive = false;
     bool viewFontActive = false;
     bool propsStateEditMode = false;
     int propsStateActive = 0;
-    
+
     bool styleNameEditMode = false;
     unsigned char styleNameText[32] = "light";
-    
+
     bool prevViewStyleTableState = viewStyleTableActive;
-    
+
     int currentSelectedControl = -1;
     int currentSelectedProperty = -1;
     int previousSelectedProperty = -1;
     int previousSelectedControl = -1;
-    
+
     bool windowControlsActive = true;
     bool propertyValueEditMode = false;
     int propertyValue = 0;
-    
+
     Color colorPickerValue = RED;
     bool textHexColorEditMode = false;
     unsigned char hexColorText[9] = "00000000";
@@ -284,17 +284,17 @@ int main(int argc, char *argv[])
     unsigned char fontSampleText[128] = "sample text";
     int exportFormatActive = 0;
     //-----------------------------------------------------------------------------------
-    
+
     // GUI: About Window
     //-----------------------------------------------------------------------------------
     GuiWindowAboutState windowAboutState = InitGuiWindowAbout();
     //-----------------------------------------------------------------------------------
-    
+
     // GUI: Exit Window
     //-----------------------------------------------------------------------------------
     bool exitWindow = false;
     bool windowExitActive = false;
-    //-----------------------------------------------------------------------------------   
+    //-----------------------------------------------------------------------------------
 
     SetTargetFPS(60);
     //------------------------------------------------------------
@@ -314,11 +314,11 @@ int main(int argc, char *argv[])
             else if (IsFileExtension(droppedFiles[0], ".ttf"))
             {
                 UnloadFont(font);
-                
+
                 // NOTE: Font generation size depends on spinner size selection
                 font = LoadFontEx(droppedFiles[0], genFontSizeValue, 0, 0);
                 GuiFont(font);
-                
+
                 strcpy(fontFileName, GetFileName(droppedFiles[0]));
             }
 
@@ -334,16 +334,16 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         // Show dialog: load input file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();
-        
+
         // Show dialog: save style file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);
-        
+
         // Show dialog: export style file (.png, .png, .h)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(STYLE_TABLE_IMAGE);
 
         // Show window: about
         if (IsKeyPressed(KEY_F1)) windowAboutState.windowAboutActive = true;
-        
+
         // Show closing window on ESC
         if (IsKeyPressed(KEY_ESCAPE))
         {
@@ -365,9 +365,9 @@ int main(int argc, char *argv[])
         {
             for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) changedPropsCounter++;
         }
-        
+
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
-        
+
         if (viewStyleTableActive || viewFontActive) lockBackground = true;
         else lockBackground = false;
 
@@ -378,16 +378,13 @@ int main(int argc, char *argv[])
         if ((currentSelectedControl > 0) && (currentSelectedProperty > 0))
         {
             if ((previousSelectedProperty != currentSelectedProperty) && !obtainProperty) obtainProperty = true;
-            
+
             if (obtainProperty)
             {
-                if (currentSelectedProperty > TEXT_COLOR_DISABLED) 
-                {
-                    if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == INNER_PADDING)) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
-                    else if (currentSelectedProperty == TEXT_ALIGNMENT) textAlignmentActive = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
-                }
-                else colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
-            
+                if (currentSelectedProperty <= TEXT_COLOR_DISABLED) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
+                else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == INNER_PADDING)) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                else if (currentSelectedProperty == TEXT_ALIGNMENT) textAlignmentActive = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+
                 obtainProperty = false;
             }
 
@@ -439,7 +436,7 @@ int main(int argc, char *argv[])
             else if (mousePos.y > colorPickerRec.y + colorPickerRec.height) SetMousePosition(mousePos.x, colorPickerRec.y + colorPickerRec.height);
         }
         //----------------------------------------------------------------------------------
-        
+
         // Style table image generation (only on toggle activation) and logic
         //----------------------------------------------------------------------------------
         if (viewStyleTableActive && (prevViewStyleTableState != viewStyleTableActive))
@@ -450,13 +447,13 @@ int main(int argc, char *argv[])
             texStyleTable = LoadTextureFromImage(imStyleTable);
             UnloadImage(imStyleTable);
         }
-        
+
         if (viewStyleTableActive)
         {
             if (IsKeyDown(KEY_RIGHT)) styleTablePositionX += 5;
             else if (IsKeyDown(KEY_LEFT)) styleTablePositionX -= 5;
         }
-        
+
         prevViewStyleTableState = viewStyleTableActive;
         //----------------------------------------------------------------------------------
 
@@ -475,7 +472,7 @@ int main(int argc, char *argv[])
         BeginDrawing();
 
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-            
+
             //---------------------------------------------------------------------------------------------------------
             if (propsStateEditMode) GuiLock();
 
@@ -484,37 +481,37 @@ int main(int argc, char *argv[])
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) DialogLoadStyle();
             if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) DialogSaveStyle(true);
             if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowAboutActive = true;
-            
+
             if (GuiTextBox((Rectangle){ 155, 10, 180, 30 }, styleNameText, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
-            
+
             viewStyleTableActive = GuiToggle((Rectangle){ 345, 10, 30, 30 }, "#101#", viewStyleTableActive);
             viewFontActive = GuiToggle((Rectangle){ 380, 10, 30, 30 }, "#31#", viewFontActive);
             windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
-            
+
             GuiState(propsStateActive);
-            
+
             if (lockBackground) GuiLock();
 
             GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 60, 140, 560 }, TextJoin(guiControlText, NUM_CONTROLS, ";"), &currentSelectedControl, NULL, true);
-            
+
             if (currentSelectedControl == -1) GuiDisable();
             GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, NUM_PROPS_DEFAULT - 1, NULL, &currentSelectedProperty, NULL, NULL, true);
             GuiEnable();
-            
+
             if (windowControlsActive)
             {
                 windowControlsActive = !GuiWindowBox((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 560 }, "Sample raygui controls");
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
-                
+
                 if ((currentSelectedProperty != INNER_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", propertyValue, 0, 20, false);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 GuiEnable();
-                
+
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
-                
+
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, FormatText("R:   %03i", colorPickerValue.r));
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 20, 20 }, FormatText("G:   %03i", colorPickerValue.g));
@@ -524,39 +521,39 @@ int main(int argc, char *argv[])
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 20, 20 }, FormatText("S:  %.0f%%", colorHSV.y*100));
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 160, 20, 20 }, FormatText("V:  %.0f%%", colorHSV.z*100));
 
-                if (GuiTextBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 275, 60, 20 }, hexColorText, 9, textHexColorEditMode)) 
+                if (GuiTextBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 275, 60, 20 }, hexColorText, 9, textHexColorEditMode))
                 {
                     textHexColorEditMode = !textHexColorEditMode;
                     colorPickerValue = GetColor((int)strtoul(hexColorText, NULL, 16));
                 }
-                
+
                 for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorPropEditor.x + 295 + 20*(i%3), anchorPropEditor.y + 190 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
                 DrawRectangleLinesEx((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 190, 60, 80 }, 2, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL)));
-                
+
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 300, 365, 15 }, NULL);
-                
+
                 if (currentSelectedProperty != TEXT_ALIGNMENT) GuiDisable();
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 25 }, "Text Alignment:");
                 textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 85, 25 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
                 GuiEnable();
-                
+
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) useCustomFont = DialogLoadFont();
                 GuiLabel((Rectangle){ anchorFontOptions.x + 105, anchorFontOptions.y + 15, 30, 30 }, "Size:");
                 GuiLabel((Rectangle){ anchorFontOptions.x + 225, anchorFontOptions.y + 15, 50, 30 }, "Spacing:");
-                
+
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 15, 80, 30 }, &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, &fontSpacingValue, 0, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
-                
+
                 exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "STYLE (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
                 if (GuiButton((Rectangle){ 620, 575, 100, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
             }
-            
+
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
             GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, FormatText("CHANGED PROPERTIES: %i", changedPropsCounter));
-            
+
             int statusTextAlign = GuiGetStyle(DEFAULT, TEXT_ALIGNMENT);
             int statusInnerPadding = GuiGetStyle(DEFAULT, INNER_PADDING);
             GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
@@ -564,9 +561,9 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", ((fontFileName[0] == 0)? "raylib default" : fontFileName), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
             GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, statusTextAlign);
             GuiSetStyle(DEFAULT, INNER_PADDING, statusInnerPadding);
-            
+
             GuiState(GUI_STATE_NORMAL);
-            
+
             GuiLabel((Rectangle){ 570, 10, 35, 30 }, "State:");
             if (GuiDropdownBox((Rectangle){ 610, 10, 120, 30 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &propsStateActive, propsStateEditMode)) propsStateEditMode = !propsStateEditMode;
 
@@ -581,13 +578,13 @@ int main(int argc, char *argv[])
                 DrawRectangleLines(GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2, font.texture.width*fontScale, font.texture.height*fontScale, RED);
                 DrawTextureEx(font.texture, (Vector2){ GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2 }, 0.0f, fontScale, WHITE);
             }
-            
+
             // Draw style table image (if active and reloaded)
             if (viewStyleTableActive && (prevViewStyleTableState == viewStyleTableActive))
             {
                 DrawRectangle(0, 50, GetScreenWidth(), GetScreenHeight() - 75, Fade(GRAY, 0.8f));
                 DrawTexture(texStyleTable, -styleTablePositionX, GetScreenHeight()/2 - texStyleTable.height/2, WHITE);
-                
+
                 styleTablePositionX = GuiSlider((Rectangle){ 0, GetScreenHeight()/2 + texStyleTable.height/2, GetScreenWidth(), 15 }, NULL, styleTablePositionX, 0, texStyleTable.width - GetScreenWidth(), false);
             }
 
@@ -763,7 +760,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 static void SaveStyle(const char *fileName)
 {
     FILE *rgsFile = NULL;
-    
+
 #if defined(RAYGUI_STYLE_SAVE_AS_TEXT)
     rgsFile = fopen(fileName, "wt");
 
@@ -925,7 +922,7 @@ static void SaveStyle(const char *fileName)
 }
 
 // Export gui style as (ready-to-use) code file
-// NOTE: Code file already implements a function to load style 
+// NOTE: Code file already implements a function to load style
 static void ExportStyleAsCode(const char *fileName)
 {
     FILE *txtFile = fopen(fileName, "wt");
@@ -953,12 +950,12 @@ static void ExportStyleAsCode(const char *fileName)
         //else fprintf(txtFile, "0x%08x    // DEFAULT_%s \n", GuiGetStyle(i, j), guiPropsExText[i - NUM_PROPS_DEFAULT]);
     }
     fprintf(txtFile, "};\n");
-    
+
     /*
     // Reference:
     // raygui style palette: Light
     static const int styleLight[20] = {
-        
+
         0x838383ff,     // DEFAULT_BORDER_COLOR_NORMAL
         0xc9c9c9ff,     // DEFAULT_BASE_COLOR_NORMAL
         0x686868ff,     // DEFAULT_TEXT_COLOR_NORMAL
@@ -980,13 +977,13 @@ static void ExportStyleAsCode(const char *fileName)
         0x90abb5ff,     // DEFAULT_LINE_COLOR
         0xf5f5f5ff,     // DEFAULT_BACKGROUND_COLOR
     };
-    
+
     // TODO: Expose custom style loading function
     void LoadStyleLight(void)
     {
         GuiLoadStyleProps(styleLight, 20);
         GuiUpdateStyleComplete();
-        
+
         // TODO: Set additional properties
         GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
         GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
@@ -1012,7 +1009,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
 
     #define TABLE_CELL_HEIGHT       40
     #define TABLE_CELL_PADDING       5          // Control padding inside cell
-    
+
     #define TABLE_CONTROLS_COUNT    12
 
     typedef enum {
@@ -1083,7 +1080,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
     // Texture rendering
     //--------------------------------------------------------------------------------------------
     BeginTextureMode(target);
-    
+
         ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
         // Draw style title
@@ -1117,7 +1114,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
             int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
             GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
             GuiLabel(rec, tableControlsName[i]);
-            
+
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
 
@@ -1154,7 +1151,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
 
                 rec.y += TABLE_CELL_HEIGHT - 1;
             }
-            
+
             GuiSetStyle(LABEL, TEXT_ALIGNMENT, labelTextAlignment);
 
             offsetWidth += (controlWidth[i] + TABLE_CELL_PADDING*2);
@@ -1180,7 +1177,7 @@ static bool DialogLoadStyle(void)
 {
     bool success = false;
     const char *fileName = NULL;
-    
+
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Open file dialog
     const char *filters[] = { "*.rgs" };
@@ -1193,10 +1190,10 @@ static bool DialogLoadStyle(void)
         SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(fileName)));
 
         strcpy(inFileName, fileName);   // Register input fileName
-        
+
         success = true;
     }
-    
+
     return success;
 }
 
@@ -1205,7 +1202,7 @@ static bool DialogLoadFont(void)
 {
     bool success = false;
     const char *fileName = NULL;
-    
+
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Open file dialog
     const char *filters[] = { "*.ttf" };
@@ -1218,7 +1215,7 @@ static bool DialogLoadFont(void)
         strcpy(fontFileName, fileName);   // Register font fileName
         success = true;
     }
-    
+
     return success;
 }
 
@@ -1228,7 +1225,7 @@ static bool DialogSaveStyle(bool binary)
 {
     bool success = false;
     const char *fileName = NULL;
-    
+
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Save file dialog
     const char *filters[] = { "*.rgs" };
@@ -1247,7 +1244,7 @@ static bool DialogSaveStyle(bool binary)
         SaveStyle(outFileName);
         success = true;
     }
-    
+
     return success;
 }
 
@@ -1292,7 +1289,7 @@ static bool DialogExportStyle(int type)
             default: break;
         }
     }
-    
+
     return success;
 }
 
@@ -1385,62 +1382,62 @@ typedef struct {
 void ExportStyleInPNG(const char *fileName, const char *rgsFileName)
 {
     unsigned char signature[8] = { 0 };
-    
+
     FILE *pngFile = fopen(fileName, "rb");
-    
+
     if (pngFile != NULL)
     {
         fseek(pngFile, 0, SEEK_END);    // Place cursor at the end of file
         long pngSize = ftell(pngFile);  // Get file size
         fseek(pngFile, 0, SEEK_SET);    // Reset file pointer to beginning
-        
+
         fread(signature, 8, 1, pngFile);
-        
+
         if (strcmp(signature, pngSign) == 0)    // Check valid PNG file
         {
             unsigned char *pngData = (unsigned char *)malloc(pngSize);
             fread(pngData, pngSize, 1, pngFile); // Read full PNG file into buffer
-            
+
             // Now we can start composing our new PNG file with rGSt chunk
             char *pngrgsFileName = GetFileNameWithoutExt(fileName);   // Requires manually free
             FILE *pngrgsFile = fopen(TextFormat("%s.rgs.png", pngrgsFileName), "wb");
             free(pngrgsFileName);
-            
+
             // Write PNG file Signature (8 bytes) + IHDR chunk (4 + 4 + 13 + 4 bytes)
             fwrite(pngData, 8 + 4 + 4 + 13 + 4, 1, pngrgsFile);
-        
+
             // Write rGSt chunk into file
             //---------------------------------------------------------------------------
             FILE *rgsFile = fopen(rgsFileName, "rb");
-            
+
             // TODO: Verify rGS file is a valid file
-            
+
             fseek(rgsFile, 0, SEEK_END);    // Place cursor at the end of file
             long rgsSize = ftell(rgsFile);  // Get file size
             fseek(rgsFile, 0, SEEK_SET);    // Reset file pointer to beginning
-            
+
             unsigned char *rgsData = (unsigned char *)malloc(rgsSize);
             fread(rgsData, rgsSize, 1, rgsFile);
-            
+
             unsigned char rgsType[4] = { 'r', 'G', 'S', 't' };
-            
+
             fwrite(&rgsSize, 4, 1, pngrgsFile);
             fwrite(&rgsType, 4, 1, pngrgsFile);
             fwrite(&rgsData, rgsSize, 1, pngrgsFile);
-            
+
             unsigned int rgsDataCRC = 0;    // TODO: Compute CRC32 for rgsData
             fwrite(&rgsDataCRC, 4, 1, pngrgsFile);
             //---------------------------------------------------------------------------
-            
+
             // Write the rest of the original PNG file
             fwrite(pngData + 33, pngSize - 33, 1, pngrgsFile);
-            
+
             fclose(rgsFile);
             fclose(pngrgsFile);
             free(pngData);
             free(rgsData);
         }
-        
+
         fclose(pngFile);
     }
 }
