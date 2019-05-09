@@ -150,14 +150,13 @@ static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
 // Default style backup to check changed properties
 static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
 
-static bool styleSaved = false;         // Show save dialog on closing if not saved
-
 static Font font = { 0 };               // Custom font
-static bool useCustomFont = false;      // Use custom font
+static bool customFont = false;         // Using custom font
 static int genFontSizeValue = 10;       // Generation font size
 static char fontFilePath[512] = { 0 };  // Font file path (register font path for reloading)
 
-static char inFileName[256] = { 0 };    // Input file name (required in case of drag & drop over executable)
+static char loadedFileName[256] = { 0 };    // Loaded style file name
+static bool saveChangesRequired = false;    // Flag to notice save changes are required
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -196,7 +195,7 @@ int main(int argc, char *argv[])
         {
             if (IsFileExtension(argv[1], ".rgs"))
             {
-                strcpy(inFileName, argv[1]);        // Read input filename to open with gui interface
+                strcpy(loadedFileName, argv[1]);    // Read input filename to open with gui interface
             }
         }
 #if defined(VERSION_ONE)
@@ -224,11 +223,21 @@ int main(int argc, char *argv[])
     int changedPropsCounter = 0;
     bool obtainProperty = false;
     bool selectingColor = false;
+    
+    // Load dropped file if provided
+    if (loadedFileName[0] != '\0') 
+    {
+        GuiLoadStyle(loadedFileName);
+        
+        SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
+    }
+    else
+    {
+        GuiLoadStyleDefault();
+        font = GetFontDefault();
+    }
 
-    font = GetFontDefault();
-
-    // Keep a backup for base style
-    GuiLoadStyleDefault();
+    // Keep a backup for base style (used to track changes)
     for (int i = 0; i < NUM_CONTROLS; i++)
     {
         for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
@@ -336,7 +345,17 @@ int main(int argc, char *argv[])
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();
 
         // Show dialog: save style file (.rgs)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) DialogSaveStyle(false);
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) 
+        {
+            if (loadedFileName[0] == '\0') DialogSaveStyle(false);
+            else
+            {
+                SaveStyle(loadedFileName);
+
+                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
+                saveChangesRequired = false;
+            }
+        }
 
         // Show dialog: export style file (.png, .png, .h)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(STYLE_TABLE_IMAGE);
@@ -360,11 +379,13 @@ int main(int argc, char *argv[])
         if (WindowShouldClose()) exitWindow = true;
 
         // Check for changed controls
+        // TODO: Do we really need to count this?
         changedPropsCounter = 0;
         for (int i = 0; i < NUM_CONTROLS; i++)
         {
             for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) changedPropsCounter++;
         }
+        if (changedPropsCounter > 0) saveChangesRequired = true;
         
         if (viewStyleTableActive || viewFontActive) lockBackground = true;
         else lockBackground = false;
@@ -548,7 +569,7 @@ int main(int argc, char *argv[])
                 if (propsStateActive == 0) GuiEnable();
 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
-                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) useCustomFont = DialogLoadFont();
+                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) customFont = DialogLoadFont();
                 GuiLabel((Rectangle){ anchorFontOptions.x + 105, anchorFontOptions.y + 15, 30, 30 }, "Size:");
                 GuiLabel((Rectangle){ anchorFontOptions.x + 225, anchorFontOptions.y + 15, 50, 30 }, "Spacing:");
 
@@ -619,8 +640,6 @@ int main(int argc, char *argv[])
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
             }
             //----------------------------------------------------------------------------------------
-            
-            DrawText(FormatText("%i", GuiGetStyle(TOGGLE, GROUP_PADDING)), 10, GetScreenHeight() - 80, 20, RED);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
@@ -697,24 +716,33 @@ static void ProcessCommandLine(int argc, char *argv[])
         }
         else if ((strcmp(argv[i], "-i") == 0) || (strcmp(argv[i], "--input") == 0))
         {
-            // Check for valid argumment and valid file extension: input
-            if (((i + 1) < argc) && (argv[i + 1][0] != '-') &&
-                IsFileExtension(inFileName, ".png"))
+            // Check for valid argument and valid file extension
+            if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
             {
-                strcpy(inFileName, argv[i + 1]);    // Read input file
-            }
+                if (IsFileExtension(argv[i + 1], ".rgs"))
+                {
+                    strcpy(inFileName, argv[i + 1]);    // Read input filename
+                }
+                else printf("WARNING: Input file extension not recognized\n");
 
-            i++;
+                i++;
+            }
+            else printf("WARNING: No input file provided\n");
         }
         else if ((strcmp(argv[i], "-o") == 0) || (strcmp(argv[i], "--output") == 0))
         {
-            // Check for valid argumment and valid file extension: output
             if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
             {
-                strcpy(outFileName, argv[i + 1]);    // Read output filename
-            }
+                if (IsFileExtension(argv[i + 1], ".h") ||
+                    IsFileExtension(argv[i + 1], ".png"))
+                {
+                    strcpy(outFileName, argv[i + 1]);   // Read output filename
+                }
+                else printf("WARNING: Input file extension not recognized\n");
 
-            i++;
+                i++;
+            }
+            else printf("WARNING: No output file provided\n");
         }
         else if (strcmp(argv[i], "--format") == 0)
         {
@@ -724,26 +752,21 @@ static void ProcessCommandLine(int argc, char *argv[])
                 int format = atoi(argv[i + 1]);
 
                 if ((format >= 0) && (format <= 4)) outputFormat = format;
-                else { TraceLog(LOG_WARNING, "Output format not valid"); showUsageInfo = true; }
             }
-            else { TraceLog(LOG_WARNING, "No valid parameter after --format"); showUsageInfo = true; }
-        }
-        else
-        {
-            TraceLog(LOG_WARNING, "No valid parameter: %s", argv[i]);
-            showUsageInfo = true;
+            else printf("WARNING: Format parameters provided not valid\n");
         }
     }
 
     if (inFileName[0] != '\0')
     {
+        // Set a default name for output in case not provided
+        if (outFileName[0] == '\0') strcpy(outFileName, "output.h");
+
+        printf("\nInput file:       %s", inFileName);
+        printf("\nOutput file:      %s", outFileName);
+
         // Process input .rgs file
         GuiLoadStyle(inFileName);
-
-        // Setup output file name, based on input
-        char outFileName[256] = { 0 };
-        strcpy(outFileName, inFileName);
-        outFileName[strlen(inFileName) - 4] = '\0';
 
         // Export style files with different formats
         switch (outputFormat)
@@ -755,6 +778,7 @@ static void ProcessCommandLine(int argc, char *argv[])
                 Image imStyleTable = GenImageStyleControlsTable("raygui_light");
                 ExportImage(imStyleTable, FormatText("%s%s", outFileName, ".png"));
                 UnloadImage(imStyleTable);
+                
             } break;
             default: break;
         }
@@ -773,44 +797,31 @@ static void SaveStyle(const char *fileName)
 {
     FILE *rgsFile = NULL;
 
+#define RAYGUI_STYLE_SAVE_AS_TEXT
 #if defined(RAYGUI_STYLE_SAVE_AS_TEXT)
     rgsFile = fopen(fileName, "wt");
 
     if (rgsFile != NULL)
     {
+        #define RGL_FILE_VERSION_TEXT  "3.0"
+        
         // Write some description comments
-        fprintf(rgsFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
-        fprintf(rgsFile, "//                                                                              //\n");
-        fprintf(rgsFile, "// raygui style exporter v2.0 - Style export as text file                       //\n");
-        fprintf(rgsFile, "// more info and bugs-report: github.com/raysan5/raygui                         //\n");
-        fprintf(rgsFile, "//                                                                              //\n");
-        fprintf(rgsFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
-        fprintf(rgsFile, "//                                                                              //\n");
-        fprintf(rgsFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
-
-        fprintf(rgsFile, "## Style information\n");
-        fprintf(rgsFile, "NUM_CONTROLS         %i\n", NUM_CONTROLS);
-        fprintf(rgsFile, "NUM_PROPS_DEFAULT    %i\n", NUM_PROPS_DEFAULT);
-        fprintf(rgsFile, "NUM_PROPS_EXTENDED   %i\n", NUM_PROPS_EXTENDED);
+        fprintf(rgsFile, "#\n# rgs style file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGL_FILE_VERSION_TEXT);
+        fprintf(rgsFile, "# NUM_CONTROLS         %i\n", NUM_CONTROLS);
+        fprintf(rgsFile, "# NUM_PROPS_DEFAULT    %i\n", NUM_PROPS_DEFAULT);
+        fprintf(rgsFile, "# NUM_PROPS_EXTENDED   %i\n#\n", NUM_PROPS_EXTENDED);
 
         // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
         for (int i = 0; i < NUM_CONTROLS; i++)
         {
-            if (i == 0) fprintf(rgsFile, "## DEFAULT properties\n");
-            else fprintf(rgsFile, "## CONTROL %02i default properties\n", i);
-
-            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++)
+            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
             {
-                if (j == NUM_PROPS_DEFAULT) fprintf(rgsFile, "## CONTROL %02i extended properties\n", i);
-
-                if (j < NUM_PROPS_EXTENDED) fprintf(rgsFile, "0x%08x    // %s_%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[i + j]);
-                else fprintf(rgsFile, "0x%08x    // EXTENDED PROPERTY \n", GuiGetStyle(i, j));
+                if (j < NUM_PROPS_DEFAULT) fprintf(rgsFile, "0x%08x    // %s_%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
+                else fprintf(rgsFile, "0x%08x    // %s_EXT%02i \n", GuiGetStyle(i, j), guiControlText[i], (j - NUM_PROPS_DEFAULT));
             }
-
-            fprintf(rgsFile, "\n");
         }
 
-        if (useCustomFont) fprintf(rgsFile, "## NOTE: This style uses a custom font.\n");
+        if (customFont) fprintf(rgsFile, "## NOTE: This style uses a custom font.\n");
     }
 #else
     rgsFile = fopen(fileName, "wb");
@@ -888,7 +899,7 @@ static void SaveStyle(const char *fileName)
         value = 0;
 
         // Write font data (embedding)
-        if (useCustomFont)
+        if (customFont)
         {
             Image imFont = GetTextureData(font.texture);
 
@@ -1005,14 +1016,6 @@ static void ExportStyleAsCode(const char *fileName)
     fclose(txtFile);
 }
 
-// Draw rectangle with centered text at specific style state
-static void DrawStyleRectangle(Rectangle rec, const char *text, int state)
-{
-    DrawRectangleRec(rec, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + 3*state)));
-    DrawRectangle(rec.x + 1, rec.y + 1, rec.width - 2, rec.height - 2, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*state)));
-    DrawText(text, rec.x + rec.width/2 - MeasureText(text, 10)/2, rec.y + rec.height/2 - 10/2, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*state)));
-}
-
 // Draw controls table image
 static Image GenImageStyleControlsTable(const char *styleName)
 {
@@ -1106,7 +1109,14 @@ static Image GenImageStyleControlsTable(const char *styleName)
         for (int i = 0; i < 4; i++)
         {
             GuiGroupBox(rec, NULL);
-            DrawStyleRectangle((Rectangle){ rec.x + 8, rec.y + TABLE_CELL_HEIGHT/2 - 16/2, 16, 16 }, "rl", i);
+            
+            // Draw style rectangle
+            /*
+            Rectangle box = { rec.x + GuiGetStyle(DEFAULT, TEXT_SIZE)/2, rec.y + TABLE_CELL_HEIGHT/2 - GuiGetStyle(DEFAULT, TEXT_SIZE)/2, GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SIZE) };
+            DrawRectangleRec(box, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + 3*i)));
+            DrawRectangle(box.x + 1, box.y + 1, box.width - 2, box.height - 2, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*i)));
+            DrawTextEx(font, "rl", (Vector2){ box.x + box.width/2 - MeasureText(text, 10)/2, box.y + box.height/2 - 10/2 }, GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
+            */
             GuiState(i); GuiLabelButton((Rectangle){ rec.x + 28, rec.y, rec.width, rec.height }, tableStateName[i]);
             rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
         }
@@ -1199,9 +1209,9 @@ static bool DialogLoadStyle(void)
     if (fileName != NULL)
     {
         GuiLoadStyle(fileName);
+        
+        strcpy(loadedFileName, fileName);   // Register loaded fileName
         SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(fileName)));
-
-        strcpy(inFileName, fileName);   // Register input fileName
 
         success = true;
     }
@@ -1256,6 +1266,8 @@ static bool DialogSaveStyle(bool binary)
 
         // Save style file (text or binary)
         SaveStyle(outFileName);
+        
+        saveChangesRequired = false;
         success = true;
     }
 
