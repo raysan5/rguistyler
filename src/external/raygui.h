@@ -281,9 +281,6 @@ typedef enum {
 // TextBox / TextBoxMulti / ValueBox / Spinner
 typedef enum {
     MULTILINE_PADDING = 16,
-    //SPINNER_BUTTON_WIDTH,
-    //SPINNER_BUTTON_PADDING,
-    //SPINNER_BUTTON_BORDER_WIDTH
 } GuiTextBoxProperty;
 
 typedef enum {
@@ -715,12 +712,6 @@ RAYGUIDEF void GuiFont(Font font)
     {
         guiFont = font;
         GuiSetStyle(DEFAULT, TEXT_SIZE, font.baseSize);
-
-        // Populate all controls with new font size
-        for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, TEXT_SIZE, GuiGetStyle(DEFAULT, TEXT_SIZE));
-
-        // NOTE: Loaded font spacing must be set manually
-        //GuiSetStyle(DEFAULT, TEXT_SPACING, 1);
     }
 }
 

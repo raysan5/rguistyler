@@ -155,7 +155,7 @@ static bool styleSaved = false;         // Show save dialog on closing if not sa
 static Font font = { 0 };               // Custom font
 static bool useCustomFont = false;      // Use custom font
 static int genFontSizeValue = 10;       // Generation font size
-static char fontFileName[256] = { 0 };  // Font file name (register font name for reloading)
+static char fontFilePath[512] = { 0 };  // Font file path (register font path for reloading)
 
 static char inFileName[256] = { 0 };    // Input file name (required in case of drag & drop over executable)
 
@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
     int styleTablePositionX = 0;
 
     float fontScale = 1.0f;
-    char fontFileName[128] = { 0 };
+    int prevGenFontSize = genFontSizeValue;
 
     bool lockBackground = false;
 
@@ -316,10 +316,10 @@ int main(int argc, char *argv[])
                 UnloadFont(font);
 
                 // NOTE: Font generation size depends on spinner size selection
-                font = LoadFontEx(droppedFiles[0], genFontSizeValue, 0, 0);
+                font = LoadFontEx(droppedFiles[0], genFontSizeValue, NULL, 0);
+                strcpy(fontFilePath, droppedFiles[0]);
+                
                 GuiFont(font);
-
-                strcpy(fontFileName, GetFileName(droppedFiles[0]));
             }
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
@@ -365,11 +365,21 @@ int main(int argc, char *argv[])
         {
             for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) changedPropsCounter++;
         }
-
-        GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
-
+        
         if (viewStyleTableActive || viewFontActive) lockBackground = true;
         else lockBackground = false;
+
+        // Reload font to new size if required
+        if (!genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath != NULL))
+        {
+            UnloadFont(font);
+            font = LoadFontEx(fontFilePath, genFontSizeValue, NULL, 0);
+            GuiFont(font);
+            
+            prevGenFontSize = genFontSizeValue;
+        }
+        
+        GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
 
         // Controls selection on list view logic
         //----------------------------------------------------------------------------------
@@ -558,7 +568,7 @@ int main(int argc, char *argv[])
             int statusInnerPadding = GuiGetStyle(DEFAULT, INNER_PADDING);
             GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
             GuiSetStyle(DEFAULT, INNER_PADDING, 10);
-            GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", ((fontFileName[0] == 0)? "raylib default" : fontFileName), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
+            GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", ((fontFilePath[0] == 0)? "raylib default" : GetFileName(fontFilePath)), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
             GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, statusTextAlign);
             GuiSetStyle(DEFAULT, INNER_PADDING, statusInnerPadding);
 
@@ -609,6 +619,8 @@ int main(int argc, char *argv[])
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
             }
             //----------------------------------------------------------------------------------------
+            
+            DrawText(FormatText("%i", GuiGetStyle(TOGGLE, GROUP_PADDING)), 10, GetScreenHeight() - 80, 20, RED);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
@@ -1212,7 +1224,9 @@ static bool DialogLoadFont(void)
     if (fileName != NULL)
     {
         font = LoadFontEx(fileName, genFontSizeValue, NULL, 0);
-        strcpy(fontFileName, fileName);   // Register font fileName
+        strcpy(fontFilePath, fileName);   // Register font fileName
+        GuiFont(font);
+        
         success = true;
     }
 
