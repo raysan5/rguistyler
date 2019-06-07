@@ -83,7 +83,8 @@ bool __stdcall FreeConsole(void);           // Close console from code (kernel32
 
 // Style file type to export
 typedef enum {
-    STYLE_BINARY = 0,       // Style binary file (.rgs)
+    STYLE_TEXT = 0,         // Style text file (.rgs)
+    STYLE_BINARY,           // Style binary file (.rgs)
     STYLE_AS_CODE,          // Style as (ready-to-use) code (.h)
     STYLE_TABLE_IMAGE       // Style controls table image (for reference)
 } GuiStyleFileType;
@@ -156,6 +157,7 @@ static int genFontSizeValue = 10;       // Generation font size
 static char fontFilePath[512] = { 0 };  // Font file path (register font path for reloading)
 
 static char loadedFileName[256] = { 0 };    // Loaded style file name
+static int loadedStyleFormat = STYLE_TEXT;  // Loaded style format
 static bool saveChangesRequired = false;    // Flag to notice save changes are required
 
 //----------------------------------------------------------------------------------
@@ -167,13 +169,13 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 #endif
 
 // Load/Save/Export data functions
-static void SaveStyle(const char *fileName);                // Save style file (.rgs)
+static bool SaveStyle(const char *fileName, int format);    // Save style file text or binary (.rgs) 
 static void ExportStyleAsCode(const char *fileName);        // Export gui style as color palette code
 
 static bool DialogLoadStyle(void);                          // Show dialog: load style file
 static bool DialogLoadFont(void);                           // Show dialog: load font file
-static bool DialogSaveStyle(bool binary);                   // Show dialog: save style file
-static bool DialogExportStyle(int type);                    // Show dialog: export style file
+static bool DialogSaveStyle(int format);                    // Show dialog: save style file
+static bool DialogExportStyle(int format);                  // Show dialog: export style file
 
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
@@ -347,18 +349,20 @@ int main(int argc, char *argv[])
         // Show dialog: save style file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) 
         {
-            if (loadedFileName[0] == '\0') DialogSaveStyle(false);
+            if (loadedFileName[0] == '\0') saveChangesRequired = !DialogSaveStyle(exportFormatActive);
             else
             {
-                SaveStyle(loadedFileName);
-
+                // TODO: Using same style type as loaded or previously saved
+                // ISSUE: Style is loaded by raygui, GuiLoadStyle() checks for format internally!
+                SaveStyle(loadedFileName, loadedStyleFormat);
+                
                 SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
                 saveChangesRequired = false;
             }
         }
 
-        // Show dialog: export style file (.png, .png, .h)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(STYLE_TABLE_IMAGE);
+        // Show dialog: export style file (.rgs, .png, .h)
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(exportFormatActive);
 
         // Show window: about
         if (IsKeyPressed(KEY_F1)) windowAboutState.windowAboutActive = true;
@@ -510,7 +514,7 @@ int main(int argc, char *argv[])
             // Main toolbar panel
             GuiPanel((Rectangle){ 0, 0, 740, 50 });
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) DialogLoadStyle();
-            if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) DialogSaveStyle(true);
+            if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) saveChangesRequired = !DialogSaveStyle(exportFormatActive);
             if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowAboutActive = true;
 
             if (GuiTextBox((Rectangle){ 155, 10, 180, 30 }, styleNameText, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
@@ -578,7 +582,7 @@ int main(int argc, char *argv[])
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
-                exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "STYLE (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
+                exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "TEXT (.rgs); BINARY (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
                 if (GuiButton((Rectangle){ 620, 575, 100, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
             }
 
@@ -635,7 +639,7 @@ int main(int argc, char *argv[])
 
                 if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes"))
                 {
-                    if (DialogExportStyle(STYLE_BINARY)) exitWindow = true;
+                    if (DialogExportStyle(exportFormatActive)) exitWindow = true;
                 }
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
             }
@@ -705,7 +709,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 
     char inFileName[256] = { 0 };       // Input file name
     char outFileName[256] = { 0 };      // Output file name
-    int outputFormat = STYLE_BINARY;    // Formats: STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
+    int outputFormat = STYLE_BINARY;    // Formats: STYLE_TEXT, STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
 
     // Arguments scan and processing
     for (int i = 1; i < argc; i++)
@@ -771,7 +775,8 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgs")); break;
+            case STYLE_TEXT:
+            case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgs"), outputFormat); break;
             case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h")); break;
             case STYLE_TABLE_IMAGE:
             {
@@ -793,155 +798,166 @@ static void ProcessCommandLine(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 
 // Save raygui style file (.rgs)
-static void SaveStyle(const char *fileName)
+static bool SaveStyle(const char *fileName, int format)
 {
+    int success = false;
+    
     FILE *rgsFile = NULL;
 
-#define RAYGUI_STYLE_SAVE_AS_TEXT
-#if defined(RAYGUI_STYLE_SAVE_AS_TEXT)
-    rgsFile = fopen(fileName, "wt");
-
-    if (rgsFile != NULL)
+    if (format == STYLE_TEXT)
     {
-        #define RGL_FILE_VERSION_TEXT  "3.0"
-        
-        // Write some description comments
-        fprintf(rgsFile, "#\n# rgs style file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGL_FILE_VERSION_TEXT);
-        fprintf(rgsFile, "# NUM_CONTROLS         %i\n", NUM_CONTROLS);
-        fprintf(rgsFile, "# NUM_PROPS_DEFAULT    %i\n", NUM_PROPS_DEFAULT);
-        fprintf(rgsFile, "# NUM_PROPS_EXTENDED   %i\n#\n", NUM_PROPS_EXTENDED);
+        rgsFile = fopen(fileName, "wt");
 
-        // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-        for (int i = 0; i < NUM_CONTROLS; i++)
+        if (rgsFile != NULL)
         {
-            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
+            #define RGL_FILE_VERSION_TEXT  "3.0"
+            
+            // Write some description comments
+            fprintf(rgsFile, "#\n# rgs style file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGL_FILE_VERSION_TEXT);
+            fprintf(rgsFile, "# NUM_CONTROLS         %i\n", NUM_CONTROLS);
+            fprintf(rgsFile, "# NUM_PROPS_DEFAULT    %i\n", NUM_PROPS_DEFAULT);
+            fprintf(rgsFile, "# NUM_PROPS_EXTENDED   %i\n#\n", NUM_PROPS_EXTENDED);
+
+            // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
+            for (int i = 0; i < NUM_CONTROLS; i++)
             {
-                if (j < NUM_PROPS_DEFAULT) fprintf(rgsFile, "0x%08x    // %s_%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
-                else fprintf(rgsFile, "0x%08x    // %s_EXT%02i \n", GuiGetStyle(i, j), guiControlText[i], (j - NUM_PROPS_DEFAULT));
+                for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
+                {
+                    if (j < NUM_PROPS_DEFAULT) fprintf(rgsFile, "0x%08x    // %s_%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
+                    else fprintf(rgsFile, "0x%08x    // %s_EXT%02i \n", GuiGetStyle(i, j), guiControlText[i], (j - NUM_PROPS_DEFAULT));
+                }
             }
+
+            if (customFont) fprintf(rgsFile, "## NOTE: This style uses a custom font.\n");
+            
+            fclose(rgsFile);
+            success = true;
         }
-
-        if (customFont) fprintf(rgsFile, "## NOTE: This style uses a custom font.\n");
     }
-#else
-    rgsFile = fopen(fileName, "wb");
-
-    if (rgsFile != NULL)
+    else if (format == STYLE_BINARY)
     {
-        // Style File Structure (.rgs)
-        // ------------------------------------------------------
-        // Offset  | Size    | Type       | Description
-        // ------------------------------------------------------
-        // 0       | 4       | char       | Signature: "rGS "
-        // 4       | 2       | short      | Version: 200
-        // 6       | 2       | short      | reserved
-        // 8       | 2       | short      | # Controls [numControls]
-        // 10      | 2       | short      | # Props Default  [numPropsDefault]
-        // 12      | 2       | short      | # Props Extended [numPropsEx]
-        // 13      | 1       | char       | font embedded type (0 - no font, 1 - raylib font type)
-        // 14      | 1       | char       | reserved
+        rgsFile = fopen(fileName, "wb");
 
-        // Properties Data (4 bytes * N)
-        // N = totalProps = (numControls*(numPropsDefault + numPropsEx))
-        // foreach (N)
-        // {
-        //   16+4*i  | 4       | int        | Property data
-        // }
-
-        // Custom Font Data : Parameters (32 bytes)
-        // 16+4*N  | 4       | int        | Font data size
-        // 20+4*N  | 4       | int        | Font base size
-        // 24+4*N  | 4       | int        | Font chars count [charCount]
-        // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
-        // 32+4*N  | 16      | Rectangle  | Font white rectangle
-
-        // Custom Font Data : Image (16 bytes + imSize)
-        // 48+4*N  | 4       | int        | Image size [imSize = IS]
-        // 52+4*N  | 4       | int        | Image width
-        // 56+4*N  | 4       | int        | Image height
-        // 60+4*N  | 4       | int        | Image format
-        // 64+4*N  | imSize  | *          | Image data
-
-        // Custom Font Data : Chars Info (32 bytes * charCount)
-        // foreach (charCount)
-        // {
-        //   68+4*N+IS+32*i  | 16    | Rectangle  | Char rectangle (in image)
-        //   64+4*N+IS+32*i  | 4     | int        | Char value
-        //   84+4*N+IS+32*i  | 4     | int        | Char offset X
-        //   88+4*N+IS+32*i  | 4     | int        | Char offset Y
-        //   92+4*N+IS+32*i  | 4     | int        | Char advance X
-        // }
-        // ------------------------------------------------------
-
-        unsigned char value = 0;
-
-        char signature[5] = "rGS ";
-        short version = 200;
-        short numControls = NUM_CONTROLS;
-        short numPropsDefault = NUM_PROPS_DEFAULT;
-        short numPropsExtended = NUM_PROPS_EXTENDED;
-
-        fwrite(signature, 1, 4, rgsFile);
-        fwrite(&version, 1, sizeof(short), rgsFile);
-        fwrite(&numControls, 1, sizeof(short), rgsFile);
-        fwrite(&numPropsDefault, 1, sizeof(short), rgsFile);
-        fwrite(&numPropsExtended, 1, sizeof(short), rgsFile);
-
-        for (int i = 0; i < NUM_CONTROLS; i++)
+        if (rgsFile != NULL)
         {
-            for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++)
+            // Style File Structure (.rgs)
+            // ------------------------------------------------------
+            // Offset  | Size    | Type       | Description
+            // ------------------------------------------------------
+            // 0       | 4       | char       | Signature: "rGS "
+            // 4       | 2       | short      | Version: 200
+            // 6       | 2       | short      | reserved
+            // 8       | 2       | short      | # Controls [numControls]
+            // 10      | 2       | short      | # Props Default  [numPropsDefault]
+            // 12      | 2       | short      | # Props Extended [numPropsEx]
+            // 13      | 1       | char       | font embedded type (0 - no font, 1 - raylib font type)
+            // 14      | 1       | char       | reserved
+
+            // Properties Data (4 bytes * N)
+            // N = totalProps = (numControls*(numPropsDefault + numPropsEx))
+            // foreach (N)
+            // {
+            //   16+4*i  | 4       | int        | Property data
+            // }
+
+            // Custom Font Data : Parameters (32 bytes)
+            // 16+4*N  | 4       | int        | Font data size
+            // 20+4*N  | 4       | int        | Font base size
+            // 24+4*N  | 4       | int        | Font chars count [charCount]
+            // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
+            // 32+4*N  | 16      | Rectangle  | Font white rectangle
+
+            // Custom Font Data : Image (16 bytes + imSize)
+            // 48+4*N  | 4       | int        | Image size [imSize = IS]
+            // 52+4*N  | 4       | int        | Image width
+            // 56+4*N  | 4       | int        | Image height
+            // 60+4*N  | 4       | int        | Image format
+            // 64+4*N  | imSize  | *          | Image data
+
+            // Custom Font Data : Chars Info (32 bytes * charCount)
+            // foreach (charCount)
+            // {
+            //   68+4*N+IS+32*i  | 16    | Rectangle  | Char rectangle (in image)
+            //   64+4*N+IS+32*i  | 4     | int        | Char value
+            //   84+4*N+IS+32*i  | 4     | int        | Char offset X
+            //   88+4*N+IS+32*i  | 4     | int        | Char offset Y
+            //   92+4*N+IS+32*i  | 4     | int        | Char advance X
+            // }
+            // ------------------------------------------------------
+
+            unsigned char value = 0;
+
+            char signature[5] = "rGS ";
+            short version = 200;
+            short numControls = NUM_CONTROLS;
+            short numPropsDefault = NUM_PROPS_DEFAULT;
+            short numPropsExtended = NUM_PROPS_EXTENDED;
+
+            fwrite(signature, 1, 4, rgsFile);
+            fwrite(&version, 1, sizeof(short), rgsFile);
+            fwrite(&numControls, 1, sizeof(short), rgsFile);
+            fwrite(&numPropsDefault, 1, sizeof(short), rgsFile);
+            fwrite(&numPropsExtended, 1, sizeof(short), rgsFile);
+
+            for (int i = 0; i < NUM_CONTROLS; i++)
             {
-                value = GuiGetStyle(i, j);
-                fwrite(&value, 1, sizeof(int), rgsFile);
+                for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++)
+                {
+                    value = GuiGetStyle(i, j);
+                    fwrite(&value, 1, sizeof(int), rgsFile);
+                }
             }
-        }
 
-        value = 0;
+            value = 0;
 
-        // Write font data (embedding)
-        if (customFont)
-        {
-            Image imFont = GetTextureData(font.texture);
-
-            // Write font parameters
-            int fontParamsSize = 32;
-            int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-            int fontCharsDataSize = font.charsCount*32;       // 32 bytes by char
-            int fontDataSize = fontParamsSize + fontImageSize + fontCharsDataSize;
-            int fontType = 0;       // 0-NORMAL, 1-SDF
-
-            fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
-            fwrite(&font.baseSize, 1, sizeof(int), rgsFile);
-            fwrite(&font.charsCount, 1, sizeof(int), rgsFile);
-            fwrite(&fontType, 1, sizeof(int), rgsFile);
-
-            // TODO: Define font white rectangle?
-            Rectangle rec = { 0 };
-            fwrite(&rec, 1, sizeof(Rectangle), rgsFile);
-
-            // Write font image parameters
-            fwrite(&fontImageSize, 1, sizeof(int), rgsFile);
-            fwrite(&imFont.width, 1, sizeof(int), rgsFile);
-            fwrite(&imFont.height, 1, sizeof(int), rgsFile);
-            fwrite(&imFont.format, 1, sizeof(int), rgsFile);
-            fwrite(&imFont.data, 1, fontImageSize, rgsFile);
-
-            UnloadImage(imFont);
-
-            // Write font chars data
-            for (int i = 0; i < font.charsCount; i++)
+            // Write font data (embedding)
+            if (customFont)
             {
-                fwrite(&font.chars[i].rec, 1, sizeof(Rectangle), rgsFile);
-                fwrite(&font.chars[i].value, 1, sizeof(int), rgsFile);
-                fwrite(&font.chars[i].offsetX, 1, sizeof(int), rgsFile);
-                fwrite(&font.chars[i].offsetY, 1, sizeof(int), rgsFile);
-                fwrite(&font.chars[i].advanceX, 1, sizeof(int), rgsFile);
+                Image imFont = GetTextureData(font.texture);
+
+                // Write font parameters
+                int fontParamsSize = 32;
+                int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
+                int fontCharsDataSize = font.charsCount*32;       // 32 bytes by char
+                int fontDataSize = fontParamsSize + fontImageSize + fontCharsDataSize;
+                int fontType = 0;       // 0-NORMAL, 1-SDF
+
+                fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
+                fwrite(&font.baseSize, 1, sizeof(int), rgsFile);
+                fwrite(&font.charsCount, 1, sizeof(int), rgsFile);
+                fwrite(&fontType, 1, sizeof(int), rgsFile);
+
+                // TODO: Define font white rectangle?
+                Rectangle rec = { 0 };
+                fwrite(&rec, 1, sizeof(Rectangle), rgsFile);
+
+                // Write font image parameters
+                fwrite(&fontImageSize, 1, sizeof(int), rgsFile);
+                fwrite(&imFont.width, 1, sizeof(int), rgsFile);
+                fwrite(&imFont.height, 1, sizeof(int), rgsFile);
+                fwrite(&imFont.format, 1, sizeof(int), rgsFile);
+                fwrite(&imFont.data, 1, fontImageSize, rgsFile);
+
+                UnloadImage(imFont);
+
+                // Write font chars data
+                for (int i = 0; i < font.charsCount; i++)
+                {
+                    fwrite(&font.chars[i].rec, 1, sizeof(Rectangle), rgsFile);
+                    fwrite(&font.chars[i].value, 1, sizeof(int), rgsFile);
+                    fwrite(&font.chars[i].offsetX, 1, sizeof(int), rgsFile);
+                    fwrite(&font.chars[i].offsetY, 1, sizeof(int), rgsFile);
+                    fwrite(&font.chars[i].advanceX, 1, sizeof(int), rgsFile);
+                }
             }
+            else fwrite(&value, 1, sizeof(int), rgsFile);
+            
+            fclose(rgsFile);
+            success = true;
         }
-        else fwrite(&value, 1, sizeof(int), rgsFile);
     }
-#endif
-    if (rgsFile != NULL) fclose(rgsFile);
+    
+    return success;
 }
 
 // Export gui style as (ready-to-use) code file
@@ -950,70 +966,73 @@ static void ExportStyleAsCode(const char *fileName)
 {
     FILE *txtFile = fopen(fileName, "wt");
 
-    fprintf(txtFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as an array values           //\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/rguistyler                    //\n");
-    fprintf(txtFile, "// feedback and support:       ray[at]raylib.com                                //\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
-    fprintf(txtFile, "//                                                                              //\n");
-    fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
-
-    fprintf(txtFile, "// raygui custom style palette\n");
-    fprintf(txtFile, "// NOTE: Only DEFAULT style defined, expanded to all controls properties\n");
-    fprintf(txtFile, "// NOTE: Use GuiLoadStylePalette(stylePalette);\n");
-
-    // Write byte data as hexadecimal text
-    fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
-    for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
+    if (txtFile != NULL)
     {
-        //if (i < NUM_PROPS_EXTENDED) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
-        //else fprintf(txtFile, "0x%08x    // DEFAULT_%s \n", GuiGetStyle(i, j), guiPropsExText[i - NUM_PROPS_DEFAULT]);
+        fprintf(txtFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
+        fprintf(txtFile, "//                                                                              //\n");
+        fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as an array values           //\n");
+        fprintf(txtFile, "//                                                                              //\n");
+        fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/rguistyler                    //\n");
+        fprintf(txtFile, "// feedback and support:       ray[at]raylib.com                                //\n");
+        fprintf(txtFile, "//                                                                              //\n");
+        fprintf(txtFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
+        fprintf(txtFile, "//                                                                              //\n");
+        fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
+
+        fprintf(txtFile, "// raygui custom style palette\n");
+        fprintf(txtFile, "// NOTE: Only DEFAULT style defined, expanded to all controls properties\n");
+        fprintf(txtFile, "// NOTE: Use GuiLoadStylePalette(stylePalette);\n");
+
+        // Write byte data as hexadecimal text
+        fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
+        for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
+        {
+            //if (i < NUM_PROPS_EXTENDED) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
+            //else fprintf(txtFile, "0x%08x    // DEFAULT_%s \n", GuiGetStyle(i, j), guiPropsExText[i - NUM_PROPS_DEFAULT]);
+        }
+        fprintf(txtFile, "};\n");
+
+        /*
+        // Reference:
+        // raygui style palette: Light
+        static const int styleLight[20] = {
+
+            0x838383ff,     // DEFAULT_BORDER_COLOR_NORMAL
+            0xc9c9c9ff,     // DEFAULT_BASE_COLOR_NORMAL
+            0x686868ff,     // DEFAULT_TEXT_COLOR_NORMAL
+            0x5bb2d9ff,     // DEFAULT_BORDER_COLOR_FOCUSED
+            0xc9effeff,     // DEFAULT_BASE_COLOR_FOCUSED
+            0x6c9bbcff,     // DEFAULT_TEXT_COLOR_FOCUSED
+            0x0492c7ff,     // DEFAULT_BORDER_COLOR_PRESSED
+            0x97e8ffff,     // DEFAULT_BASE_COLOR_PRESSED
+            0x368bafff,     // DEFAULT_TEXT_COLOR_PRESSED
+            0xb5c1c2ff,     // DEFAULT_BORDER_COLOR_DISABLED
+            0xe6e9e9ff,     // DEFAULT_BASE_COLOR_DISABLED
+            0xaeb7b8ff,     // DEFAULT_TEXT_COLOR_DISABLED
+            1,              // DEFAULT_BORDER_WIDTH
+            1,              // DEFAULT_INNER_PADDING;
+            1,              // DEFAULT_TEXT_ALIGNMENT
+            0,              // DEFAULT_RESERVED02
+            10,             // DEFAULT_TEXT_SIZE
+            1,              // DEFAULT_TEXT_SPACING
+            0x90abb5ff,     // DEFAULT_LINE_COLOR
+            0xf5f5f5ff,     // DEFAULT_BACKGROUND_COLOR
+        };
+
+        // TODO: Expose custom style loading function
+        void LoadStyleLight(void)
+        {
+            GuiLoadStyleProps(styleLight, 20);
+            GuiUpdateStyleComplete();
+
+            // TODO: Set additional properties
+            GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
+            GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
+        }
+        */
+
+        fclose(txtFile);
     }
-    fprintf(txtFile, "};\n");
-
-    /*
-    // Reference:
-    // raygui style palette: Light
-    static const int styleLight[20] = {
-
-        0x838383ff,     // DEFAULT_BORDER_COLOR_NORMAL
-        0xc9c9c9ff,     // DEFAULT_BASE_COLOR_NORMAL
-        0x686868ff,     // DEFAULT_TEXT_COLOR_NORMAL
-        0x5bb2d9ff,     // DEFAULT_BORDER_COLOR_FOCUSED
-        0xc9effeff,     // DEFAULT_BASE_COLOR_FOCUSED
-        0x6c9bbcff,     // DEFAULT_TEXT_COLOR_FOCUSED
-        0x0492c7ff,     // DEFAULT_BORDER_COLOR_PRESSED
-        0x97e8ffff,     // DEFAULT_BASE_COLOR_PRESSED
-        0x368bafff,     // DEFAULT_TEXT_COLOR_PRESSED
-        0xb5c1c2ff,     // DEFAULT_BORDER_COLOR_DISABLED
-        0xe6e9e9ff,     // DEFAULT_BASE_COLOR_DISABLED
-        0xaeb7b8ff,     // DEFAULT_TEXT_COLOR_DISABLED
-        1,              // DEFAULT_BORDER_WIDTH
-        1,              // DEFAULT_INNER_PADDING;
-        1,              // DEFAULT_TEXT_ALIGNMENT
-        0,              // DEFAULT_RESERVED02
-        10,             // DEFAULT_TEXT_SIZE
-        1,              // DEFAULT_TEXT_SPACING
-        0x90abb5ff,     // DEFAULT_LINE_COLOR
-        0xf5f5f5ff,     // DEFAULT_BACKGROUND_COLOR
-    };
-
-    // TODO: Expose custom style loading function
-    void LoadStyleLight(void)
-    {
-        GuiLoadStyleProps(styleLight, 20);
-        GuiUpdateStyleComplete();
-
-        // TODO: Set additional properties
-        GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
-        GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
-    }
-    */
-
-    fclose(txtFile);
 }
 
 // Draw controls table image
@@ -1245,13 +1264,13 @@ static bool DialogLoadFont(void)
 
 
 // Dialog save style file
-static bool DialogSaveStyle(bool binary)
+static bool DialogSaveStyle(int format)
 {
     bool success = false;
     const char *fileName = NULL;
 
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
-    // Save file dialog
+    // TODO: Show dialog dependent on format
     const char *filters[] = { "*.rgs" };
     fileName = tinyfd_saveFileDialog("Save raygui style file", "style.rgs", 1, filters, "raygui Style Files (*.rgs)");
 #endif
@@ -1265,34 +1284,31 @@ static bool DialogSaveStyle(bool binary)
         if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
 
         // Save style file (text or binary)
-        SaveStyle(outFileName);
-        
-        saveChangesRequired = false;
-        success = true;
+        success = SaveStyle(outFileName, format);
     }
 
     return success;
 }
 
 // Dialog export style file
-static bool DialogExportStyle(int type)
+static bool DialogExportStyle(int format)
 {
     bool success = false;
     const char *fileName = NULL;
 
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Save file dialog
-    if (type == STYLE_BINARY)
+    if ((format == STYLE_TEXT) || (format == STYLE_BINARY))
     {
         const char *filters[] = { "*.rgs" };
         fileName = tinyfd_saveFileDialog("Export raygui style file", "style.rgs", 1, filters, "Style File (*.rgs)");
     }
-    else if (type == STYLE_AS_CODE)
+    else if (format == STYLE_AS_CODE)
     {
         const char *filters[] = { "*.h" };
         fileName = tinyfd_saveFileDialog("Export raygui style code file", "style.h", 1, filters, "Style As Code (*.h)");
     }
-    else if (type == STYLE_TABLE_IMAGE)
+    else if (format == STYLE_TABLE_IMAGE)
     {
         const char *filters[] = { "*.png" };
         fileName = tinyfd_saveFileDialog("Export raygui style table image file", "style.png", 1, filters, "Style Table Image (*.png)");
@@ -1301,9 +1317,10 @@ static bool DialogExportStyle(int type)
 
     if (fileName != NULL)
     {
-        switch (type)
+        switch (format)
         {
-            case STYLE_BINARY: SaveStyle(fileName); success = true; break;
+            case STYLE_TEXT: 
+            case STYLE_BINARY: success = SaveStyle(fileName, format); break;
             case STYLE_AS_CODE: ExportStyleAsCode(fileName); success = true; break;
             case STYLE_TABLE_IMAGE:
             {
@@ -1347,14 +1364,14 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
 // Load style text file
 static LoadStyleText(const char *fileName)
 {
-    int i = 0, j = 0;
-    unsigned int value = 0;
-    char buffer[256] = { 0 };
-
     FILE *rgsFile = fopen(fileName, "rt");
 
     if (rgsFile != NULL)
     {
+        int i = 0, j = 0;
+        unsigned int value = 0;
+        char buffer[256] = { 0 };
+
         fgets(buffer, 256, rgsFile);
 
         while (!feof(rgsFile))
@@ -1365,7 +1382,7 @@ static LoadStyleText(const char *fileName)
                 GuiSetStyle(i, j, value);
                 j++;
 
-                if (j >= NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) i++;
+                if (j >= NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) { i++; j = 0; }
             }
 
             fgets(buffer, 256, rgsFile);
