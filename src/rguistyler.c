@@ -8,7 +8,7 @@
 *       Enable PRO features for the tool. Usually command-line and export options related.
 *
 *   DEPENDENCIES:
-*       raylib 2.4-dev          - Windowing/input management and drawing.
+*       raylib 2.5              - Windowing/input management and drawing.
 *       raygui 2.0              - IMGUI controls (based on raylib).
 *       tinyfiledialogs 3.3.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
@@ -21,7 +21,7 @@
 *           -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 *
 *   DEVELOPERS:
-*       Ramon Santamaria (@raysan5):    Supervision, review, redesign, update and maintainer.
+*       Ramon Santamaria (@raysan5):    Supervision, review, redesign, update and maintenance.
 *       Adria Arranz (@Adri102):        Developer and designer, implemented v2.0 (2018)
 *       Jordi Jorba (@KoroBli):         Developer and designer, implemented v2.0 (2018)
 *       Sergio Martinez (@anidealgift): Development and testing v1.0 (2015..2017)
@@ -159,6 +159,7 @@ static char fontFilePath[512] = { 0 };  // Font file path (register font path fo
 static char loadedFileName[256] = { 0 };    // Loaded style file name
 static int loadedStyleFormat = STYLE_TEXT;  // Loaded style format
 static bool saveChangesRequired = false;    // Flag to notice save changes are required
+static char styleNameText[32] = "light";    // Style name
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -271,7 +272,6 @@ int main(int argc, char *argv[])
     int propsStateActive = 0;
 
     bool styleNameEditMode = false;
-    unsigned char styleNameText[32] = "light";
 
     bool prevViewStyleTableState = viewStyleTableActive;
 
@@ -286,13 +286,13 @@ int main(int argc, char *argv[])
 
     Color colorPickerValue = RED;
     bool textHexColorEditMode = false;
-    unsigned char hexColorText[9] = "00000000";
+    char hexColorText[9] = "00000000";
     int textAlignmentActive = 0;
     bool genFontSizeEditMode = false;
     bool fontSpacingEditMode = false;
     int fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
     bool fontSampleEditMode = false;
-    unsigned char fontSampleText[128] = "sample text";
+    char fontSampleText[128] = "sample text";
     int exportFormatActive = 0;
     //-----------------------------------------------------------------------------------
 
@@ -810,21 +810,21 @@ static bool SaveStyle(const char *fileName, int format)
 
         if (rgsFile != NULL)
         {
-            #define RGL_FILE_VERSION_TEXT  "3.0"
+            #define RGS_FILE_VERSION_TEXT  "3.0"
             
             // Write some description comments
-            fprintf(rgsFile, "#\n# rgs style file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGL_FILE_VERSION_TEXT);
-            fprintf(rgsFile, "# NUM_CONTROLS         %i\n", NUM_CONTROLS);
-            fprintf(rgsFile, "# NUM_PROPS_DEFAULT    %i\n", NUM_PROPS_DEFAULT);
-            fprintf(rgsFile, "# NUM_PROPS_EXTENDED   %i\n#\n", NUM_PROPS_EXTENDED);
+            fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
+            fprintf(rgsFile, "# Number of Controls:                      %i\n", NUM_CONTROLS);
+            fprintf(rgsFile, "# Number Default Properties per Control:   %i\n", NUM_PROPS_DEFAULT);
+            fprintf(rgsFile, "# Number Extended Properties per Control:  %i\n#\n", NUM_PROPS_EXTENDED);
 
             // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
             for (int i = 0; i < NUM_CONTROLS; i++)
             {
                 for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
                 {
-                    if (j < NUM_PROPS_DEFAULT) fprintf(rgsFile, "0x%08x    // %s_%s \n", GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
-                    else fprintf(rgsFile, "0x%08x    // %s_EXT%02i \n", GuiGetStyle(i, j), guiControlText[i], (j - NUM_PROPS_DEFAULT));
+                    if (j < NUM_PROPS_DEFAULT) fprintf(rgsFile, "p %02i %02i 0x%08x    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
+                    else fprintf(rgsFile, "p %02i %02i 0x%08x    // %s_EXT%02i \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j - NUM_PROPS_DEFAULT));
                 }
             }
 
@@ -1324,7 +1324,7 @@ static bool DialogExportStyle(int format)
             case STYLE_AS_CODE: ExportStyleAsCode(fileName); success = true; break;
             case STYLE_TABLE_IMAGE:
             {
-                Image imStyleTable = GenImageStyleControlsTable("style_name");
+                Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                 ExportImage(imStyleTable, fileName);
                 UnloadImage(imStyleTable);
                 success = true;
