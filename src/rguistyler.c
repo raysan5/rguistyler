@@ -9,7 +9,7 @@
 *
 *   DEPENDENCIES:
 *       raylib 2.5              - Windowing/input management and drawing.
-*       raygui 2.0              - IMGUI controls (based on raylib).
+*       raygui 2.5              - IMGUI controls (based on raylib).
 *       tinyfiledialogs 3.3.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
 *   COMPILATION (Windows - MinGW):
@@ -427,17 +427,29 @@ int main(int argc, char *argv[])
             // NOTE: In case DEFAULT control selected, we propagate changes to all controls
             if (currentSelectedProperty <= TEXT_COLOR_DISABLED)
             {
-                if (currentSelectedControl == DEFAULT) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, ColorToInt(colorPickerValue));
+                if (currentSelectedControl == DEFAULT) 
+                {
+                    GuiSetStyle(0, currentSelectedProperty, ColorToInt(colorPickerValue));
+                    for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, ColorToInt(colorPickerValue));
+                }
                 else GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
             }
             else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == INNER_PADDING))
             {
-                if (currentSelectedControl == DEFAULT) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
+                if (currentSelectedControl == DEFAULT) 
+                {
+                    GuiSetStyle(0, currentSelectedProperty, propertyValue);
+                    for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
+                }
                 else GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
             }
             else if (currentSelectedProperty == TEXT_ALIGNMENT)
             {
-                if (currentSelectedControl == DEFAULT) for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, textAlignmentActive);
+                if (currentSelectedControl == DEFAULT) 
+                {
+                    GuiSetStyle(0, currentSelectedProperty, textAlignmentActive);
+                    for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, textAlignmentActive);
+                }
                 else GuiSetStyle(currentSelectedControl, currentSelectedProperty, textAlignmentActive);
             }
         }
@@ -814,9 +826,10 @@ static bool SaveStyle(const char *fileName, int format)
             
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
-            fprintf(rgsFile, "# Number of Controls:                      %i\n", NUM_CONTROLS);
-            fprintf(rgsFile, "# Number Default Properties per Control:   %i\n", NUM_PROPS_DEFAULT);
-            fprintf(rgsFile, "# Number Extended Properties per Control:  %i\n#\n", NUM_PROPS_EXTENDED);
+            fprintf(rgsFile, "# Number of controls:                           %i\n", NUM_CONTROLS);
+            fprintf(rgsFile, "# Number of Properties per Control (Default):   %i\n", NUM_PROPS_DEFAULT);
+            fprintf(rgsFile, "# Number of Properties per Control (Extended):  %i\n#\n", NUM_PROPS_EXTENDED);
+            fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
 
             // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
             for (int i = 0; i < NUM_CONTROLS; i++)
@@ -968,68 +981,52 @@ static void ExportStyleAsCode(const char *fileName)
 
     if (txtFile != NULL)
     {
-        fprintf(txtFile, "\n//////////////////////////////////////////////////////////////////////////////////\n");
+        fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as an array values           //\n");
+        fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as a values array            //\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/rguistyler                    //\n");
-        fprintf(txtFile, "// feedback and support:       ray[at]raylib.com                                //\n");
+        fprintf(txtFile, "// USAGE: On init call: GuiLoadStyle%s();                        //\n", TextToPascal(styleNameText));
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// Copyright (c) 2018 Ramon Santamaria (@raysan5)                               //\n");
+        fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/raygui                        //\n");
+        fprintf(txtFile, "// feedback and support:       ray[at]raylibtech.com                            //\n");
+        fprintf(txtFile, "//                                                                              //\n");
+        fprintf(txtFile, "// Copyright (c) 2019 raylib technologies (@raylibtech)                         //\n");
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
-        fprintf(txtFile, "// raygui custom style palette\n");
-        fprintf(txtFile, "// NOTE: Only DEFAULT style defined, expanded to all controls properties\n");
-        fprintf(txtFile, "// NOTE: Use GuiLoadStylePalette(stylePalette);\n");
-
         // Write byte data as hexadecimal text
-        fprintf(txtFile, "static const unsigned int stylePalette[%i] = {\n", NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
+        fprintf(txtFile, "// Custom style palette: %s\n", styleNameText);
+        fprintf(txtFile, "static const int style%s[%i] = {\n", TextToPascal(styleNameText), NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
         for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
         {
-            //if (i < NUM_PROPS_EXTENDED) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
-            //else fprintf(txtFile, "0x%08x    // DEFAULT_%s \n", GuiGetStyle(i, j), guiPropsExText[i - NUM_PROPS_DEFAULT]);
+            if (i < NUM_PROPS_DEFAULT) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
+            else fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), FormatText("EXT%02i", (i - NUM_PROPS_EXTENDED + 1)));
         }
-        fprintf(txtFile, "};\n");
-
-        /*
-        // Reference:
-        // raygui style palette: Light
-        static const int styleLight[20] = {
-
-            0x838383ff,     // DEFAULT_BORDER_COLOR_NORMAL
-            0xc9c9c9ff,     // DEFAULT_BASE_COLOR_NORMAL
-            0x686868ff,     // DEFAULT_TEXT_COLOR_NORMAL
-            0x5bb2d9ff,     // DEFAULT_BORDER_COLOR_FOCUSED
-            0xc9effeff,     // DEFAULT_BASE_COLOR_FOCUSED
-            0x6c9bbcff,     // DEFAULT_TEXT_COLOR_FOCUSED
-            0x0492c7ff,     // DEFAULT_BORDER_COLOR_PRESSED
-            0x97e8ffff,     // DEFAULT_BASE_COLOR_PRESSED
-            0x368bafff,     // DEFAULT_TEXT_COLOR_PRESSED
-            0xb5c1c2ff,     // DEFAULT_BORDER_COLOR_DISABLED
-            0xe6e9e9ff,     // DEFAULT_BASE_COLOR_DISABLED
-            0xaeb7b8ff,     // DEFAULT_TEXT_COLOR_DISABLED
-            1,              // DEFAULT_BORDER_WIDTH
-            1,              // DEFAULT_INNER_PADDING;
-            1,              // DEFAULT_TEXT_ALIGNMENT
-            0,              // DEFAULT_RESERVED02
-            10,             // DEFAULT_TEXT_SIZE
-            1,              // DEFAULT_TEXT_SPACING
-            0x90abb5ff,     // DEFAULT_LINE_COLOR
-            0xf5f5f5ff,     // DEFAULT_BACKGROUND_COLOR
-        };
-
-        // TODO: Expose custom style loading function
-        void LoadStyleLight(void)
+        fprintf(txtFile, "};\n\n");
+        
+        fprintf(txtFile, "// Style loading function: %s\n", styleNameText);
+        fprintf(txtFile, "static void GuiLoadStyle%s(void)\n{\n", TextToPascal(styleNameText));
+        fprintf(txtFile, "    // Load an populate global default style\n");
+        fprintf(txtFile, "    GuiLoadStyleProps(style%s, 20);\n", TextToPascal(styleNameText));
+        fprintf(txtFile, "    GuiUpdateStyleComplete();\n\n");
+        fprintf(txtFile, "    // Set additional style properties (if required)\n");
+        
+        // Check all properties that have changed in comparison to default style
+        // and add custom style sets for those properties
+        for (int i = 1; i < NUM_CONTROLS; i++)
         {
-            GuiLoadStyleProps(styleLight, 20);
-            GuiUpdateStyleComplete();
-
-            // TODO: Set additional properties
-            GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
-            GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
+            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
+            {
+                if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+                {
+                    if (j < NUM_PROPS_DEFAULT) fprintf(txtFile, "    GuiSetStyle(%s, %s, 0x%08x);\n", guiControlText[i], guiPropsText[j], GuiGetStyle(i, j));
+                    else fprintf(txtFile, "    GuiSetStyle(%s, %i, 0x%08x); // %s_%s\n", guiControlText[i], j, GuiGetStyle(i, j), guiControlText[i], FormatText("EXT%02i", (j - NUM_PROPS_EXTENDED + 1)));
+                }
+            }
         }
-        */
+        fprintf(txtFile, "}\n");
+
+        // TODO: Support font export (byte array) and initialization
 
         fclose(txtFile);
     }
