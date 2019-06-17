@@ -209,6 +209,13 @@ int main(int argc, char *argv[])
         }
 #endif      // VERSION_ONE
     }
+    
+#if (defined(VERSION_ONE) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
+    // WARNING (Windows): If program is compiled as Window application (instead of console),
+    // no console is available to show output info... solution is compiling a console application
+    // and closing console (FreeConsole()) when changing to GUI interface
+    FreeConsole();
+#endif
 
     // GUI usage mode - Initialization
     //--------------------------------------------------------------------------------------
@@ -347,9 +354,13 @@ int main(int argc, char *argv[])
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();
 
         // Show dialog: save style file (.rgs)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) 
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S))
         {
-            if (loadedFileName[0] == '\0') saveChangesRequired = !DialogSaveStyle(exportFormatActive);
+            if (loadedFileName[0] == '\0')
+            {
+                if ((exportFormatActive == STYLE_AS_CODE) || (exportFormatActive == STYLE_TABLE_IMAGE)) exportFormatActive = STYLE_TEXT;
+                saveChangesRequired = !DialogSaveStyle(exportFormatActive);
+            }
             else
             {
                 // TODO: Using same style type as loaded or previously saved
@@ -594,7 +605,11 @@ int main(int argc, char *argv[])
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
+#if defined(VERSION_ONE)
                 exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "TEXT (.rgs); BINARY (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
+#else
+                exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "TEXT (.rgs);TABLE (.png)", exportFormatActive);
+#endif
                 if (GuiButton((Rectangle){ 620, 575, 100, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
             }
 
@@ -813,6 +828,10 @@ static void ProcessCommandLine(int argc, char *argv[])
 static bool SaveStyle(const char *fileName, int format)
 {
     int success = false;
+    
+#if !defined(VERSION_ONE)
+    if (format == STYLE_BINARY) format = STYLE_TEXT;
+#endif
     
     FILE *rgsFile = NULL;
 
@@ -1307,6 +1326,10 @@ static bool DialogExportStyle(int format)
 {
     bool success = false;
     const char *fileName = NULL;
+    
+#if !defined(VERSION_ONE)
+    if ((format == STYLE_BINARY) || (format == STYLE_AS_CODE)) format = STYLE_TEXT;
+#endif
 
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Save file dialog
