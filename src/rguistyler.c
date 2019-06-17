@@ -826,18 +826,33 @@ static bool SaveStyle(const char *fileName, int format)
             
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
-            fprintf(rgsFile, "# Number of controls:                           %i\n", NUM_CONTROLS);
-            fprintf(rgsFile, "# Number of Properties per Control (Default):   %i\n", NUM_PROPS_DEFAULT);
-            fprintf(rgsFile, "# Number of Properties per Control (Extended):  %i\n#\n", NUM_PROPS_EXTENDED);
+            fprintf(rgsFile, "# Number of controls (Total):                   %i\n", NUM_CONTROLS);
+            fprintf(rgsFile, "# Number of properties per control (Basic):     %i\n", NUM_PROPS_DEFAULT);
+            fprintf(rgsFile, "# Number of properties per Control (Extended):  %i\n#\n", NUM_PROPS_EXTENDED);
             fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
+            fprintf(rgsFile, "# NOTE:  Only changed properties from global style are saved\n#\n");
+            
+            // Save DEFAULT properties that changed
+            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
+            {
+                if (styleBackup[j] != GuiGetStyle(0, j))
+                {
+                    // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
+                    fprintf(rgsFile, "p 00 %02i 0x%08x    // DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
+                }
+            }
 
-            // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-            for (int i = 0; i < NUM_CONTROLS; i++)
+            // Save other controls properties that changed
+            for (int i = 1; i < NUM_CONTROLS; i++)
             {
                 for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
                 {
-                    if (j < NUM_PROPS_DEFAULT) fprintf(rgsFile, "p %02i %02i 0x%08x    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
-                    else fprintf(rgsFile, "p %02i %02i 0x%08x    // %s_EXT%02i \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j - NUM_PROPS_DEFAULT));
+                    // Check all properties that have changed in comparison to default style and add custom style sets for those properties
+                    if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+                    {
+                        // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
+                        fprintf(rgsFile, "p %02i %02i 0x%08x    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
+                    }
                 }
             }
 
