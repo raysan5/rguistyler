@@ -8,8 +8,6 @@ Useful for tools style customization. The best mate for [rGuiLayout](https://git
 rGuiStyler comes in two flavours: **ZERO** (free version) and **ONE** (low-cost version). You can get them [here](https://raylibtech.itch.io/rguistyler).
 
 <br>
-<br>
-<br>
 
 ## rGuiStyler ZERO features
 
