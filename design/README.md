@@ -32,6 +32,6 @@ Tool UI/UX kept improving day after day, trying different options and refining d
 
 After some months of continuous review, here it is the final result: **rGuiStyler v2.0**
 
-![rGuiStyler - April 2017](./design/rguistyler2_light_REV8.png)
+![rGuiStyler - April 2017](./rguistyler2_light_REV8.png)
 
 *More screenshots about the tool design evolution could be found in this folder.*
