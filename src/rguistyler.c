@@ -328,7 +328,21 @@ int main(int argc, char *argv[])
             char **droppedFiles = GetDroppedFiles(&dropsCount);
 
             // Supports loading .rgs style files (text or binary) and .png style palette images
-            if (IsFileExtension(droppedFiles[0], ".rgs")) GuiLoadStyle(droppedFiles[0]);
+            if (IsFileExtension(droppedFiles[0], ".rgs")) 
+            {
+                GuiLoadStyleDefault();          // Reset to base default style
+                GuiLoadStyle(droppedFiles[0]);  // Load new style properties
+                
+                strcpy(loadedFileName, droppedFiles[0]);
+                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
+                strcpy(styleNameText, GetFileNameWithoutExt(droppedFiles[0]));
+                
+                // Reset style backup to loaded style (used to track changes)
+                for (int i = 0; i < NUM_CONTROLS; i++)
+                {
+                    for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
+                }
+            }
             else if (IsFileExtension(droppedFiles[0], ".ttf"))
             {
                 UnloadFont(font);
@@ -605,11 +619,7 @@ int main(int argc, char *argv[])
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
-#if defined(VERSION_ONE)
                 exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "TEXT (.rgs); BINARY (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
-#else
-                exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "TEXT (.rgs);TABLE (.png)", exportFormatActive);
-#endif
                 if (GuiButton((Rectangle){ 620, 575, 100, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
             }
 
@@ -849,8 +859,9 @@ static bool SaveStyle(const char *fileName, int format)
             fprintf(rgsFile, "# Number of properties per control (Basic):     %i\n", NUM_PROPS_DEFAULT);
             fprintf(rgsFile, "# Number of properties per Control (Extended):  %i\n#\n", NUM_PROPS_EXTENDED);
             fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
-            fprintf(rgsFile, "# NOTE:  Only changed properties from global style are saved\n#\n");
-            
+            fprintf(rgsFile, "# STYLE: %s\n", styleNameText);
+            fprintf(rgsFile, "# NOTE: Only changed properties from global style are saved\n#\n");
+
             // Save DEFAULT properties that changed
             for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
             {
