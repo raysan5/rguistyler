@@ -44,6 +44,6 @@ rGuiStyler ONE also allows exporting style as binary style file (.rgs) and a por
 
 ## rGuiStyler License
 
-*Copyright (c) 2016-2019 raylib technologies ([@raylibtech](https://twitter.com/raylibtech)). All Rights Reserved.* Check [LICENSE](LICENSE) for details.
+*Copyright (c) 2015-2019 raylib technologies ([@raylibtech](https://twitter.com/raylibtech)). All Rights Reserved.* Check [LICENSE](LICENSE) for details.
 
 In case you want a custom version of the tool, just get in touch: ray[at]raylibtech.com
