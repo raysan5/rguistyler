@@ -159,7 +159,7 @@ static char fontFilePath[512] = { 0 };  // Font file path (register font path fo
 static char loadedFileName[256] = { 0 };    // Loaded style file name
 static int loadedStyleFormat = STYLE_TEXT;  // Loaded style format
 static bool saveChangesRequired = false;    // Flag to notice save changes are required
-static char styleNameText[32] = "light";    // Style name
+static char styleNameText[32] = "light_default";    // Style name
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
     }
 
     // Init color picker saved colors
-    Color colorBoxValue[12];
+    Color colorBoxValue[12] = { 0 };
     for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
     Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
 
@@ -343,7 +343,7 @@ int main(int argc, char *argv[])
                     for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
                 }
             }
-            else if (IsFileExtension(droppedFiles[0], ".ttf"))
+            else if (IsFileExtension(droppedFiles[0], ".ttf") || IsFileExtension(droppedFiles[0], ".otf"))
             {
                 UnloadFont(font);
 
@@ -398,6 +398,24 @@ int main(int argc, char *argv[])
             if (windowAboutState.windowAboutActive) windowAboutState.windowAboutActive = false;
             else if (changedPropsCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
+        }
+        
+        // Reset to default light style
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R))
+        {
+            GuiLoadStyleDefault();
+            
+            strcpy(loadedFileName, "\0");
+            SetWindowTitle(FormatText("%s v%s", TOOL_NAME, TOOL_VERSION));
+            strcpy(styleNameText, "light_default");
+            
+            // Reset style backup to loaded style (used to track changes)
+            for (int i = 0; i < NUM_CONTROLS; i++)
+            {
+                for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
+            }
+            
+            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
         }
         //----------------------------------------------------------------------------------
 
@@ -599,6 +617,7 @@ int main(int argc, char *argv[])
                     colorPickerValue = GetColor((int)strtoul(hexColorText, NULL, 16));
                 }
 
+                // Draw colors selector palette
                 for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorPropEditor.x + 295 + 20*(i%3), anchorPropEditor.y + 190 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
                 DrawRectangleLinesEx((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 190, 60, 80 }, 2, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL)));
 
@@ -619,8 +638,8 @@ int main(int argc, char *argv[])
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
-                exportFormatActive = GuiComboBox((Rectangle){ 450, 575, 160, 30 }, "TEXT (.rgs); BINARY (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
-                if (GuiButton((Rectangle){ 620, 575, 100, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
+                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "TEXT (.rgs); BINARY (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
+                if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
             }
 
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
@@ -636,8 +655,8 @@ int main(int argc, char *argv[])
 
             GuiState(GUI_STATE_NORMAL);
 
-            GuiLabel((Rectangle){ 570, 10, 35, 30 }, "State:");
-            if (GuiDropdownBox((Rectangle){ 610, 10, 120, 30 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &propsStateActive, propsStateEditMode)) propsStateEditMode = !propsStateEditMode;
+            GuiLabel((Rectangle){ 580 - MeasureTextEx(font, "State:", genFontSizeValue, fontSpacingValue).x - 10, 10, 35, 30 }, "State:");
+            if (GuiDropdownBox((Rectangle){ 580, 10, 150, 30 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &propsStateActive, propsStateEditMode)) propsStateEditMode = !propsStateEditMode;
 
             GuiUnlock();
             //------------------------------------------------------------------------------------------------------------------------
@@ -817,7 +836,7 @@ static void ProcessCommandLine(int argc, char *argv[])
             case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h")); break;
             case STYLE_TABLE_IMAGE:
             {
-                Image imStyleTable = GenImageStyleControlsTable("raygui_light");
+                Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                 ExportImage(imStyleTable, FormatText("%s%s", outFileName, ".png"));
                 UnloadImage(imStyleTable);
                 
@@ -855,12 +874,9 @@ static bool SaveStyle(const char *fileName, int format)
             
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
-            fprintf(rgsFile, "# Number of controls (Total):                   %i\n", NUM_CONTROLS);
-            fprintf(rgsFile, "# Number of properties per control (Basic):     %i\n", NUM_PROPS_DEFAULT);
-            fprintf(rgsFile, "# Number of properties per Control (Extended):  %i\n#\n", NUM_PROPS_EXTENDED);
             fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
             fprintf(rgsFile, "# STYLE: %s\n", styleNameText);
-            fprintf(rgsFile, "# NOTE: Only changed properties from global style are saved\n#\n");
+            fprintf(rgsFile, "# WARNING: Only changed properties from global style are saved\n#\n");
 
             // Save DEFAULT properties that changed
             for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
@@ -905,21 +921,18 @@ static bool SaveStyle(const char *fileName, int format)
             // 0       | 4       | char       | Signature: "rGS "
             // 4       | 2       | short      | Version: 200
             // 6       | 2       | short      | reserved
-            // 8       | 2       | short      | # Controls [numControls]
-            // 10      | 2       | short      | # Props Default  [numPropsDefault]
-            // 12      | 2       | short      | # Props Extended [numPropsEx]
-            // 13      | 1       | char       | font embedded type (0 - no font, 1 - raylib font type)
-            // 14      | 1       | char       | reserved
+            // 8       | 4       | int        | Num properties (N)
 
-            // Properties Data (4 bytes * N)
-            // N = totalProps = (numControls*(numPropsDefault + numPropsEx))
-            // foreach (N)
+            // Properties Data: (controlId (2 byte) +  propertyId (2 byte) + propertyValue (4 bytes))*N
+            // foreach (property)
             // {
-            //   16+4*i  | 4       | int        | Property data
+            //   16+4*i  | 2       | short      | ControlId
+            //   16+4*i  | 2       | short      | PropertyId
+            //   16+4*i  | 4       | int        | PropertyValue
             // }
 
             // Custom Font Data : Parameters (32 bytes)
-            // 16+4*N  | 4       | int        | Font data size
+            // 16+4*N  | 4       | int        | Font data size (0 - no font)
             // 20+4*N  | 4       | int        | Font base size
             // 24+4*N  | 4       | int        | Font chars count [charCount]
             // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
@@ -947,31 +960,55 @@ static bool SaveStyle(const char *fileName, int format)
 
             char signature[5] = "rGS ";
             short version = 200;
-            short numControls = NUM_CONTROLS;
-            short numPropsDefault = NUM_PROPS_DEFAULT;
-            short numPropsExtended = NUM_PROPS_EXTENDED;
+            short reserved = 0;
 
             fwrite(signature, 1, 4, rgsFile);
             fwrite(&version, 1, sizeof(short), rgsFile);
-            fwrite(&numControls, 1, sizeof(short), rgsFile);
-            fwrite(&numPropsDefault, 1, sizeof(short), rgsFile);
-            fwrite(&numPropsExtended, 1, sizeof(short), rgsFile);
+            fwrite(&reserved, 1, sizeof(short), rgsFile);
+            
+            int propsCounter = 0;
+            
+            
+            // Count all properties that have changed in comparison to default style
+            for (int i = 1; i < NUM_CONTROLS; i++)
+            {
+                for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
+                {
+                    if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j))) propsCounter++;
+                }
+            }
+            
+            fwrite(&propsCounter, 1, sizeof(int), rgsFile);
+            
+            short controlId = 0;
+            short propertyId = 0;
+            int propertyValue = 0;
 
             for (int i = 0; i < NUM_CONTROLS; i++)
             {
                 for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++)
                 {
-                    value = GuiGetStyle(i, j);
-                    fwrite(&value, 1, sizeof(int), rgsFile);
+                    if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+                    {
+                        controlId = (short)i;
+                        propertyId = (short)j;
+                        propertyValue = GuiGetStyle(i, j);
+                        
+                        fwrite(&controlId, 1, sizeof(short), rgsFile);
+                        fwrite(&propertyId, 1, sizeof(short), rgsFile);
+                        fwrite(&propertyValue, 1, sizeof(int), rgsFile);
+                    }
                 }
             }
-
-            value = 0;
+            
+            int fontSize = 0;
 
             // Write font data (embedding)
             if (customFont)
             {
                 Image imFont = GetTextureData(font.texture);
+                
+                //ImageGrayscale(&imFont);  // TODO.
 
                 // Write font parameters
                 int fontParamsSize = 32;
@@ -1008,7 +1045,7 @@ static bool SaveStyle(const char *fileName, int format)
                     fwrite(&font.chars[i].advanceX, 1, sizeof(int), rgsFile);
                 }
             }
-            else fwrite(&value, 1, sizeof(int), rgsFile);
+            else fwrite(&fontSize, 1, sizeof(int), rgsFile);
             
             fclose(rgsFile);
             success = true;
@@ -1121,17 +1158,17 @@ static Image GenImageStyleControlsTable(const char *styleName)
 
     // TODO: Controls grid with should be calculated depending on font size and controls text!
     int controlWidth[TABLE_CONTROLS_COUNT] = {
-        80,     // LABEL
-        90,     // BUTTON
-        90,     // TOGGLE
-        160,    // CHECKBOX
-        90,     // SLIDER
-        90,     // SLIDERBAR
-        90,     // PROGRESSBAR
-        120,    // COMBOBOX,
-        110,    // DROPDOWNBOX
-        90,     // TEXTBOX
-        90,     // VALUEBOX
+        100,    // LABEL
+        100,    // BUTTON
+        100,    // TOGGLE
+        200,    // CHECKBOX
+        100,    // SLIDER
+        100,    // SLIDERBAR
+        100,    // PROGRESSBAR
+        140,    // COMBOBOX,
+        160,    // DROPDOWNBOX
+        100,    // TEXTBOX
+        100,    // VALUEBOX
         100,    // SPINNER
     };
 
@@ -1151,6 +1188,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
 
     RenderTexture2D target = LoadRenderTexture(tableWidth, tableHeight);
 
+    int sliderWidth = GuiGetStyle(SLIDER, SLIDER_WIDTH);
     GuiSetStyle(SLIDER, SLIDER_WIDTH, 10);
 
     // Texture rendering
@@ -1196,7 +1234,11 @@ static Image GenImageStyleControlsTable(const char *styleName)
             GuiGroupBox(rec, NULL);
             int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
             GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
-            GuiLabel(rec, tableControlsName[i]);
+            //GuiLabel(rec, tableControlsName[i]);
+            
+            // TODO: Some problem with GuiLabel() -> GuiDrawText()
+            Vector2 textSize = MeasureTextEx(font, tableControlsName[i], GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
+            DrawTextEx(font, tableControlsName[i], (Vector2){ rec.x + rec.width/2 - textSize.x/2, rec.y + rec.height/2 - textSize.y/2 }, GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
 
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
@@ -1247,6 +1289,8 @@ static Image GenImageStyleControlsTable(const char *styleName)
     EndTextureMode();
     //--------------------------------------------------------------------------------------------
 
+    GuiSetStyle(SLIDER, SLIDER_WIDTH, sliderWidth);
+
     Image imStyleTable = GetTextureData(target.texture);
     ImageFlipVertical(&imStyleTable);
 
@@ -1288,8 +1332,8 @@ static bool DialogLoadFont(void)
 
 #if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
     // Open file dialog
-    const char *filters[] = { "*.ttf" };
-    fileName = tinyfd_openFileDialog("Load raygui style font", "", 1, filters, "Font Files (*.ttf)", 0);
+    const char *filters[] = { "*.ttf", "*.otf" };
+    fileName = tinyfd_openFileDialog("Load raygui style font", "", 2, filters, "Font Files (*.ttf, *.otf)", 0);
 #endif
 
     if (fileName != NULL)
