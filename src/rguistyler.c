@@ -342,6 +342,8 @@ int main(int argc, char *argv[])
                 {
                     for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
                 }
+                
+                // TODO: If .rgs includes a custom font, load it in font...
             }
             else if (IsFileExtension(droppedFiles[0], ".ttf") || IsFileExtension(droppedFiles[0], ".otf"))
             {
@@ -349,9 +351,14 @@ int main(int argc, char *argv[])
 
                 // NOTE: Font generation size depends on spinner size selection
                 font = LoadFontEx(droppedFiles[0], genFontSizeValue, NULL, 0);
-                strcpy(fontFilePath, droppedFiles[0]);
                 
-                GuiFont(font);
+                if (font.texture.id > 0)
+                {
+                    strcpy(fontFilePath, droppedFiles[0]);
+                    
+                    GuiFont(font);
+                    customFont = true;
+                }
             }
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
@@ -403,6 +410,9 @@ int main(int argc, char *argv[])
         // Reset to default light style
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R))
         {
+            currentSelectedControl = -1;
+            currentSelectedProperty = -1;
+            
             GuiLoadStyleDefault();
             
             strcpy(loadedFileName, "\0");
@@ -416,9 +426,11 @@ int main(int argc, char *argv[])
             }
             
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
-        }
+            
+            GuiFont(GetFontDefault());
+        }   
         //----------------------------------------------------------------------------------
-
+            
         // Basic program flow logic
         //----------------------------------------------------------------------------------
         framesCounter++;                    // General usage frames counter
@@ -875,8 +887,12 @@ static bool SaveStyle(const char *fileName, int format)
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
             fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
-            fprintf(rgsFile, "# STYLE: %s\n", styleNameText);
-            fprintf(rgsFile, "# WARNING: Only changed properties from global style are saved\n#\n");
+            fprintf(rgsFile, "# STYLE: %s\n#\n", styleNameText);
+            if (customFont)
+            {
+                fprintf(rgsFile, "# WARNING: This style used a custom font: %s (size: %i, spacing: %i)\n#\n", 
+                        GetFileName(fontFilePath), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
+            }
 
             // Save DEFAULT properties that changed
             for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
@@ -902,8 +918,6 @@ static bool SaveStyle(const char *fileName, int format)
                 }
             }
 
-            if (customFont) fprintf(rgsFile, "## NOTE: This style uses a custom font.\n");
-            
             fclose(rgsFile);
             success = true;
         }
@@ -926,9 +940,9 @@ static bool SaveStyle(const char *fileName, int format)
             // Properties Data: (controlId (2 byte) +  propertyId (2 byte) + propertyValue (4 bytes))*N
             // foreach (property)
             // {
-            //   16+4*i  | 2       | short      | ControlId
-            //   16+4*i  | 2       | short      | PropertyId
-            //   16+4*i  | 4       | int        | PropertyValue
+            //   8+8*i  | 2       | short      | ControlId
+            //   8+8*i  | 2       | short      | PropertyId
+            //   8+8*i  | 4       | int        | PropertyValue
             // }
 
             // Custom Font Data : Parameters (32 bytes)
@@ -968,8 +982,10 @@ static bool SaveStyle(const char *fileName, int format)
             
             int propsCounter = 0;
             
+            // Count all properties that have changed in default style
+            for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++) if (styleBackup[i] != GuiGetStyle(0, i)) propsCounter++;
             
-            // Count all properties that have changed in comparison to default style
+            // Add to count all properties that have changed in comparison to default style
             for (int i = 1; i < NUM_CONTROLS; i++)
             {
                 for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
@@ -983,8 +999,23 @@ static bool SaveStyle(const char *fileName, int format)
             short controlId = 0;
             short propertyId = 0;
             int propertyValue = 0;
+            
+            // Save first all properties that have changed in default style
+            for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++) 
+            {
+                if (styleBackup[i] != GuiGetStyle(0, i))
+                {
+                    propertyId = (short)i;
+                    propertyValue = GuiGetStyle(0, i);
+                    
+                    fwrite(&controlId, 1, sizeof(short), rgsFile);
+                    fwrite(&propertyId, 1, sizeof(short), rgsFile);
+                    fwrite(&propertyValue, 1, sizeof(int), rgsFile);
+                }
+            }
 
-            for (int i = 0; i < NUM_CONTROLS; i++)
+            // Save all properties that have changed in comparison to default style
+            for (int i = 1; i < NUM_CONTROLS; i++)
             {
                 for (int j = 0; j < NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED; j++)
                 {
@@ -1006,9 +1037,8 @@ static bool SaveStyle(const char *fileName, int format)
             // Write font data (embedding)
             if (customFont)
             {
-                Image imFont = GetTextureData(font.texture);
-                
-                //ImageGrayscale(&imFont);  // TODO.
+                Image imFont = GetTextureData(font.texture);                
+                ImageFormat(&imFont, UNCOMPRESSED_R8G8B8A8);    // TODO: Required?
 
                 // Write font parameters
                 int fontParamsSize = 32;
@@ -1031,7 +1061,7 @@ static bool SaveStyle(const char *fileName, int format)
                 fwrite(&imFont.width, 1, sizeof(int), rgsFile);
                 fwrite(&imFont.height, 1, sizeof(int), rgsFile);
                 fwrite(&imFont.format, 1, sizeof(int), rgsFile);
-                fwrite(&imFont.data, 1, fontImageSize, rgsFile);
+                fwrite(imFont.data, 1, fontImageSize, rgsFile);
 
                 UnloadImage(imFont);
 
