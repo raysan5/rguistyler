@@ -181,6 +181,7 @@ static bool DialogExportStyle(int format);                  // Show dialog: expo
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
 // Auxiliar functions
+static int StyleChangesCounter(void);                       // Count changed properties in current style
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
 
 //------------------------------------------------------------------------------------
@@ -247,7 +248,7 @@ int main(int argc, char *argv[])
         font = GetFontDefault();
     }
 
-    // Keep a backup for base style (used to track changes)
+    // Keep a backup for default light style (used to track changes)
     for (int i = 0; i < NUM_CONTROLS; i++)
     {
         for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
@@ -332,16 +333,16 @@ int main(int argc, char *argv[])
             {
                 GuiLoadStyleDefault();          // Reset to base default style
                 GuiLoadStyle(droppedFiles[0]);  // Load new style properties
-                
+
                 strcpy(loadedFileName, droppedFiles[0]);
                 SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
                 strcpy(styleNameText, GetFileNameWithoutExt(droppedFiles[0]));
-                
-                // Reset style backup to loaded style (used to track changes)
-                for (int i = 0; i < NUM_CONTROLS; i++)
-                {
-                    for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
-                }
+
+                genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+                fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
+
+                memset(fontFilePath, 0, 512);
+                customFont = false;
                 
                 // TODO: If .rgs includes a custom font, load it in font...
             }
@@ -415,51 +416,44 @@ int main(int argc, char *argv[])
             
             GuiLoadStyleDefault();
             
-            strcpy(loadedFileName, "\0");
+            memset(loadedFileName, 0, 256);
             SetWindowTitle(FormatText("%s v%s", TOOL_NAME, TOOL_VERSION));
             strcpy(styleNameText, "light_default");
+            memset(fontFilePath, 0, 512);
+            customFont = false;
             
-            // Reset style backup to loaded style (used to track changes)
-            for (int i = 0; i < NUM_CONTROLS; i++)
-            {
-                for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] = GuiGetStyle(i, j);
-            }
+            genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+            fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
             
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
-            
-            GuiFont(GetFontDefault());
         }   
         //----------------------------------------------------------------------------------
-            
+
         // Basic program flow logic
         //----------------------------------------------------------------------------------
         framesCounter++;                    // General usage frames counter
         mousePos = GetMousePosition();      // Get mouse position each frame
         if (WindowShouldClose()) exitWindow = true;
 
-        // Check for changed controls
-        // TODO: Do we really need to count this?
-        changedPropsCounter = 0;
-        for (int i = 0; i < NUM_CONTROLS; i++)
-        {
-            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++) if (styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) changedPropsCounter++;
-        }
+        // Check for changed properties
+        changedPropsCounter = StyleChangesCounter();
         if (changedPropsCounter > 0) saveChangesRequired = true;
         
         if (viewStyleTableActive || viewFontActive) lockBackground = true;
         else lockBackground = false;
 
         // Reload font to new size if required
-        if (!genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath != NULL))
+        if (customFont && !genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath != NULL))
         {
             UnloadFont(font);
             font = LoadFontEx(fontFilePath, genFontSizeValue, NULL, 0);
             GuiFont(font);
-            
-            prevGenFontSize = genFontSizeValue;
         }
         
+        GuiSetStyle(DEFAULT, TEXT_SIZE, genFontSizeValue);
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
+        
+        prevGenFontSize = genFontSizeValue;
 
         // Controls selection on list view logic
         //----------------------------------------------------------------------------------
@@ -970,8 +964,6 @@ static bool SaveStyle(const char *fileName, int format)
             // }
             // ------------------------------------------------------
 
-            unsigned char value = 0;
-
             char signature[5] = "rGS ";
             short version = 200;
             short reserved = 0;
@@ -980,21 +972,9 @@ static bool SaveStyle(const char *fileName, int format)
             fwrite(&version, 1, sizeof(short), rgsFile);
             fwrite(&reserved, 1, sizeof(short), rgsFile);
             
-            int propsCounter = 0;
+            int changedPropsCounter = StyleChangesCounter();
             
-            // Count all properties that have changed in default style
-            for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++) if (styleBackup[i] != GuiGetStyle(0, i)) propsCounter++;
-            
-            // Add to count all properties that have changed in comparison to default style
-            for (int i = 1; i < NUM_CONTROLS; i++)
-            {
-                for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
-                {
-                    if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j))) propsCounter++;
-                }
-            }
-            
-            fwrite(&propsCounter, 1, sizeof(int), rgsFile);
+            fwrite(&changedPropsCounter, 1, sizeof(int), rgsFile);
             
             short controlId = 0;
             short propertyId = 0;
@@ -1037,8 +1017,8 @@ static bool SaveStyle(const char *fileName, int format)
             // Write font data (embedding)
             if (customFont)
             {
-                Image imFont = GetTextureData(font.texture);                
-                ImageFormat(&imFont, UNCOMPRESSED_R8G8B8A8);    // TODO: Required?
+                Image imFont = GetTextureData(font.texture);
+                //ImageFormat(&imFont, UNCOMPRESSED_R8G8B8A8);    // TODO: WARNING: It could be required on OpenGL ES 2.0
 
                 // Write font parameters
                 int fontParamsSize = 32;
@@ -1116,6 +1096,44 @@ static void ExportStyleAsCode(const char *fileName)
         }
         fprintf(txtFile, "};\n\n");
         
+        if (customFont)
+        {
+            fprintf(rgsFile, "// WARNING: This style uses a custom font: %s (size: %i, spacing: %i)\n\n", 
+                    GetFileName(fontFilePath), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
+        }
+        
+#if defined(VERSION_ONE)
+        Image imFont = { 0 };
+        
+        if (customFont)
+        {
+            // Support font export and initialization
+            // NOTE: This mechanism is highly coupled to raylib
+            imFont = GetTextureData(font.texture);
+            int imFontSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
+            
+            #define BYTES_TEXT_PER_LINE     20
+            
+            // Save font image data
+            fprintf(txtFile, "// Font image pixels data\n");
+            fprintf(txtFile, "static const unsigned char imFontData[%i] = {\n    ", imFontSize);
+            for (int i = 0; i < imFontSize - 1; i++) fprintf(txtFile, (((i > 0) && (i%BYTES_TEXT_PER_LINE == 0))? "0x%02x,\n    " : "0x%02x, "), ((unsigned char *)imFont.data)[i]);
+            fprintf(txtFile, "0x%02x };\n\n", ((unsigned char *)imFont.data)[imFontSize - 1]);
+
+            // Save font chars data
+            // NOTE: Characters grayscale pixels data not saved
+            fprintf(txtFile, "// Font characters info data\n");
+            fprintf(txtFile, "static const CharInfo fontChars[%i] = {\n", font.charsCount);
+            for (int i = 0; i < font.charsCount; i++) 
+            {
+                fprintf(txtFile, "    { %i, { %1.0f, %1.0f, %1.0f, %1.0f }, %i, %i, %i, 0 },\n", 
+                        font.chars[i].value, font.chars[i].rec.x, font.chars[i].rec.y, font.chars[i].rec.width, font.chars[i].rec.height, 
+                        font.chars[i].offsetX, font.chars[i].offsetY, font.chars[i].advanceX);
+            }
+            fprintf(txtFile, "};\n\n");
+        }
+#endif
+        
         fprintf(txtFile, "// Style loading function: %s\n", styleNameText);
         fprintf(txtFile, "static void GuiLoadStyle%s(void)\n{\n", TextToPascal(styleNameText));
         fprintf(txtFile, "    // Load an populate global default style\n");
@@ -1136,10 +1154,24 @@ static void ExportStyleAsCode(const char *fileName)
                 }
             }
         }
+
+#if defined(VERSION_ONE)
+        if (customFont)
+        {
+            fprintf(txtFile, "\n    // Custom font loading\n");
+            fprintf(txtFile, "    Image imFont = { imFontData, %i, %i, 1, %i };\n", imFont.width, imFont.height, imFont.format);
+            fprintf(txtFile, "    Font font = { LoadTextureFromImage(imFont), %i, %i, 0 };\n\n", GuiGetStyle(DEFAULT, TEXT_SIZE), font.charsCount);
+            
+            fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
+            fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
+            fprintf(txtFile, "    font.chars = (CharInfo *)malloc(font.charsCount*sizeof(CharInfo));\n");
+            fprintf(txtFile, "    memcpy(font.chars, fontChars, font.charsCount*sizeof(CharInfo));\n\n");
+            
+            fprintf(txtFile, "    GuiFont(font);\n");
+        }
+#endif
         fprintf(txtFile, "}\n");
-
-        // TODO: Support font export (byte array) and initialization
-
+        
         fclose(txtFile);
     }
 }
@@ -1186,7 +1218,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         "SPINNER"       // VALUEBOX + BUTTON
     };
 
-    // TODO: Controls grid with should be calculated depending on font size and controls text!
+    // TODO: Controls grid widths should be calculated depending on font size and controls text!
     int controlWidth[TABLE_CONTROLS_COUNT] = {
         100,    // LABEL
         100,    // BUTTON
@@ -1378,7 +1410,6 @@ static bool DialogLoadFont(void)
     return success;
 }
 
-
 // Dialog save style file
 static bool DialogSaveStyle(int format)
 {
@@ -1460,6 +1491,26 @@ static bool DialogExportStyle(int format)
 // Auxiliar GUI functions
 //--------------------------------------------------------------------------------------------
 
+// Count changed properties in current style (in reference to default light style)
+static int StyleChangesCounter(void)
+{
+    int changes = 0;
+    
+    // Count all properties that have changed in default style
+    for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++) if (styleBackup[i] != GuiGetStyle(0, i)) changes++;
+    
+    // Add to count all properties that have changed in comparison to default style
+    for (int i = 1; i < NUM_CONTROLS; i++)
+    {
+        for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
+        {
+            if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j))) changes++;
+        }
+    }
+    
+    return changes;
+}
+
 // Color box control to save color samples from color picker
 // NOTE: It requires colorPicker pointer for updating in case of selection
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
@@ -1479,39 +1530,6 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
 
     return color;
 }
-
-#if 0
-// Load style text file
-static LoadStyleText(const char *fileName)
-{
-    FILE *rgsFile = fopen(fileName, "rt");
-
-    if (rgsFile != NULL)
-    {
-        int i = 0, j = 0;
-        unsigned int value = 0;
-        char buffer[256] = { 0 };
-
-        fgets(buffer, 256, rgsFile);
-
-        while (!feof(rgsFile))
-        {
-            if ((buffer[0] != '\n') && (buffer[0] != '#'))
-            {
-                sscanf(buffer, "0x%x", &value);
-                GuiSetStyle(i, j, value);
-                j++;
-
-                if (j >= NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) { i++; j = 0; }
-            }
-
-            fgets(buffer, 256, rgsFile);
-        }
-
-        fclose(rgsFile);
-    }
-}
-#endif
 
 #if 0
 // PNG file management info
