@@ -70,7 +70,7 @@
 //----------------------------------------------------------------------------------
 // Basic information
 #define TOOL_NAME           "rGuiStyler"
-#define TOOL_VERSION        "3.0-dev"
+#define TOOL_VERSION        "3.0"
 #define TOOL_DESCRIPTION    "A simple and easy-to-use raygui styles editor"
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -745,7 +745,7 @@ static void ShowCommandLineInfo(void)
     printf("\nOPTIONS:\n\n");
     printf("    -h, --help                      : Show tool version and command line usage help\n");
     printf("    -i, --input <filename.ext>      : Define input file.\n");
-    printf("                                      Supported extensions: .rgs, .png\n");
+    printf("                                      Supported extensions: .rgs (text or binary)\n");
     printf("    -o, --output <filename.ext>     : Define output file.\n");
     printf("                                      Supported extensions: .rgs, .png, .h\n");
     printf("                                      NOTE: Extension could be modified depending on format\n\n");
@@ -753,10 +753,9 @@ static void ShowCommandLineInfo(void)
     printf("                                      Supported values:\n");
     printf("                                          0 - Style text format (.rgs)  \n");
     printf("                                          1 - Style binary format (.rgs)\n");
-    printf("                                          2 - Palette image (.png)\n");
-    printf("                                          3 - Palette as int array (.h)\n");
-    printf("                                          4 - Controls table image (.png)\n\n");
-    //printf("    -e, --edit-prop <property> <value>\n");
+    printf("                                          2 - Style as code (.h)\n");
+    printf("                                          3 - Controls table image (.png)\n\n");
+    //printf("    -e, --edit-prop <controlId>,<propertyId>,<propertyValue>\n");
     //printf("                                    : Edit specific property from input to output.\n");
 
     printf("\nEXAMPLES:\n\n");
@@ -799,34 +798,37 @@ static void ProcessCommandLine(int argc, char *argv[])
         {
             if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
             {
-                if (IsFileExtension(argv[i + 1], ".h") ||
+                if (IsFileExtension(argv[i + 1], ".rgs") ||
+                    IsFileExtension(argv[i + 1], ".h") ||
                     IsFileExtension(argv[i + 1], ".png"))
                 {
                     strcpy(outFileName, argv[i + 1]);   // Read output filename
                 }
-                else printf("WARNING: Input file extension not recognized\n");
+                else printf("WARNING: Output file extension not recognized\n");
 
                 i++;
             }
             else printf("WARNING: No output file provided\n");
         }
-        else if (strcmp(argv[i], "--format") == 0)
+        else if ((strcmp(argv[i], "-f") == 0) || (strcmp(argv[i], "--format") == 0))
         {
             // Check for valid argumment and valid parameters
             if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
             {
                 int format = atoi(argv[i + 1]);
 
-                if ((format >= 0) && (format <= 4)) outputFormat = format;
+                if ((format >= 0) && (format <= 3)) outputFormat = format;
             }
             else printf("WARNING: Format parameters provided not valid\n");
         }
+        
+        // TODO: Support font parameters and individual property edition
     }
 
     if (inFileName[0] != '\0')
     {
         // Set a default name for output in case not provided
-        if (outFileName[0] == '\0') strcpy(outFileName, "output.h");
+        if (outFileName[0] == '\0') strcpy(outFileName, "output.ext");
 
         printf("\nInput file:       %s", inFileName);
         printf("\nOutput file:      %s", outFileName);
@@ -845,7 +847,6 @@ static void ProcessCommandLine(int argc, char *argv[])
                 Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                 ExportImage(imStyleTable, FormatText("%s%s", outFileName, ".png"));
                 UnloadImage(imStyleTable);
-                
             } break;
             default: break;
         }
@@ -1098,7 +1099,7 @@ static void ExportStyleAsCode(const char *fileName)
         
         if (customFont)
         {
-            fprintf(rgsFile, "// WARNING: This style uses a custom font: %s (size: %i, spacing: %i)\n\n", 
+            fprintf(txtFile, "// WARNING: This style uses a custom font: %s (size: %i, spacing: %i)\n\n", 
                     GetFileName(fontFilePath), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
         }
         
@@ -1113,6 +1114,10 @@ static void ExportStyleAsCode(const char *fileName)
             int imFontSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
             
             #define BYTES_TEXT_PER_LINE     20
+            
+            // TODO: Compress font image data
+            // Image data is usually Grayscale + Alpha that can be reduced to Grayscale and 
+            // greatly compressed just using a simple RLE algorythm 
             
             // Save font image data
             fprintf(txtFile, "// Font image pixels data\n");
