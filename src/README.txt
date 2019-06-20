@@ -40,8 +40,20 @@ To view all available operation just run on command line:
 
  > rguistyler.exe --help
 
+## rGuiStyler Custom
+ 
+Do you like this tool? Do you need any specific feature to be added? Maybe a custom export format? 
+Maybe a custom gui theme? Or maybe a version for Linux, OSX, Android, Raspberry Pi or HTML5?
+Just get in touch: ray@raylibtech.com
+
 ## rGuiStyler License
+
+rGuiStyler is closed source software but it's based on open-source technologies: 
+ - raylib (github.com/raysan5/raylib)
+ - raygui (github.com/raysan5/raygui).
+
+rGuiStyler ZERO is free and rGuiStyler ONE is low-cost, with the addition of some useful features. 
+In any case, consider it as a small donation to help the author keep working on software for games development.
 
 Copyright (c) 2015-2019 raylib technologies (@raylibtech). All Rights Reserved.
 
-In case you want a custom version of the tool, just get in touch: ray[at]raylibtech.com
