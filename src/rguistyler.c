@@ -883,10 +883,11 @@ static bool SaveStyle(const char *fileName, int format)
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
             fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
             fprintf(rgsFile, "# STYLE: %s\n#\n", styleNameText);
+            
             if (customFont)
             {
-                fprintf(rgsFile, "# WARNING: This style used a custom font: %s (size: %i, spacing: %i)\n#\n", 
-                        GetFileName(fontFilePath), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
+                fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n");
+                fprintf(rgsFile, "f %i %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetFileName(fontFilePath));
             }
 
             // Save DEFAULT properties that changed
