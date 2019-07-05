@@ -1548,7 +1548,7 @@ unsigned char pngSign[8] = { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
 typedef struct {
     unsigned int length;    // Big endian!
     unsigned char type[4];  // Chunck type: IDHR, PLTE, IDAT, IEND  /  gAMA, sRGB, tEXt, tIME...
-    unsigned char *data;    // Chunck data
+    unsigned char *data;    // Chunck data pointer
     unsigned int crc;       // 32bit CRC (computed over type and data)
 } PNGChunk;
 
@@ -1564,6 +1564,10 @@ typedef struct {
     unsigned char filter;       // Filter method: 0 (default)
     unsigned char interlace;    // Interlace scheme (optional): 0 (none)
 } IHDRChunkData;
+
+// IDATChunkData > PNGChunk with pixel data
+// IENDChunkData > PNGChunk (empty), it should be LAST
+// PLTEChunkData > An array of RGB (3 bytes) values (optional for truecolor, before IDAT)
 
 // Embedd gui style inside PNG file as rGSt chunk
 void ExportStyleInPNG(const char *fileName, const char *rgsFileName)
