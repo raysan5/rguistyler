@@ -1050,7 +1050,7 @@ static bool SaveStyle(const char *fileName, int format)
                 // Write font chars data
                 for (int i = 0; i < font.charsCount; i++)
                 {
-                    fwrite(&font.recs[i], 1, sizeof(Rectangle), rgsFile);
+                    fwrite(&font.chars[i].rec, 1, sizeof(Rectangle), rgsFile);
                     fwrite(&font.chars[i].value, 1, sizeof(int), rgsFile);
                     fwrite(&font.chars[i].offsetX, 1, sizeof(int), rgsFile);
                     fwrite(&font.chars[i].offsetY, 1, sizeof(int), rgsFile);
@@ -1133,7 +1133,7 @@ static void ExportStyleAsCode(const char *fileName)
             for (int i = 0; i < font.charsCount; i++) 
             {
                 fprintf(txtFile, "    { %i, { %1.0f, %1.0f, %1.0f, %1.0f }, %i, %i, %i, 0 },\n", 
-                        font.chars[i].value, font.recs[i].x, font.recs[i].y, font.recs[i].width, font.recs[i].height, 
+                        font.chars[i].value, font.chars[i].rec.x, font.chars[i].rec.y, font.chars[i].rec.width, font.chars[i].rec.height, 
                         font.chars[i].offsetX, font.chars[i].offsetY, font.chars[i].advanceX);
             }
             fprintf(txtFile, "};\n\n");
