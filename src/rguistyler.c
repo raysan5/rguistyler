@@ -1050,7 +1050,7 @@ static bool SaveStyle(const char *fileName, int format)
                 // Write font chars data
                 for (int i = 0; i < font.charsCount; i++)
                 {
-                    fwrite(&font.chars[i].rec, 1, sizeof(Rectangle), rgsFile);
+                    fwrite(&font.recs[i], 1, sizeof(Rectangle), rgsFile);
                     fwrite(&font.chars[i].value, 1, sizeof(int), rgsFile);
                     fwrite(&font.chars[i].offsetX, 1, sizeof(int), rgsFile);
                     fwrite(&font.chars[i].offsetY, 1, sizeof(int), rgsFile);
