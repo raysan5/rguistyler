@@ -70,9 +70,9 @@
 // Defines and Macros
 //----------------------------------------------------------------------------------
 // Basic information
-#define TOOL_NAME           "rGuiStyler"
-#define TOOL_VERSION        "3.0"
-#define TOOL_DESCRIPTION    "A simple and easy-to-use raygui styles editor"
+const char *TOOL_NAME = "rGuiStyler";
+const char *TOOL_VERSION = "3.1";
+const char *TOOL_DESCRIPTION = "A simple and easy-to-use raygui styles editor";
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 bool __stdcall FreeConsole(void);           // Close console from code (kernel32.lib)
@@ -89,6 +89,15 @@ typedef enum {
     STYLE_AS_CODE,          // Style as (ready-to-use) code (.h)
     STYLE_TABLE_IMAGE       // Style controls table image (for reference)
 } GuiStyleFileType;
+
+// Dialog type
+typedef enum DialogType {
+    DIALOG_OPEN = 0,
+    DIALOG_SAVE,
+    DIALOG_MESSAGE,
+    DIALOG_TEXTINPUT,
+    DIALOG_OTHER
+} DialogType;
 
 //----------------------------------------------------------------------------------
 // Global Variables Definition
@@ -173,23 +182,29 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 // Load/Save/Export data functions
 static bool SaveStyle(const char *fileName, int format);    // Save style file text or binary (.rgs) 
 static void ExportStyleAsCode(const char *fileName);        // Export gui style as color palette code
-
-static bool DialogLoadStyle(void);                          // Show dialog: load style file
-static bool DialogLoadFont(void);                           // Show dialog: load font file
-static bool DialogSaveStyle(int format);                    // Show dialog: save style file
-static bool DialogExportStyle(int format);                  // Show dialog: export style file
-
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
 // Auxiliar functions
 static int StyleChangesCounter(void);                       // Count changed properties in current style
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
 
+// Multiplatform file dialogs
+// NOTE 1: fileName parameters is used to display and store selected file name
+// NOTE 2: Value returned is the operation result, on custom dialogs represents button option pressed
+// NOTE 3: filters and message are used for buttons and dialog messages on DIALOG_MESSAGE and DIALOG_TEXTINPUT
+static int GuiFileDialog(int dialogType, const char *title, char *fileName, const char *filters, const char *message);
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+#if !defined(DEBUG)
+    SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
+#endif
+    char inFileName[512] = { 0 };       // Input file name (required in case of drag & drop over executable)
+    char outFileName[512] = { 0 };      // Output file name (required for file save/export)
+
     // Command-line usage mode
     //--------------------------------------------------------------------------------------
     if (argc > 1)
@@ -315,6 +330,14 @@ int main(int argc, char *argv[])
     bool exitWindow = false;
     bool windowExitActive = false;
     //-----------------------------------------------------------------------------------
+    
+    // GUI: Custom file dialogs
+    //-----------------------------------------------------------------------------------
+    bool showLoadFileDialog = false;
+    bool showLoadFontFileDialog = false;
+    bool showSaveFileDialog = false;
+    bool showExportFileDialog = false;
+    //-----------------------------------------------------------------------------------  
 
     SetTargetFPS(60);
     //------------------------------------------------------------
@@ -356,9 +379,8 @@ int main(int argc, char *argv[])
                 
                 if (font.texture.id > 0)
                 {
-                    strcpy(fontFilePath, droppedFiles[0]);
-                    
                     GuiFont(font);
+                    strcpy(fontFilePath, droppedFiles[0]);
                     customFont = true;
                 }
             }
@@ -374,7 +396,7 @@ int main(int argc, char *argv[])
         // Keyboard shortcuts
         //----------------------------------------------------------------------------------
         // Show dialog: load input file (.rgs)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) DialogLoadStyle();
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) showLoadFileDialog = true;
 
         // Show dialog: save style file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S))
@@ -382,7 +404,7 @@ int main(int argc, char *argv[])
             if (loadedFileName[0] == '\0')
             {
                 if ((exportFormatActive == STYLE_AS_CODE) || (exportFormatActive == STYLE_TABLE_IMAGE)) exportFormatActive = STYLE_TEXT;
-                saveChangesRequired = !DialogSaveStyle(exportFormatActive);
+                showSaveFileDialog = true;
             }
             else
             {
@@ -396,7 +418,7 @@ int main(int argc, char *argv[])
         }
 
         // Show dialog: export style file (.rgs, .png, .h)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) DialogExportStyle(exportFormatActive);
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) showExportFileDialog = true;
 
         // Show window: about
         if (IsKeyPressed(KEY_F1)) windowAboutState.windowAboutActive = true;
@@ -573,8 +595,8 @@ int main(int argc, char *argv[])
             //---------------------------------------------------------------------------------------------------------
             // Main toolbar panel
             GuiPanel((Rectangle){ 0, 0, 740, 50 });
-            if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) DialogLoadStyle();
-            if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) saveChangesRequired = !DialogSaveStyle(exportFormatActive);
+            if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
+            if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) showSaveFileDialog = true;
             if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowAboutActive = true;
 
             if (GuiTextBox((Rectangle){ 155, 10, 180, 30 }, styleNameText, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
@@ -634,7 +656,7 @@ int main(int argc, char *argv[])
                 if (propsStateActive == 0) GuiEnable();
 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
-                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) customFont = DialogLoadFont();
+                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) showLoadFontFileDialog = true;
 
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 15, 80, 30 }, "Size:", &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, "Spacing:", &fontSpacingValue, 0, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
@@ -642,7 +664,7 @@ int main(int argc, char *argv[])
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
                 exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "TEXT (.rgs); BINARY (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
-                if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 30 }, "#7#Export Style")) DialogExportStyle(exportFormatActive);
+                if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 30 }, "#7#Export Style")) showExportFileDialog = true;
             }
 
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
@@ -696,11 +718,143 @@ int main(int argc, char *argv[])
 
                 GuiLabel((Rectangle){ GetScreenWidth()/2 - 95, GetScreenHeight()/2 - 60, 200, 100 }, "Do you want to save before quitting?");
 
-                if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes"))
-                {
-                    if (DialogExportStyle(exportFormatActive)) exitWindow = true;
-                }
+                if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes")) showExportFileDialog = true;
                 else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
+            }
+            //----------------------------------------------------------------------------------------
+            
+            // GUI: Load File Dialog (and loading logic)
+            //----------------------------------------------------------------------------------------
+            if (showLoadFileDialog)
+            {
+#if defined(CUSTOM_MODAL_DIALOGS)
+                int result = GuiFileDialog(DIALOG_MESSAGE, "Load raygui style file ...", inFileName, "Ok", "Just drag and drop your .rgs style file!");
+#else
+                int result = GuiFileDialog(DIALOG_OPEN, "Load raygui style file", inFileName, "*.rgs", "raygui Style Files (*.rgs)");
+#endif
+                if (result == 1)
+                {
+                    // Load style
+                    GuiLoadStyle(inFileName);
+                    
+                    SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
+                    saveChangesRequired = false;
+                }
+                
+                if (result >= 0) showLoadFileDialog = false;
+            }
+            //----------------------------------------------------------------------------------------
+            
+            // GUI: Load Font File Dialog (and loading logic)
+            //----------------------------------------------------------------------------------------
+            if (showLoadFontFileDialog)
+            {
+#if defined(CUSTOM_MODAL_DIALOGS)
+                int result = GuiFileDialog(DIALOG_MESSAGE, "Load font file ...", inFileName, "Ok", "Just drag and drop your .ttf/.otf font file!");
+#else
+                int result = GuiFileDialog(DIALOG_OPEN, "Load font file", inFileName, "*.ttf;*.otf", "Font Files (*.ttf, *.otf)");
+#endif
+                if (result == 1)
+                {
+                    // Load font file
+                    Font tempFont = LoadFontEx(inFileName, genFontSizeValue, NULL, 0);
+                    
+                    if (tempFont.texture.id > 0)
+                    {
+                        UnloadFont(font);
+                        font = tempFont;
+                        
+                        GuiFont(font);
+                        strcpy(fontFilePath, inFileName);
+                        customFont = true;
+                    }
+                }
+                
+                if (result >= 0) showLoadFontFileDialog = false;
+            }
+            //----------------------------------------------------------------------------------------
+            
+            // GUI: Save File Dialog (and saving logic)
+            //----------------------------------------------------------------------------------------
+            if (showSaveFileDialog)
+            {
+                strcpy(outFileName, TextFormat("%s.rgs", styleNameText));
+#if defined(CUSTOM_MODAL_DIALOGS)
+                int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
+#else
+                int result = GuiFileDialog(DIALOG_SAVE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
+#endif
+                if (result == 1)
+                {
+                    // Save file: outFileName
+                    // Check for valid extension and make sure it is
+                    if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+
+                    // Save style file (text or binary)
+                    SaveStyle(outFileName, STYLE_TEXT);
+
+                #if defined(PLATFORM_WEB)
+                    // Download file from MEMFS (emscripten memory filesystem)
+                    // NOTE: Second argument must be a simple filename (we can't use directories)
+                    emscripten_run_script(TextFormat("SaveFileFromMEMFSToDisk('%s','%s')", outFileName, GetFileName(outFileName)));
+                #endif
+                }
+                
+                if (result >= 0) showSaveFileDialog = false;
+            }
+            //----------------------------------------------------------------------------------------
+            
+            // GUI: Export File Dialog (and saving logic)
+            //----------------------------------------------------------------------------------------
+            if (showExportFileDialog)
+            {
+                // Consider different supported file types
+                char filters[64] = { 0 };
+                strcpy(outFileName, styleNameText);
+                
+            #if !defined(VERSION_ONE)
+                if ((exportFormatActive == STYLE_BINARY) || (exportFormatActive == STYLE_AS_CODE)) exportFormatActive = STYLE_TEXT;
+            #endif
+                
+                switch (exportFormatActive)
+                {
+                    case STYLE_TEXT: 
+                    case STYLE_BINARY: strcpy(filters, "*.rgs"); strcat(outFileName, ".rgs"); break;
+                    case STYLE_AS_CODE: strcpy(filters, "*.h"); strcat(outFileName, ".h"); break;
+                    case STYLE_TABLE_IMAGE: strcpy(filters, "*.png"); strcat(outFileName, ".png");break;
+                    default: break;
+                }
+
+#if defined(CUSTOM_MODAL_DIALOGS)
+                int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
+#else
+                int result = GuiFileDialog(DIALOG_SAVE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
+#endif
+                if (result == 1)
+                {
+                    // Export file: outFileName
+                    switch (exportFormatActive)
+                    {
+                        case STYLE_TEXT: 
+                        case STYLE_BINARY: SaveStyle(outFileName, exportFormatActive); break;
+                        case STYLE_AS_CODE: ExportStyleAsCode(outFileName); break;
+                        case STYLE_TABLE_IMAGE:
+                        {
+                            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
+                            ExportImage(imStyleTable, outFileName);
+                            UnloadImage(imStyleTable);
+                        } break;
+                        default: break;
+                    }
+     
+                #if defined(PLATFORM_WEB)
+                    // Download file from MEMFS (emscripten memory filesystem)
+                    // NOTE: Second argument must be a simple filename (we can't use directories)
+                    emscripten_run_script(TextFormat("SaveFileFromMEMFSToDisk('%s','%s')", outFileName, GetFileName(outFileName)));
+                #endif
+                }
+                
+                if (result >= 0) showExportFileDialog = false;
             }
             //----------------------------------------------------------------------------------------
 
@@ -893,7 +1047,7 @@ static bool SaveStyle(const char *fileName, int format)
                 if (styleBackup[j] != GuiGetStyle(0, j))
                 {
                     // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                    fprintf(rgsFile, "p 00 %02i 0x%08x    // DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
+                    fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
                 }
             }
 
@@ -906,7 +1060,7 @@ static bool SaveStyle(const char *fileName, int format)
                     if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
                     {
                         // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                        fprintf(rgsFile, "p %02i %02i 0x%08x    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
+                        fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
                     }
                 }
             }
@@ -1364,132 +1518,6 @@ static Image GenImageStyleControlsTable(const char *styleName)
     return imStyleTable;
 }
 
-// Dialog load style file
-static bool DialogLoadStyle(void)
-{
-    bool success = false;
-    const char *fileName = NULL;
-
-#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
-    // Open file dialog
-    const char *filters[] = { "*.rgs" };
-    fileName = tinyfd_openFileDialog("Load raygui style file", "", 1, filters, "raygui Style Files (*.rgs)", 0);
-#endif
-
-    if (fileName != NULL)
-    {
-        GuiLoadStyle(fileName);
-        
-        strcpy(loadedFileName, fileName);   // Register loaded fileName
-        SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(fileName)));
-
-        success = true;
-    }
-
-    return success;
-}
-
-// Dialog load font file
-static bool DialogLoadFont(void)
-{
-    bool success = false;
-    const char *fileName = NULL;
-
-#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
-    // Open file dialog
-    const char *filters[] = { "*.ttf", "*.otf" };
-    fileName = tinyfd_openFileDialog("Load raygui style font", "", 2, filters, "Font Files (*.ttf, *.otf)", 0);
-#endif
-
-    if (fileName != NULL)
-    {
-        font = LoadFontEx(fileName, genFontSizeValue, NULL, 0);
-        strcpy(fontFilePath, fileName);   // Register font fileName
-        GuiFont(font);
-        
-        success = true;
-    }
-
-    return success;
-}
-
-// Dialog save style file
-static bool DialogSaveStyle(int format)
-{
-    bool success = false;
-    const char *fileName = NULL;
-
-#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
-    // TODO: Show dialog dependent on format
-    const char *filters[] = { "*.rgs" };
-    fileName = tinyfd_saveFileDialog("Save raygui style file", "style.rgs", 1, filters, "raygui Style Files (*.rgs)");
-#endif
-
-    if (fileName != NULL)
-    {
-        char outFileName[256] = { 0 };
-        strcpy(outFileName, fileName);
-
-        // Check for valid extension and make sure it is
-        if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
-
-        // Save style file (text or binary)
-        success = SaveStyle(outFileName, format);
-    }
-
-    return success;
-}
-
-// Dialog export style file
-static bool DialogExportStyle(int format)
-{
-    bool success = false;
-    const char *fileName = NULL;
-    
-#if !defined(VERSION_ONE)
-    if ((format == STYLE_BINARY) || (format == STYLE_AS_CODE)) format = STYLE_TEXT;
-#endif
-
-#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
-    // Save file dialog
-    if ((format == STYLE_TEXT) || (format == STYLE_BINARY))
-    {
-        const char *filters[] = { "*.rgs" };
-        fileName = tinyfd_saveFileDialog("Export raygui style file", "style.rgs", 1, filters, "Style File (*.rgs)");
-    }
-    else if (format == STYLE_AS_CODE)
-    {
-        const char *filters[] = { "*.h" };
-        fileName = tinyfd_saveFileDialog("Export raygui style code file", "style.h", 1, filters, "Style As Code (*.h)");
-    }
-    else if (format == STYLE_TABLE_IMAGE)
-    {
-        const char *filters[] = { "*.png" };
-        fileName = tinyfd_saveFileDialog("Export raygui style table image file", "style.png", 1, filters, "Style Table Image (*.png)");
-    }
-#endif
-
-    if (fileName != NULL)
-    {
-        switch (format)
-        {
-            case STYLE_TEXT: 
-            case STYLE_BINARY: success = SaveStyle(fileName, format); break;
-            case STYLE_AS_CODE: ExportStyleAsCode(fileName); success = true; break;
-            case STYLE_TABLE_IMAGE:
-            {
-                Image imStyleTable = GenImageStyleControlsTable(styleNameText);
-                ExportImage(imStyleTable, fileName);
-                UnloadImage(imStyleTable);
-                success = true;
-            } break;
-            default: break;
-        }
-    }
-
-    return success;
-}
-
 //--------------------------------------------------------------------------------------------
 // Auxiliar GUI functions
 //--------------------------------------------------------------------------------------------
@@ -1532,6 +1560,52 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
     DrawRectangleLinesEx(bounds, 1, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL)));
 
     return color;
+}
+
+// Multiplatform file dialogs
+static int GuiFileDialog(int dialogType, const char *title, char *fileName, const char *filters, const char *message)
+{
+    int result = -1;
+
+#if defined(CUSTOM_MODAL_DIALOGS)
+    static char tempFileName[256] = { 0 };
+    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
+
+    switch (dialogType)
+    {
+        case DIALOG_OPEN: /* TODO: Load file modal dialog */ break;
+        case DIALOG_SAVE: /* TODO: Load file modal dialog */ break;
+        case DIALOG_MESSAGE: result = GuiMessageBox((Rectangle){ GetScreenWidth()/2 - 120, GetScreenHeight()/2 - 60, 240, 120 }, GuiIconText(RICON_FILE_OPEN, title), message, filters); break;
+        case DIALOG_TEXTINPUT: result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 120, GetScreenHeight()/2 - 60, 240, 120 }, GuiIconText(RICON_FILE_SAVE, title), message, tempFileName, filters); break;
+        default: break;
+    }
+    
+    if ((result == 1) && (tempFileName[0] != '\0')) strcpy(fileName, tempFileName);
+    
+#else   // Use native OS dialogs (tinyfiledialogs)
+
+    const char *tempFileName = NULL;
+    int filterCount = 0;
+    const char **filterSplit = TextSplit(filters, ';', &filterCount);
+    
+    switch (dialogType)
+    {
+        case DIALOG_OPEN: tempFileName = tinyfd_openFileDialog(title, fileName, filterCount, filterSplit, message, 0); break;
+        case DIALOG_SAVE: tempFileName = tinyfd_saveFileDialog(title, fileName, filterCount, filterSplit, message); break;
+        case DIALOG_MESSAGE: result = tinyfd_messageBox(title, message, "ok", "info", 0); break;
+        case DIALOG_TEXTINPUT: tempFileName = tinyfd_inputBox(title, message, ""); break;
+        default: break;
+    }
+
+    if (tempFileName != NULL) 
+    {
+        strcpy(fileName, tempFileName);
+        result = 1;
+    }
+    else result = 0;
+#endif
+
+    return result;
 }
 
 #if 0
