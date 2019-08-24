@@ -249,7 +249,7 @@ typedef enum {
     LISTVIEW,
     COLORPICKER,
     SCROLLBAR,
-    RESERVED
+    STATUSBAR
 } GuiControl;
 
 // Gui base properties for every control
@@ -408,8 +408,8 @@ RAYGUIDEF int GuiTextBoxGetByteIndex(const char *text, int start, int from, int 
 #endif
 
 // Container/separator controls, useful for controls organization
-RAYGUIDEF bool GuiWindowBox(Rectangle bounds, const char *text);                                        // Window Box control, shows a window that can be closed
-RAYGUIDEF void GuiGroupBox(Rectangle bounds, const char *text);                                         // Group Box control with title name
+RAYGUIDEF bool GuiWindowBox(Rectangle bounds, const char *title);                                       // Window Box control, shows a window that can be closed
+RAYGUIDEF void GuiGroupBox(Rectangle bounds, const char *text);                                         // Group Box control with text name
 RAYGUIDEF void GuiLine(Rectangle bounds, const char *text);                                             // Line separator control, could contain text
 RAYGUIDEF void GuiPanel(Rectangle bounds);                                                              // Panel control, useful to group controls
 RAYGUIDEF Rectangle GuiScrollPanel(Rectangle bounds, Rectangle content, Vector2 *scroll);               // Scroll Panel control
@@ -439,9 +439,9 @@ RAYGUIDEF Vector2 GuiGrid(Rectangle bounds, float spacing, int subdivs);        
 
 // Advance controls set
 RAYGUIDEF int GuiListView(Rectangle bounds, const char *text, int *scrollIndex, int active);            // List View control, returns selected list element index
-RAYGUIDEF int GuiListViewEx(Rectangle bounds, const char **text, int count, int *focus, int *scrollIndex, int active);  // List View with extended parameters
-RAYGUIDEF int GuiMessageBox(Rectangle bounds, const char *windowTitle, const char *message, const char *buttons);       // Message Box control, displays a message
-RAYGUIDEF int GuiTextInputBox(Rectangle bounds, const char *windowTitle, char *text, const char *buttons);              // Text Input Box control, ask for text
+RAYGUIDEF int GuiListViewEx(Rectangle bounds, const char **text, int count, int *focus, int *scrollIndex, int active);      // List View with extended parameters
+RAYGUIDEF int GuiMessageBox(Rectangle bounds, const char *title, const char *message, const char *buttons);                 // Message Box control, displays a message
+RAYGUIDEF int GuiTextInputBox(Rectangle bounds, const char *title, const char *message, const char *buttons, char *text);   // Text Input Box control, ask for text
 RAYGUIDEF Color GuiColorPicker(Rectangle bounds, Color color);                                          // Color Picker control
 
 // Styles loading functions
@@ -702,6 +702,11 @@ static void GuiDrawText(const char *text, Rectangle bounds, int alignment, Color
             } break;
             default: break;
         }
+
+        // NOTE: Make sure we get pixel-perfect coordinates,
+        // In case of decimals we got weird text positioning
+        position.x = (float)((int)position.x);
+        position.y = (float)((int)position.y);
         //---------------------------------------------------------------------------------
 
         // Draw text (with icon if available)
@@ -833,19 +838,23 @@ RAYGUIDEF void GuiTextBoxSetState(GuiTextBoxState state)
 #endif
 
 // Window Box control
-RAYGUIDEF bool GuiWindowBox(Rectangle bounds, const char *text)
+RAYGUIDEF bool GuiWindowBox(Rectangle bounds, const char *title)
 {
-    #define WINDOW_CLOSE_BUTTON_PADDING    2
-    #define WINDOW_STATUSBAR_HEIGHT        24
+    // NOTE: This define is also used by GuiMessageBox() and GuiTextInputBox()
+    #define WINDOW_STATUSBAR_HEIGHT        22
 
     GuiControlState state = guiState;
     bool clicked = false;
+    
+    int statusBarHeight = WINDOW_STATUSBAR_HEIGHT + 2*GuiGetStyle(STATUSBAR, BORDER_WIDTH);
+    statusBarHeight += (statusBarHeight%2);
+    
+    Rectangle statusBar = { bounds.x, bounds.y, bounds.width, statusBarHeight };
+    if (bounds.height < statusBarHeight*2) bounds.height = statusBarHeight*2;
 
-    Rectangle statusBar = { bounds.x, bounds.y, bounds.width, WINDOW_STATUSBAR_HEIGHT };
-    if (bounds.height < WINDOW_STATUSBAR_HEIGHT*2) bounds.height = WINDOW_STATUSBAR_HEIGHT*2;
+    Rectangle closeButtonRec = { statusBar.x + statusBar.width - GuiGetStyle(STATUSBAR, BORDER_WIDTH) - 20,
+                                 statusBar.y + statusBarHeight/2 - 18/2, 18, 18 };
 
-    Rectangle buttonRec = { statusBar.x + statusBar.width - GuiGetStyle(DEFAULT, BORDER_WIDTH) - WINDOW_CLOSE_BUTTON_PADDING - 20,
-                            statusBar.y + GuiGetStyle(DEFAULT, BORDER_WIDTH) + WINDOW_CLOSE_BUTTON_PADDING, 18, 18 };
     // Update control
     //--------------------------------------------------------------------
     // NOTE: Logic is directly managed by button
@@ -861,13 +870,7 @@ RAYGUIDEF bool GuiWindowBox(Rectangle bounds, const char *text)
                                   Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), guiAlpha));
 
     // Draw window header as status bar
-    int defaultPadding = GuiGetStyle(DEFAULT, INNER_PADDING);
-    int defaultTextAlign = GuiGetStyle(DEFAULT, TEXT_ALIGNMENT);
-    GuiSetStyle(DEFAULT, INNER_PADDING, 8);
-    GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
-    GuiStatusBar(statusBar, text);
-    GuiSetStyle(DEFAULT, INNER_PADDING, defaultPadding);
-    GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, defaultTextAlign);
+    GuiStatusBar(statusBar, title);
 
     // Draw window close button
     int tempBorderWidth = GuiGetStyle(BUTTON, BORDER_WIDTH);
@@ -875,9 +878,9 @@ RAYGUIDEF bool GuiWindowBox(Rectangle bounds, const char *text)
     GuiSetStyle(BUTTON, BORDER_WIDTH, 1);
     GuiSetStyle(BUTTON, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
 #if defined(RAYGUI_SUPPORT_RICONS)
-    clicked = GuiButton(buttonRec, GuiIconText(RICON_CROSS_SMALL, NULL));
+    clicked = GuiButton(closeButtonRec, GuiIconText(RICON_CROSS_SMALL, NULL));
 #else
-    clicked = GuiButton(buttonRec, "x");
+    clicked = GuiButton(closeButtonRec, "x");
 #endif
     GuiSetStyle(BUTTON, BORDER_WIDTH, tempBorderWidth);
     GuiSetStyle(BUTTON, TEXT_ALIGNMENT, tempTextAlignment);
@@ -886,7 +889,7 @@ RAYGUIDEF bool GuiWindowBox(Rectangle bounds, const char *text)
     return clicked;
 }
 
-// Group Box control with title name
+// Group Box control with text name
 RAYGUIDEF void GuiGroupBox(Rectangle bounds, const char *text)
 {
     #define GROUPBOX_LINE_THICK     1
@@ -1179,7 +1182,7 @@ RAYGUIDEF bool GuiImageButtonEx(Rectangle bounds, const char *text, Texture2D te
     DrawRectangle(bounds.x + GuiGetStyle(BUTTON, BORDER_WIDTH), bounds.y + GuiGetStyle(BUTTON, BORDER_WIDTH), bounds.width - 2*GuiGetStyle(BUTTON, BORDER_WIDTH), bounds.height - 2*GuiGetStyle(BUTTON, BORDER_WIDTH), Fade(GetColor(GuiGetStyle(BUTTON, BASE + (state*3))), guiAlpha));
 
     if (text != NULL) GuiDrawText(text, GetTextBounds(BUTTON, bounds), GuiGetStyle(BUTTON, TEXT_ALIGNMENT), Fade(GetColor(GuiGetStyle(BUTTON, TEXT + (state*3))), guiAlpha));
-    if (texture.id > 0) DrawTextureRec(texture, texSource, RAYGUI_CLITERAL(Vector2){ bounds.x + bounds.width/2 - (texSource.width + GuiGetStyle(BUTTON, INNER_PADDING)/2)/2, bounds.y + bounds.height/2 - texSource.height/2 }, Fade(GetColor(GuiGetStyle(BUTTON, TEXT + (state*3))), guiAlpha));
+    if (texture.id > 0) DrawTextureRec(texture, texSource, RAYGUI_CLITERAL(Vector2){ bounds.x + bounds.width/2 - texSource.width/2, bounds.y + bounds.height/2 - texSource.height/2 }, Fade(GetColor(GuiGetStyle(BUTTON, TEXT + (state*3))), guiAlpha));
     //------------------------------------------------------------------
 
     return clicked;
@@ -2557,9 +2560,8 @@ RAYGUIDEF bool GuiSpinner(Rectangle bounds, const char *text, int *value, int mi
     // Draw value selector custom buttons
     // NOTE: BORDER_WIDTH and TEXT_ALIGNMENT forced values
     int tempBorderWidth = GuiGetStyle(BUTTON, BORDER_WIDTH);
-    GuiSetStyle(BUTTON, BORDER_WIDTH, GuiGetStyle(SPINNER, BORDER_WIDTH));
-
     int tempTextAlign = GuiGetStyle(BUTTON, TEXT_ALIGNMENT);
+    GuiSetStyle(BUTTON, BORDER_WIDTH, GuiGetStyle(SPINNER, BORDER_WIDTH));
     GuiSetStyle(BUTTON, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
 
 #if defined(RAYGUI_SUPPORT_RICONS)
@@ -2737,7 +2739,7 @@ RAYGUIDEF bool GuiTextBox(Rectangle bounds, char *text, int textSize, bool editM
             // Only allow keys in range [32..125]
             if (keyCount < (textSize - 1))
             {
-                int maxWidth = (bounds.width - (GuiGetStyle(DEFAULT, INNER_PADDING)*2));
+                int maxWidth = (bounds.width - (GuiGetStyle(TEXTBOX, INNER_PADDING)*2));
 
                 if (GetTextWidth(text) < (maxWidth - GuiGetStyle(DEFAULT, TEXT_SIZE)))
                 {
@@ -2995,9 +2997,6 @@ RAYGUIDEF bool GuiTextBoxMulti(Rectangle bounds, char *text, int textSize, bool 
                               bounds.y + GuiGetStyle(TEXTBOX, BORDER_WIDTH) + GuiGetStyle(TEXTBOX, INNER_PADDING)/2 + ((GuiGetStyle(DEFAULT, TEXT_SIZE) + GuiGetStyle(TEXTBOX, INNER_PADDING))*currentLine),
                               1, GuiGetStyle(DEFAULT, TEXT_SIZE) + GuiGetStyle(TEXTBOX, INNER_PADDING), Fade(GetColor(GuiGetStyle(TEXTBOX, BORDER_COLOR_FOCUSED)), guiAlpha));
             }
-
-            // Draw characters counter
-            //GuiDrawText(numChars, RAYGUI_CLITERAL(Vector2){ bounds.x + bounds.width - GetTextWidth(numChars) - GuiGetStyle(TEXTBOX, INNER_PADDING), bounds.y + bounds.height - GuiGetStyle(DEFAULT, TEXT_SIZE) - GuiGetStyle(TEXTBOX, INNER_PADDING) }, Fade(GetColor(GuiGetStyle(TEXTBOX, TEXT_COLOR_PRESSED)), guiAlpha/2));
         }
     }
     else if (state == GUI_STATE_DISABLED)
@@ -3174,10 +3173,10 @@ RAYGUIDEF void GuiStatusBar(Rectangle bounds, const char *text)
 
     // Draw control
     //--------------------------------------------------------------------
-    DrawRectangleLinesEx(bounds, GuiGetStyle(DEFAULT, BORDER_WIDTH), Fade(GetColor(GuiGetStyle(DEFAULT, (state != GUI_STATE_DISABLED)? BORDER_COLOR_NORMAL : BORDER_COLOR_DISABLED)), guiAlpha));
-    DrawRectangleRec(RAYGUI_CLITERAL(Rectangle){ bounds.x + GuiGetStyle(DEFAULT, BORDER_WIDTH), bounds.y + GuiGetStyle(DEFAULT, BORDER_WIDTH), bounds.width - GuiGetStyle(DEFAULT, BORDER_WIDTH)*2, bounds.height - GuiGetStyle(DEFAULT, BORDER_WIDTH)*2 }, Fade(GetColor(GuiGetStyle(DEFAULT, (state != GUI_STATE_DISABLED)? BASE_COLOR_NORMAL : BASE_COLOR_DISABLED)), guiAlpha));
+    DrawRectangleLinesEx(bounds, GuiGetStyle(STATUSBAR, BORDER_WIDTH), Fade(GetColor(GuiGetStyle(STATUSBAR, (state != GUI_STATE_DISABLED)? BORDER_COLOR_NORMAL : BORDER_COLOR_DISABLED)), guiAlpha));
+    DrawRectangleRec(RAYGUI_CLITERAL(Rectangle){ bounds.x + GuiGetStyle(STATUSBAR, BORDER_WIDTH), bounds.y + GuiGetStyle(STATUSBAR, BORDER_WIDTH), bounds.width - GuiGetStyle(STATUSBAR, BORDER_WIDTH)*2, bounds.height - GuiGetStyle(STATUSBAR, BORDER_WIDTH)*2 }, Fade(GetColor(GuiGetStyle(STATUSBAR, (state != GUI_STATE_DISABLED)? BASE_COLOR_NORMAL : BASE_COLOR_DISABLED)), guiAlpha));
 
-    GuiDrawText(text, GetTextBounds(DEFAULT, bounds), GuiGetStyle(DEFAULT, TEXT_ALIGNMENT), Fade(GetColor(GuiGetStyle(DEFAULT, (state != GUI_STATE_DISABLED)? TEXT_COLOR_NORMAL : TEXT_COLOR_DISABLED)), guiAlpha));
+    GuiDrawText(text, GetTextBounds(STATUSBAR, bounds), GuiGetStyle(STATUSBAR, TEXT_ALIGNMENT), Fade(GetColor(GuiGetStyle(STATUSBAR, (state != GUI_STATE_DISABLED)? TEXT_COLOR_NORMAL : TEXT_COLOR_DISABLED)), guiAlpha));
     //--------------------------------------------------------------------
 }
 
@@ -3753,7 +3752,7 @@ RAYGUIDEF Color GuiColorPicker(Rectangle bounds, Color color)
 }
 
 // Message Box control
-RAYGUIDEF int GuiMessageBox(Rectangle bounds, const char *windowTitle, const char *message, const char *buttons)
+RAYGUIDEF int GuiMessageBox(Rectangle bounds, const char *title, const char *message, const char *buttons)
 {
     #define MESSAGEBOX_BUTTON_HEIGHT            24
     #define MESSAGEBOX_BUTTON_PADDING           10
@@ -3778,7 +3777,7 @@ RAYGUIDEF int GuiMessageBox(Rectangle bounds, const char *windowTitle, const cha
 
     // Draw control
     //--------------------------------------------------------------------
-    if (GuiWindowBox(bounds, windowTitle)) clicked = 0;
+    if (GuiWindowBox(bounds, title)) clicked = 0;
 
     int prevTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
     GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
@@ -3801,7 +3800,7 @@ RAYGUIDEF int GuiMessageBox(Rectangle bounds, const char *windowTitle, const cha
 }
 
 // Text Input Box control, ask for text
-RAYGUIDEF int GuiTextInputBox(Rectangle bounds, const char *windowTitle, char *text, const char *buttons)
+RAYGUIDEF int GuiTextInputBox(Rectangle bounds, const char *title, const char *message, const char *buttons, char *text)
 {
     #define TEXTINPUTBOX_BUTTON_HEIGHT      24
     #define TEXTINPUTBOX_BUTTON_PADDING     10
@@ -3822,16 +3821,40 @@ RAYGUIDEF int GuiTextInputBox(Rectangle bounds, const char *windowTitle, char *t
     buttonBounds.y = bounds.y + bounds.height - TEXTINPUTBOX_BUTTON_HEIGHT - TEXTINPUTBOX_BUTTON_PADDING;
     buttonBounds.width = (bounds.width - TEXTINPUTBOX_BUTTON_PADDING*(buttonsCount + 1))/buttonsCount;
     buttonBounds.height = TEXTINPUTBOX_BUTTON_HEIGHT;
+    
+    int messageInputHeight = bounds.height - WINDOW_STATUSBAR_HEIGHT - GuiGetStyle(STATUSBAR, BORDER_WIDTH) - TEXTINPUTBOX_BUTTON_HEIGHT - 2*TEXTINPUTBOX_BUTTON_PADDING;
+    
+    Rectangle textBounds = { 0 };
+    if (message != NULL)
+    {
+        Vector2 textSize = MeasureTextEx(guiFont, message, GuiGetStyle(DEFAULT, TEXT_SIZE), 1);
+
+        textBounds.x = bounds.x + bounds.width/2 - textSize.x/2;
+        textBounds.y = bounds.y + WINDOW_STATUSBAR_HEIGHT + messageInputHeight/4 - textSize.y/2;
+        textBounds.width = textSize.x;
+        textBounds.height = textSize.y;
+    }
 
     Rectangle textBoxBounds = { 0 };
     textBoxBounds.x = bounds.x + TEXTINPUTBOX_BUTTON_PADDING;
-    textBoxBounds.y = bounds.y + WINDOW_STATUSBAR_HEIGHT + (bounds.height - WINDOW_STATUSBAR_HEIGHT - TEXTINPUTBOX_BUTTON_HEIGHT - TEXTINPUTBOX_BUTTON_PADDING)/2 - TEXTINPUTBOX_HEIGHT/2;
+    textBoxBounds.y = bounds.y + WINDOW_STATUSBAR_HEIGHT - TEXTINPUTBOX_HEIGHT/2;
+    if (message == NULL) textBoxBounds.y += messageInputHeight/2;
+    else textBoxBounds.y += (messageInputHeight/2 + messageInputHeight/4);
     textBoxBounds.width = bounds.width - TEXTINPUTBOX_BUTTON_PADDING*2;
     textBoxBounds.height = TEXTINPUTBOX_HEIGHT;
     
     // Draw control
     //--------------------------------------------------------------------
-    if (GuiWindowBox(bounds, windowTitle)) btnIndex = 0;
+    if (GuiWindowBox(bounds, title)) btnIndex = 0;
+    
+    // Draw message if available
+    if (message != NULL) 
+    {
+        int prevTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
+        GuiLabel(textBounds, message);
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, prevTextAlignment);
+    }
 
     if (GuiTextBox(textBoxBounds, text, MAX_FILENAME_LENGTH, textEditMode)) textEditMode = !textEditMode;
 
@@ -3931,6 +3954,8 @@ RAYGUIDEF void GuiLoadStyle(const char *fileName)
                 {
                     case 'p':
                     {
+                        // Style property: p <control_id> <property_id> <property_value> <property_name>
+                        
                         sscanf(buffer, "p %d %d 0x%x", &controlId, &propertyId, &propertyValue);
                         
                         if (controlId == 0) // DEFAULT control
@@ -3946,19 +3971,37 @@ RAYGUIDEF void GuiLoadStyle(const char *fileName)
                     } break;
                     case 'f':
                     {
-                        int fontSize = 0;
-                        int fontSpacing = 0;
-                        char fontFileName[256] = { 0 };
-                        sscanf(buffer, "f %d %d %[^\n]s", &fontSize, &fontSpacing, fontFileName);
-
-                        Font font = LoadFontEx(FormatText("%s/%s", GetDirectoryPath(fileName), fontFileName), fontSize, NULL, 0);
+                        // Style font: f <gen_font_size> <charmap_file> <font_file>
                         
-                        if ((font.texture.id > 0) && (font.charsCount > 0))
+                        int fontSize = 0;
+                        char charmapFileName[256] = { 0 };
+                        char fontFileName[256] = { 0 };
+                        sscanf(buffer, "f %d %s %[^\n]s", &fontSize, charmapFileName, fontFileName);
+
+                        Font font = { 0 };
+                        
+                        if (charmapFileName[0] != '0')
                         {
-                            GuiFont(font);
-                            GuiSetStyle(DEFAULT, TEXT_SIZE, fontSize);
-                            GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacing);
+                            // Load characters from charmap file, 
+                            // expected '\n' separated list of integer values
+                            char *charValues = LoadText(charmapFileName);
+                            if (charValues != NULL)
+                            {
+                                int charsCount = 0;
+                                const char **chars = TextSplit(charValues, '\n', &charsCount);   // WARNING: TextSplit only supports 64 strings!
+                                
+                                int *values = (int *)malloc(charsCount*sizeof(int));
+                                for (int i = 0; i < charsCount; i++) values[i] = atoi(chars[i]);
+                                
+                                font = LoadFontEx(FormatText("%s/%s", GetDirectoryPath(fileName), fontFileName), fontSize, values, charsCount);
+                                
+                                free(values);
+                            }
                         }
+                        else font = LoadFontEx(FormatText("%s/%s", GetDirectoryPath(fileName), fontFileName), fontSize, NULL, 0);
+
+                        if ((font.texture.id > 0) && (font.charsCount > 0)) GuiFont(font);
+
                     } break;
                     default: break;
                 }
@@ -4173,6 +4216,8 @@ RAYGUIDEF void GuiLoadStyleDefault(void)
     GuiSetStyle(COLORPICKER, BAR_PADDING, 0xa);
     GuiSetStyle(COLORPICKER, BAR_SELECTOR_HEIGHT, 6);
     GuiSetStyle(COLORPICKER, BAR_SELECTOR_PADDING, 2);
+    GuiSetStyle(STATUSBAR, INNER_PADDING, 8);
+    GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
 }
 
 // Updates controls style with default values
