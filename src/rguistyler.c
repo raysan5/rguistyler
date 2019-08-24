@@ -74,8 +74,8 @@ const char *TOOL_NAME = "rGuiStyler";
 const char *TOOL_VERSION = "3.1";
 const char *TOOL_DESCRIPTION = "A simple and easy-to-use raygui styles editor";
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-bool __stdcall FreeConsole(void);           // Close console from code (kernel32.lib)
+#if (!defined(DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
+bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib)
 #endif
 
 //----------------------------------------------------------------------------------
@@ -161,6 +161,8 @@ static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
 // Default style backup to check changed properties
 static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
 
+// TODO: When loading a .rgs file, custom font is internally loaded by raygui GuiLoadStyle()
+// but not exposed to rGuiStyler, it should be available: GuiGetFont()?
 static Font font = { 0 };               // Custom font
 static bool customFont = false;         // Using custom font
 static int genFontSizeValue = 10;       // Generation font size
@@ -169,7 +171,7 @@ static char fontFilePath[512] = { 0 };  // Font file path (register font path fo
 static char loadedFileName[256] = { 0 };    // Loaded style file name
 static int loadedStyleFormat = STYLE_TEXT;  // Loaded style format
 static bool saveChangesRequired = false;    // Flag to notice save changes are required
-static char styleNameText[32] = "light_default";    // Style name
+static char styleNameText[32] = "default";  // Style name
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -226,8 +228,8 @@ int main(int argc, char *argv[])
         }
 #endif      // VERSION_ONE
     }
-    
-#if (defined(VERSION_ONE) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
+
+#if (!defined(DEBUG) && defined(VERSION_ONE) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
     // WARNING (Windows): If program is compiled as Window application (instead of console),
     // no console is available to show output info... solution is compiling a console application
     // and closing console (FreeConsole()) when changing to GUI interface
@@ -239,7 +241,6 @@ int main(int argc, char *argv[])
     const int screenWidth = 740;
     const int screenHeight = 660;
 
-    SetTraceLogLevel(LOG_NONE);             // Disable trace log messsages
     InitWindow(screenWidth, screenHeight, FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, TOOL_DESCRIPTION));
     SetExitKey(0);
 
@@ -255,7 +256,6 @@ int main(int argc, char *argv[])
     if (loadedFileName[0] != '\0') 
     {
         GuiLoadStyle(loadedFileName);
-        
         SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
     }
     else
@@ -365,10 +365,14 @@ int main(int argc, char *argv[])
                 genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
-                memset(fontFilePath, 0, 512);
-                customFont = false;
-                
                 // TODO: If .rgs includes a custom font, load it in font...
+                // font = GuiGetFont();
+                memset(fontFilePath, 0, 512);
+                customFont = false;     // TODO?
+                
+                // TODO: Reset style backup for changes?
+                //changedPropsCounter = 0;
+                //saveChangesRequired = false;
             }
             else if (IsFileExtension(droppedFiles[0], ".ttf") || IsFileExtension(droppedFiles[0], ".otf"))
             {
@@ -441,7 +445,7 @@ int main(int argc, char *argv[])
             
             memset(loadedFileName, 0, 256);
             SetWindowTitle(FormatText("%s v%s", TOOL_NAME, TOOL_VERSION));
-            strcpy(styleNameText, "light_default");
+            strcpy(styleNameText, "default");
             memset(fontFilePath, 0, 512);
             customFont = false;
             
@@ -739,6 +743,8 @@ int main(int argc, char *argv[])
                     
                     SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
                     saveChangesRequired = false;
+
+                    // TODO: Load style font if available
                 }
                 
                 if (result >= 0) showLoadFileDialog = false;
@@ -1028,7 +1034,7 @@ static bool SaveStyle(const char *fileName, int format)
 
         if (rgsFile != NULL)
         {
-            #define RGS_FILE_VERSION_TEXT  "3.0"
+            #define RGS_FILE_VERSION_TEXT  "3.1"
             
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
@@ -1453,11 +1459,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
             GuiGroupBox(rec, NULL);
             int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
             GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
-            //GuiLabel(rec, tableControlsName[i]);
-            
-            // TODO: Some problem with GuiLabel() -> GuiDrawText()
-            Vector2 textSize = MeasureTextEx(font, tableControlsName[i], GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
-            DrawTextEx(font, tableControlsName[i], (Vector2){ rec.x + rec.width/2 - textSize.x/2, rec.y + rec.height/2 - textSize.y/2 }, GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
+            GuiLabel(rec, tableControlsName[i]);
 
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
@@ -1576,7 +1578,7 @@ static int GuiFileDialog(int dialogType, const char *title, char *fileName, cons
         case DIALOG_OPEN: /* TODO: Load file modal dialog */ break;
         case DIALOG_SAVE: /* TODO: Load file modal dialog */ break;
         case DIALOG_MESSAGE: result = GuiMessageBox((Rectangle){ GetScreenWidth()/2 - 120, GetScreenHeight()/2 - 60, 240, 120 }, GuiIconText(RICON_FILE_OPEN, title), message, filters); break;
-        case DIALOG_TEXTINPUT: result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 120, GetScreenHeight()/2 - 60, 240, 120 }, GuiIconText(RICON_FILE_SAVE, title), message, tempFileName, filters); break;
+        case DIALOG_TEXTINPUT: result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 120, GetScreenHeight()/2 - 60, 240, 120 }, GuiIconText(RICON_FILE_SAVE, title), message, filters, tempFileName); break;
         default: break;
     }
     
