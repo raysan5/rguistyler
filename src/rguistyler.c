@@ -383,7 +383,7 @@ int main(int argc, char *argv[])
                 
                 if (font.texture.id > 0)
                 {
-                    GuiFont(font);
+                    GuiSetFont(font);
                     strcpy(fontFilePath, droppedFiles[0]);
                     customFont = true;
                 }
@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
         {
             UnloadFont(font);
             font = LoadFontEx(fontFilePath, genFontSizeValue, NULL, 0);
-            GuiFont(font);
+            GuiSetFont(font);
         }
         
         GuiSetStyle(DEFAULT, TEXT_SIZE, genFontSizeValue);
@@ -770,7 +770,7 @@ int main(int argc, char *argv[])
                         UnloadFont(font);
                         font = tempFont;
                         
-                        GuiFont(font);
+                        GuiSetFont(font);
                         strcpy(fontFilePath, inFileName);
                         customFont = true;
                     }
@@ -1330,7 +1330,7 @@ static void ExportStyleAsCode(const char *fileName)
             fprintf(txtFile, "    font.chars = (CharInfo *)malloc(font.charsCount*sizeof(CharInfo));\n");
             fprintf(txtFile, "    memcpy(font.chars, fontChars, font.charsCount*sizeof(CharInfo));\n\n");
             
-            fprintf(txtFile, "    GuiFont(font);\n");
+            fprintf(txtFile, "    GuiSetFont(font);\n");
         }
 #endif
         fprintf(txtFile, "}\n");

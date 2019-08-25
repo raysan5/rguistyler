@@ -72,7 +72,9 @@
 *       text selection support and text copy/cut/paste support
 *
 *   VERSIONS HISTORY:
-*       2.6 (16-Aug-2019) Redesigned GuiListView*(), GuiDropdownBox(), GuiSlider*(), GuiProgressBar()
+*       2.6 (25-Aug-2019) Redesigned GuiListView*(), GuiDropdownBox(), GuiSlider*(), GuiProgressBar(), GuiMessageBox(), GuiTextInputBox()
+*                         Reviewed GuiTextBox*(), GuiSpinner(), GuiValueBox(), GuiLoadStyle()
+*                         Added 8 new custom styles ready to use
 *       2.5 (28-May-2019) Implemented extended GuiTextBox(), GuiValueBox(), GuiSpinner()
 *       2.3 (29-Apr-2019) Added rIcons auxiliar library and support for it, multiple controls reviewed
 *                         Refactor all controls drawing mechanism to use control state
@@ -381,8 +383,10 @@ RAYGUIDEF void GuiDisable(void);                                        // Disab
 RAYGUIDEF void GuiLock(void);                                           // Lock gui controls (global state)
 RAYGUIDEF void GuiUnlock(void);                                         // Unlock gui controls (global state)
 RAYGUIDEF void GuiState(int state);                                     // Set gui state (global state)
-RAYGUIDEF void GuiFont(Font font);                                      // Set gui custom font (global state)
 RAYGUIDEF void GuiFade(float alpha);                                    // Set gui controls alpha (global state), alpha goes from 0.0f to 1.0f
+
+RAYGUIDEF void GuiSetFont(Font font);                                   // Set gui custom font (global state)
+RAYGUIDEF Font GuiGetFont(void);                                        // Get gui custom font (global state)
 
 // Style set/get functions
 RAYGUIDEF void GuiSetStyle(int control, int property, int value);       // Set one style property
@@ -702,11 +706,6 @@ static void GuiDrawText(const char *text, Rectangle bounds, int alignment, Color
             } break;
             default: break;
         }
-
-        // NOTE: Make sure we get pixel-perfect coordinates,
-        // In case of decimals we got weird text positioning
-        position.x = (float)((int)position.x);
-        position.y = (float)((int)position.y);
         //---------------------------------------------------------------------------------
 
         // Draw text (with icon if available)
@@ -749,8 +748,17 @@ RAYGUIDEF void GuiUnlock(void) { guiLocked = false; }
 // Set gui state (global state)
 RAYGUIDEF void GuiState(int state) { guiState = (GuiControlState)state; }
 
-// Define custom gui font
-RAYGUIDEF void GuiFont(Font font)
+// Set gui controls alpha global state
+RAYGUIDEF void GuiFade(float alpha)
+{
+    if (alpha < 0.0f) alpha = 0.0f;
+    else if (alpha > 1.0f) alpha = 1.0f;
+
+    guiAlpha = alpha;
+}
+
+// Set custom gui font
+RAYGUIDEF void GuiSetFont(Font font)
 {
     if (font.texture.id > 0)
     {
@@ -759,13 +767,10 @@ RAYGUIDEF void GuiFont(Font font)
     }
 }
 
-// Set gui controls alpha global state
-RAYGUIDEF void GuiFade(float alpha)
+// Get custom gui font
+RAYGUIDEF Font GuiGetFont(void)
 {
-    if (alpha < 0.0f) alpha = 0.0f;
-    else if (alpha > 1.0f) alpha = 1.0f;
-
-    guiAlpha = alpha;
+    return guiFont;
 }
 
 // Set control style property value
@@ -2984,19 +2989,20 @@ RAYGUIDEF bool GuiTextBoxMulti(Rectangle bounds, char *text, int textSize, bool 
     {
         DrawRectangle(bounds.x + GuiGetStyle(TEXTBOX, BORDER_WIDTH), bounds.y + GuiGetStyle(TEXTBOX, BORDER_WIDTH), bounds.width - 2*GuiGetStyle(TEXTBOX, BORDER_WIDTH), bounds.height - 2*GuiGetStyle(TEXTBOX, BORDER_WIDTH), Fade(GetColor(GuiGetStyle(TEXTBOX, BASE_COLOR_PRESSED)), guiAlpha));
 
-        if (editMode)
+        // Draw blinking cursor
+        if (editMode && ((framesCounter/20)%2 == 0))
         {
-            if ((framesCounter/20)%2 == 0)
-            {
-                char *line = NULL;
-                if (currentLine > 0) line = strrchr(text, '\n');
-                else line = text;
-
-                // Draw text cursor
-                DrawRectangle(bounds.x + GuiGetStyle(TEXTBOX, BORDER_WIDTH) + GuiGetStyle(TEXTBOX, INNER_PADDING) + GetTextWidth(line),
-                              bounds.y + GuiGetStyle(TEXTBOX, BORDER_WIDTH) + GuiGetStyle(TEXTBOX, INNER_PADDING)/2 + ((GuiGetStyle(DEFAULT, TEXT_SIZE) + GuiGetStyle(TEXTBOX, INNER_PADDING))*currentLine),
-                              1, GuiGetStyle(DEFAULT, TEXT_SIZE) + GuiGetStyle(TEXTBOX, INNER_PADDING), Fade(GetColor(GuiGetStyle(TEXTBOX, BORDER_COLOR_FOCUSED)), guiAlpha));
-            }
+            char *line = NULL;
+            if (currentLine > 0) line = strrchr(text, '\n');
+            else line = text;
+            
+            Rectangle cursor = {
+                bounds.x + GuiGetStyle(TEXTBOX, BORDER_WIDTH) + GuiGetStyle(TEXTBOX, INNER_PADDING) + GetTextWidth(line),
+                bounds.y + GuiGetStyle(TEXTBOX, BORDER_WIDTH) + GuiGetStyle(TEXTBOX, INNER_PADDING)/2 + ((GuiGetStyle(DEFAULT, TEXT_SIZE) + GuiGetStyle(TEXTBOX, INNER_PADDING))*currentLine),
+                1, GuiGetStyle(DEFAULT, TEXT_SIZE) + GuiGetStyle(TEXTBOX, INNER_PADDING)
+            };
+            
+            DrawRectangleRec(cursor, Fade(GetColor(GuiGetStyle(TEXTBOX, BORDER_COLOR_PRESSED)), guiAlpha));
         }
     }
     else if (state == GUI_STATE_DISABLED)
@@ -4000,7 +4006,7 @@ RAYGUIDEF void GuiLoadStyle(const char *fileName)
                         }
                         else font = LoadFontEx(FormatText("%s/%s", GetDirectoryPath(fileName), fontFileName), fontSize, NULL, 0);
 
-                        if ((font.texture.id > 0) && (font.charsCount > 0)) GuiFont(font);
+                        if ((font.texture.id > 0) && (font.charsCount > 0)) GuiSetFont(font);
 
                     } break;
                     default: break;
@@ -4108,7 +4114,7 @@ RAYGUIDEF void GuiLoadStyle(const char *fileName)
                     fread(&font.chars[i].advanceX, 1, sizeof(int), rgsFile);
                 }
 
-                GuiFont(font);
+                GuiSetFont(font);
 
                 // Set font texture source rectangle to be used as white texture to draw shapes
                 // NOTE: This way, all gui can be draw using a single draw call
