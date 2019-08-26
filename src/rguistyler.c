@@ -161,18 +161,11 @@ static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
 // Default style backup to check changed properties
 static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
 
-// TODO: When loading a .rgs file, custom font is internally loaded by raygui GuiLoadStyle()
-// but not exposed to rGuiStyler, it should be available: GuiGetFont()?
+// Custom font variables
 static Font font = { 0 };               // Custom font
 static bool customFont = false;         // Using custom font
-static int genFontSizeValue = 10;       // Generation font size
 static char fontFilePath[512] = { 0 };  // Font file path (register font path for reloading)
 static bool fontFileProvided = false;   // Font loaded from a file provided (required for reloading)
-
-static char loadedFileName[256] = { 0 };    // Loaded style file name
-static int loadedStyleFormat = STYLE_TEXT;  // Loaded style format
-static bool saveChangesRequired = false;    // Flag to notice save changes are required
-static char styleNameText[32] = "default";  // Style name
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -184,7 +177,7 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 
 // Load/Save/Export data functions
 static bool SaveStyle(const char *fileName, int format);    // Save style file text or binary (.rgs) 
-static void ExportStyleAsCode(const char *fileName);        // Export gui style as color palette code
+static void ExportStyleAsCode(const char *fileName, const char *styleName);        // Export gui style as color palette code
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
 // Auxiliar functions
@@ -218,7 +211,7 @@ int main(int argc, char *argv[])
         {
             if (IsFileExtension(argv[1], ".rgs"))
             {
-                strcpy(loadedFileName, argv[1]);    // Read input filename to open with gui interface
+                strcpy(inFileName, argv[1]);    // Read input filename to open with gui interface
             }
         }
 #if defined(VERSION_ONE)
@@ -254,10 +247,10 @@ int main(int argc, char *argv[])
     bool selectingColor = false;
     
     // Load dropped file if provided
-    if (loadedFileName[0] != '\0') 
+    if (inFileName[0] != '\0') 
     {
-        GuiLoadStyle(loadedFileName);
-        SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
+        GuiLoadStyle(inFileName);
+        SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
     }
     else
     {
@@ -280,7 +273,12 @@ int main(int argc, char *argv[])
     int styleTablePositionX = 0;
 
     float fontScale = 1.0f;
+    int genFontSizeValue = 10;       // Generation font size
     int prevGenFontSize = genFontSizeValue;
+
+    // Style required variables
+    bool saveChangesRequired = false;     // Flag to notice save changes are required
+    char styleNameText[32] = "default";   // Style name
 
     bool lockBackground = false;
 
@@ -359,8 +357,8 @@ int main(int argc, char *argv[])
                 GuiLoadStyleDefault();          // Reset to base default style
                 GuiLoadStyle(droppedFiles[0]);  // Load new style properties
 
-                strcpy(loadedFileName, droppedFiles[0]);
-                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
+                strcpy(inFileName, droppedFiles[0]);
+                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
                 strcpy(styleNameText, GetFileNameWithoutExt(droppedFiles[0]));
 
                 genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
@@ -408,18 +406,17 @@ int main(int argc, char *argv[])
         // Show dialog: save style file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S))
         {
-            if (loadedFileName[0] == '\0')
+            if (inFileName[0] == '\0')
             {
                 if ((exportFormatActive == STYLE_AS_CODE) || (exportFormatActive == STYLE_TABLE_IMAGE)) exportFormatActive = STYLE_TEXT;
                 showSaveFileDialog = true;
             }
             else
             {
-                // TODO: Using same style type as loaded or previously saved
+                // TODO: Use same style type as loaded or previously saved
                 // ISSUE: Style is loaded by raygui, GuiLoadStyle() checks for format internally!
-                SaveStyle(loadedFileName, loadedStyleFormat);
-                
-                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(loadedFileName)));
+                SaveStyle(inFileName, STYLE_TEXT);
+                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
                 saveChangesRequired = false;
             }
         }
@@ -446,7 +443,7 @@ int main(int argc, char *argv[])
             
             GuiLoadStyleDefault();
             
-            memset(loadedFileName, 0, 256);
+            memset(inFileName, 0, 512);
             SetWindowTitle(FormatText("%s v%s", TOOL_NAME, TOOL_VERSION));
             strcpy(styleNameText, "default");
             memset(fontFilePath, 0, 512);
@@ -742,7 +739,11 @@ int main(int argc, char *argv[])
                     SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
                     saveChangesRequired = false;
 
-                    // TODO: Load style font if available
+					// Load .rgs custom font in font
+                    font = GuiGetFont();
+                    memset(fontFilePath, 0, 512);
+                    fontFileProvided = false;
+                    customFont = true;
                 }
                 
                 if (result >= 0) showLoadFileDialog = false;
@@ -842,7 +843,7 @@ int main(int argc, char *argv[])
                     {
                         case STYLE_TEXT: 
                         case STYLE_BINARY: SaveStyle(outFileName, exportFormatActive); break;
-                        case STYLE_AS_CODE: ExportStyleAsCode(outFileName); break;
+                        case STYLE_AS_CODE: ExportStyleAsCode(outFileName, styleNameText); break;
                         case STYLE_TABLE_IMAGE:
                         {
                             Image imStyleTable = GenImageStyleControlsTable(styleNameText);
@@ -997,10 +998,10 @@ static void ProcessCommandLine(int argc, char *argv[])
         {
             case STYLE_TEXT:
             case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgs"), outputFormat); break;
-            case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h")); break;
+            case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
             {
-                Image imStyleTable = GenImageStyleControlsTable(styleNameText);
+                Image imStyleTable = GenImageStyleControlsTable(GetFileNameWithoutExt(outFileName));
                 ExportImage(imStyleTable, FormatText("%s%s", outFileName, ".png"));
                 UnloadImage(imStyleTable);
             } break;
@@ -1038,7 +1039,6 @@ static bool SaveStyle(const char *fileName, int format)
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
             fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
-            fprintf(rgsFile, "# STYLE: %s\n#\n", styleNameText);
             
             if (customFont)
             {
@@ -1225,7 +1225,7 @@ static bool SaveStyle(const char *fileName, int format)
 
 // Export gui style as (ready-to-use) code file
 // NOTE: Code file already implements a function to load style
-static void ExportStyleAsCode(const char *fileName)
+static void ExportStyleAsCode(const char *fileName, const char *styleName)
 {
     FILE *txtFile = fopen(fileName, "wt");
 
@@ -1235,7 +1235,7 @@ static void ExportStyleAsCode(const char *fileName)
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "// StyleAsCode exporter v1.0 - Style data exported as a values array            //\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// USAGE: On init call: GuiLoadStyle%s();                        //\n", TextToPascal(styleNameText));
+        fprintf(txtFile, "// USAGE: On init call: GuiLoadStyle%s();                        //\n", TextToPascal(styleName));
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/raygui                        //\n");
         fprintf(txtFile, "// feedback and support:       ray[at]raylibtech.com                            //\n");
@@ -1245,8 +1245,8 @@ static void ExportStyleAsCode(const char *fileName)
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
         // Write byte data as hexadecimal text
-        fprintf(txtFile, "// Custom style palette: %s\n", styleNameText);
-        fprintf(txtFile, "static const int style%s[%i] = {\n", TextToPascal(styleNameText), NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
+        fprintf(txtFile, "// Custom style palette: %s\n", styleName);
+        fprintf(txtFile, "static const int style%s[%i] = {\n", TextToPascal(styleName), NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
         for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
         {
             if (i < NUM_PROPS_DEFAULT) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
@@ -1296,10 +1296,10 @@ static void ExportStyleAsCode(const char *fileName)
         }
 #endif
         
-        fprintf(txtFile, "// Style loading function: %s\n", styleNameText);
-        fprintf(txtFile, "static void GuiLoadStyle%s(void)\n{\n", TextToPascal(styleNameText));
+        fprintf(txtFile, "// Style loading function: %s\n", styleName);
+        fprintf(txtFile, "static void GuiLoadStyle%s(void)\n{\n", TextToPascal(styleName));
         fprintf(txtFile, "    // Load an populate global default style\n");
-        fprintf(txtFile, "    GuiLoadStyleProps(style%s, 20);\n", TextToPascal(styleNameText));
+        fprintf(txtFile, "    GuiLoadStyleProps(style%s, 20);\n", TextToPascal(styleName));
         fprintf(txtFile, "    GuiUpdateStyleComplete();\n\n");
         fprintf(txtFile, "    // Set additional style properties (if required)\n");
         
@@ -1329,7 +1329,7 @@ static void ExportStyleAsCode(const char *fileName)
             fprintf(txtFile, "    font.chars = (CharInfo *)malloc(font.charsCount*sizeof(CharInfo));\n");
             fprintf(txtFile, "    memcpy(font.chars, fontChars, font.charsCount*sizeof(CharInfo));\n\n");
             
-            fprintf(txtFile, "    GuiSetFont(font);\n");
+            fprintf(txtFile, "    GuiFont(font);\n");
         }
 #endif
         fprintf(txtFile, "}\n");
