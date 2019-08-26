@@ -10,7 +10,7 @@
 *   DEPENDENCIES:
 *       raylib 2.6-dev          - Windowing/input management and drawing.
 *       raygui 2.6-dev          - IMGUI controls (based on raylib).
-*       tinyfiledialogs 3.3.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
+*       tinyfiledialogs 3.3.9   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
 *   COMPILATION (Windows - MinGW):
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99
@@ -167,6 +167,7 @@ static Font font = { 0 };               // Custom font
 static bool customFont = false;         // Using custom font
 static int genFontSizeValue = 10;       // Generation font size
 static char fontFilePath[512] = { 0 };  // Font file path (register font path for reloading)
+static bool fontFileProvided = false;   // Font loaded from a file provided (required for reloading)
 
 static char loadedFileName[256] = { 0 };    // Loaded style file name
 static int loadedStyleFormat = STYLE_TEXT;  // Loaded style format
@@ -365,10 +366,11 @@ int main(int argc, char *argv[])
                 genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
-                // TODO: If .rgs includes a custom font, load it in font...
-                // font = GuiGetFont();
+                // Load .rgs custom font in font
+                font = GuiGetFont();
                 memset(fontFilePath, 0, 512);
-                customFont = false;     // TODO?
+                fontFileProvided = false;
+                customFont = true;
                 
                 // TODO: Reset style backup for changes?
                 //changedPropsCounter = 0;
@@ -385,6 +387,7 @@ int main(int argc, char *argv[])
                 {
                     GuiSetFont(font);
                     strcpy(fontFilePath, droppedFiles[0]);
+                    fontFileProvided = true;
                     customFont = true;
                 }
             }
@@ -470,7 +473,7 @@ int main(int argc, char *argv[])
         else lockBackground = false;
 
         // Reload font to new size if required
-        if (customFont && !genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath != NULL))
+        if (fontFileProvided && !genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath != NULL))
         {
             UnloadFont(font);
             font = LoadFontEx(fontFilePath, genFontSizeValue, NULL, 0);
@@ -674,13 +677,8 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
             GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, FormatText("CHANGED PROPERTIES: %i", changedPropsCounter));
 
-            int statusTextAlign = GuiGetStyle(DEFAULT, TEXT_ALIGNMENT);
-            int statusInnerPadding = GuiGetStyle(DEFAULT, INNER_PADDING);
-            GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_LEFT);
-            GuiSetStyle(DEFAULT, INNER_PADDING, 10);
-            GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", ((fontFilePath[0] == 0)? "raylib default" : GetFileName(fontFilePath)), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
-            GuiSetStyle(DEFAULT, TEXT_ALIGNMENT, statusTextAlign);
-            GuiSetStyle(DEFAULT, INNER_PADDING, statusInnerPadding);
+            if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
+            else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", (customFont)? "style custom font" : "raylib default", font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
 
             GuiState(GUI_STATE_NORMAL);
 
@@ -772,6 +770,7 @@ int main(int argc, char *argv[])
                         
                         GuiSetFont(font);
                         strcpy(fontFilePath, inFileName);
+                        fontFileProvided = true;
                         customFont = true;
                     }
                 }
