@@ -69,10 +69,9 @@
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
-// Basic information
-const char *TOOL_NAME = "rGuiStyler";
-const char *TOOL_VERSION = "3.1";
-const char *TOOL_DESCRIPTION = "A simple and easy-to-use raygui styles editor";
+const char *toolName = "rGuiStyler";
+const char *toolVersion = "3.1";
+const char *toolDescription = "A simple and easy-to-use raygui styles editor";
 
 #if (!defined(DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
 bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib)
@@ -235,7 +234,7 @@ int main(int argc, char *argv[])
     const int screenWidth = 740;
     const int screenHeight = 660;
 
-    InitWindow(screenWidth, screenHeight, FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, TOOL_DESCRIPTION));
+    InitWindow(screenWidth, screenHeight, FormatText("%s v%s - %s", toolName, toolVersion, toolDescription));
     SetExitKey(0);
 
     // General pourpose variables
@@ -250,7 +249,7 @@ int main(int argc, char *argv[])
     if (inFileName[0] != '\0') 
     {
         GuiLoadStyle(inFileName);
-        SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
+        SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
     }
     else
     {
@@ -358,7 +357,7 @@ int main(int argc, char *argv[])
                 GuiLoadStyle(droppedFiles[0]);  // Load new style properties
 
                 strcpy(inFileName, droppedFiles[0]);
-                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
+                SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                 strcpy(styleNameText, GetFileNameWithoutExt(droppedFiles[0]));
 
                 genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
@@ -416,7 +415,7 @@ int main(int argc, char *argv[])
                 // TODO: Use same style type as loaded or previously saved
                 // ISSUE: Style is loaded by raygui, GuiLoadStyle() checks for format internally!
                 SaveStyle(inFileName, STYLE_TEXT);
-                SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
+                SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                 saveChangesRequired = false;
             }
         }
@@ -444,7 +443,7 @@ int main(int argc, char *argv[])
             GuiLoadStyleDefault();
             
             memset(inFileName, 0, 512);
-            SetWindowTitle(FormatText("%s v%s", TOOL_NAME, TOOL_VERSION));
+            SetWindowTitle(FormatText("%s v%s", toolName, toolVersion));
             strcpy(styleNameText, "default");
             memset(fontFilePath, 0, 512);
             customFont = false;
@@ -736,7 +735,7 @@ int main(int argc, char *argv[])
                     // Load style
                     GuiLoadStyle(inFileName);
                     
-                    SetWindowTitle(FormatText("%s v%s - %s", TOOL_NAME, TOOL_VERSION, GetFileName(inFileName)));
+                    SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                     saveChangesRequired = false;
 
 					// Load .rgs custom font in font
@@ -887,7 +886,7 @@ static void ShowCommandLineInfo(void)
 {
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
-    printf("// %s v%s ONE - %s             //\n", TOOL_NAME, TOOL_VERSION, TOOL_DESCRIPTION);
+    printf("// %s v%s ONE - %s             //\n", toolName, toolVersion, toolDescription);
     printf("// powered by raylib v2.4 (www.raylib.com) and raygui v2.0                      //\n");
     printf("// more info and bugs-report: github.com/raysan5/rguistyler                     //\n");
     printf("//                                                                              //\n");
