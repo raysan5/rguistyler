@@ -7,6 +7,10 @@
 *   #define VERSION_ONE
 *       Enable PRO features for the tool. Usually command-line and export options related.
 *
+*   #define CUSTOM_MODAL_DIALOGS
+*       Use custom raygui generated modal dialogs instead of native OS ones
+*       NOTE: Avoids including tinyfiledialogs depencency library
+*
 *   DEPENDENCIES:
 *       raylib 2.6-dev          - Windowing/input management and drawing.
 *       raygui 2.6-dev          - IMGUI controls (based on raylib).
