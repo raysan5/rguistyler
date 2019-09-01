@@ -219,8 +219,6 @@ void GuiWindowAbout(GuiWindowAboutState *state)
 
         int buttonTextAlign = GuiGetStyle(BUTTON, TEXT_ALIGNMENT);
         GuiSetStyle(BUTTON, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
-        int buttonInnerPadding = GuiGetStyle(BUTTON, INNER_PADDING);
-        GuiSetStyle(BUTTON, INNER_PADDING, 1);
 #if defined(VERSION_ONE)
         // TODO: Define a proper EULA
         //state->chkLicenseChecked = GuiCheckBox((Rectangle){ state->position.x + 10, state->position.y + 310, 16, 16 }, chkLicenseText, state->chkLicenseChecked);
@@ -230,7 +228,6 @@ void GuiWindowAbout(GuiWindowAboutState *state)
 #endif
         if (GuiButton((Rectangle){ state->position.x + 255, state->position.y + 305, 70, 25 }, BtnCloseText)) state->windowAboutActive = false;
         GuiSetStyle(BUTTON, TEXT_ALIGNMENT, buttonTextAlign);
-        GuiSetStyle(BUTTON, INNER_PADDING, buttonInnerPadding);
     }
 }
 

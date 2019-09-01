@@ -142,7 +142,7 @@ static const char *guiPropsText[NUM_PROPS_DEFAULT] = {
     "BASE_COLOR_DISABLED",
     "TEXT_COLOR_DISABLED",
     "BORDER_WIDTH",
-    "INNER_PADDING",
+    "TEXT_PADDING",
     "TEXT_ALIGNMENT",
     "RESERVED"
 };
@@ -534,7 +534,7 @@ int main(int argc, char *argv[])
             if (obtainProperty)
             {
                 if (currentSelectedProperty <= TEXT_COLOR_DISABLED) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
-                else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == INNER_PADDING)) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == TEXT_PADDING)) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
                 else if (currentSelectedProperty == TEXT_ALIGNMENT) textAlignmentActive = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
 
                 obtainProperty = false;
@@ -551,7 +551,7 @@ int main(int argc, char *argv[])
                 }
                 else GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
             }
-            else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == INNER_PADDING))
+            else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == TEXT_PADDING))
             {
                 if (currentSelectedControl == DEFAULT) 
                 {
@@ -666,7 +666,7 @@ int main(int argc, char *argv[])
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
 
-                if ((currentSelectedProperty != INNER_PADDING) && (currentSelectedProperty != BORDER_WIDTH) && (propsStateActive == 0)) GuiDisable();
+                if ((currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH) && (propsStateActive == 0)) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, propertyValue, 0, 20);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 if (propsStateActive == 0) GuiEnable();
@@ -1475,12 +1475,6 @@ static Image GenImageStyleControlsTable(const char *styleName)
             GuiGroupBox(rec, NULL);
             
             // Draw style rectangle
-            /*
-            Rectangle box = { rec.x + GuiGetStyle(DEFAULT, TEXT_SIZE)/2, rec.y + TABLE_CELL_HEIGHT/2 - GuiGetStyle(DEFAULT, TEXT_SIZE)/2, GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SIZE) };
-            DrawRectangleRec(box, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + 3*i)));
-            DrawRectangle(box.x + 1, box.y + 1, box.width - 2, box.height - 2, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL + 3*i)));
-            DrawTextEx(font, "rl", (Vector2){ box.x + box.width/2 - MeasureText(text, 10)/2, box.y + box.height/2 - 10/2 }, GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL + 3*i)));
-            */
             GuiState(i); GuiLabelButton((Rectangle){ rec.x + 28, rec.y, rec.width, rec.height }, tableStateName[i]);
             rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
         }
