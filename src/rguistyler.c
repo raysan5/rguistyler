@@ -339,7 +339,21 @@ int main(int argc, char *argv[])
     bool showLoadFontFileDialog = false;
     bool showSaveFileDialog = false;
     bool showExportFileDialog = false;
-    //-----------------------------------------------------------------------------------  
+    //-----------------------------------------------------------------------------------
+    
+#if defined(STYLES_SPINNING_DEMO)
+    int styleCounter = 0;
+    char stylesList[8][64] = {
+        "D:\\GitHub\\raygui/styles/jungle/jungle.rgs\0",
+        "D:\\GitHub\\raygui/styles/candy/candy.rgs\0",
+        "D:\\GitHub\\raygui/styles/bluish/bluish.rgs\0",
+        "D:\\GitHub\\raygui/styles/cherry/cherry.rgs\0",
+        "D:\\GitHub\\raygui/styles/ashes/ashes.rgs\0",
+        "D:\\GitHub\\raygui/styles/cyber/cyber.rgs\0",
+        "D:\\GitHub\\raygui/styles/lavanda/lavanda.rgs\0",
+        "D:\\GitHub\\raygui/styles/terminal/terminal.rgs\0"
+    };
+#endif
 
     SetTargetFPS(60);
     //------------------------------------------------------------
@@ -403,6 +417,30 @@ int main(int argc, char *argv[])
 
         // Keyboard shortcuts
         //----------------------------------------------------------------------------------
+#if defined(STYLES_SPINNING_DEMO)
+        if (IsKeyPressed(KEY_RIGHT))
+        {           
+            GuiLoadStyleDefault();          // Reset to base default style
+            GuiLoadStyle(stylesList[styleCounter]);  // Load new style properties
+
+            strcpy(inFileName, GetFileName(stylesList[styleCounter]));
+            SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+            strcpy(styleNameText, GetFileNameWithoutExt(inFileName));
+
+            genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+            fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
+
+            // Load .rgs custom font in font
+            font = GuiGetFont();
+            memset(fontFilePath, 0, 512);
+            fontFileProvided = false;
+            customFont = true;
+            
+            styleCounter++;
+            if (styleCounter > 7) styleCounter = 0;
+        }
+#endif
+
         // Show dialog: load input file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) showLoadFileDialog = true;
 
