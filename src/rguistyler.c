@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v3.1-dev - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v3.1 - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
 *
@@ -32,7 +32,7 @@
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2014-2018 raylib technologies (@raylibtech).
+*   Copyright (c) 2014-2019 raylib technologies (@raylibtech).
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -632,8 +632,13 @@ int main(int argc, char *argv[])
 
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
+            if (windowAboutState.windowAboutActive || windowExitActive) GuiDisable();
+            else GuiEnable();
+
+            // Main GUI
             //---------------------------------------------------------------------------------------------------------
-            // Main toolbar panel
+
+            // Toolbar panel
             GuiPanel((Rectangle){ 0, 0, 740, 50 });
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
             if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) showSaveFileDialog = true;
@@ -645,7 +650,11 @@ int main(int argc, char *argv[])
             viewFontActive = GuiToggle((Rectangle){ 380, 10, 30, 30 }, "#31#", viewFontActive);
             windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
 
-            GuiState(propsStateActive);
+            // NOTE: Supporting custom gui state set makes a bit difficult to disable all gui on WindowAbout,
+            // tried different options and allowing direct state change is the less problematic,
+            // left other tests commented just in case
+            //if ((GuiGetState() != GUI_STATE_DISABLED) || (propsStateActive == GUI_STATE_DISABLED)) 
+            GuiSetState(propsStateActive);
 
             if (viewStyleTableActive || viewFontActive || propsStateEditMode) GuiLock();
 
@@ -653,7 +662,7 @@ int main(int argc, char *argv[])
 
             if ((currentSelectedControl == -1) && (propsStateActive == 0)) GuiDisable();
             currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, NUM_PROPS_DEFAULT - 1, NULL, NULL, currentSelectedProperty);
-            if (propsStateActive == 0) GuiEnable();
+            if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowAboutActive || windowExitActive)) GuiEnable();
 
             if (windowControlsActive)
             {
@@ -664,7 +673,7 @@ int main(int argc, char *argv[])
                 if ((currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH) && (propsStateActive == 0)) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, propertyValue, 0, 20);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-                if (propsStateActive == 0) GuiEnable();
+                if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowAboutActive || windowExitActive)) GuiEnable();
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
@@ -693,7 +702,7 @@ int main(int argc, char *argv[])
                 if ((currentSelectedProperty != TEXT_ALIGNMENT) && (propsStateActive == 0)) GuiDisable();
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 25 }, "Text Alignment:");
                 textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 85, 25 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
-                if (propsStateActive == 0) GuiEnable();
+                if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowAboutActive || windowExitActive)) GuiEnable();
 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) showLoadFontFileDialog = true;
@@ -713,7 +722,8 @@ int main(int argc, char *argv[])
             if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
             else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", (customFont)? "style custom font" : "raylib default", font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
 
-            GuiState(GUI_STATE_NORMAL);
+            //if (GuiGetState() != GUI_STATE_DISABLED) 
+            GuiSetState(GUI_STATE_NORMAL);
 
             GuiUnlock();
 
@@ -775,7 +785,7 @@ int main(int argc, char *argv[])
                     SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                     saveChangesRequired = false;
 
-					// Load .rgs custom font in font
+                    // Load .rgs custom font in font
                     font = GuiGetFont();
                     memset(fontFilePath, 0, 512);
                     fontFileProvided = false;
@@ -1497,12 +1507,12 @@ static Image GenImageStyleControlsTable(const char *styleName)
             GuiGroupBox(rec, NULL);
             
             // Draw style rectangle
-            GuiState(i); GuiLabelButton((Rectangle){ rec.x + 28, rec.y, rec.width, rec.height }, tableStateName[i]);
+            GuiSetState(i); GuiLabelButton((Rectangle){ rec.x + 28, rec.y, rec.width, rec.height }, tableStateName[i]);
             rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
         }
         //----------------------------------------------------------------------------------------
 
-        GuiState(GUI_STATE_NORMAL);
+        GuiSetState(GUI_STATE_NORMAL);
 
         int offsetWidth = TABLE_LEFT_PADDING + tableStateNameWidth;
 
@@ -1526,7 +1536,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
                 // Draw grid lines: control state
                 GuiGroupBox(rec, NULL);
 
-                GuiState(j);
+                GuiSetState(j);
                     // Draw control centered correctly in grid
                     switch (i)
                     {
@@ -1549,7 +1559,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
                         case TYPE_SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, NULL, &value, 0, 100, false); break;
                         default: break;
                     }
-                GuiState(GUI_STATE_NORMAL);
+                GuiSetState(GUI_STATE_NORMAL);
 
                 rec.y += TABLE_CELL_HEIGHT - 1;
             }
