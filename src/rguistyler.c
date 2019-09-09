@@ -13,7 +13,7 @@
 *
 *   DEPENDENCIES:
 *       raylib 2.6-dev          - Windowing/input management and drawing.
-*       raygui 2.6-dev          - IMGUI controls (based on raylib).
+*       raygui 2.6              - Immediate-mode GUI controls.
 *       tinyfiledialogs 3.3.9   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
 *   COMPILATION (Windows - MinGW):
@@ -124,7 +124,7 @@ static const char *guiControlText[NUM_CONTROLS] = {
     "LISTVIEW",
     "COLORPICKER",
     "SCROLLBAR",
-    "RESERVED"
+    "STATUSBAR"
 };
 
 // Controls default properties name text
@@ -638,7 +638,7 @@ int main(int argc, char *argv[])
             // Main GUI
             //---------------------------------------------------------------------------------------------------------
 
-            // Toolbar panel
+            // Main toolbar panel
             GuiPanel((Rectangle){ 0, 0, 740, 50 });
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
             if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) showSaveFileDialog = true;
@@ -666,7 +666,7 @@ int main(int argc, char *argv[])
 
             if (windowControlsActive)
             {
-                windowControlsActive = !GuiWindowBox((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 560 }, "Sample raygui controls");
+                windowControlsActive = !GuiWindowBox((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 560 }, "#198#Sample raygui controls");
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
 
@@ -1331,7 +1331,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             
             // Save font image data
             fprintf(txtFile, "// Font image pixels data\n");
-            fprintf(txtFile, "static const unsigned char imFontData[%i] = { ", imFontSize);
+            fprintf(txtFile, "static unsigned char imFontData[%i] = { ", imFontSize);
             for (int i = 0; i < imFontSize - 1; i++) fprintf(txtFile, ((i%BYTES_TEXT_PER_LINE == 0)? "0x%02x,\n    " : "0x%02x, "), ((unsigned char *)imFont.data)[i]);
             fprintf(txtFile, "0x%02x };\n\n", ((unsigned char *)imFont.data)[imFontSize - 1]);
 
@@ -1453,7 +1453,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         "SPINNER"       // VALUEBOX + BUTTON
     };
 
-    // TODO: Controls grid widths should be calculated depending on font size and controls text!
+    // TODO: Calculate controls grid widths depending on font size and spacing
     int controlWidth[TABLE_CONTROLS_COUNT] = {
         100,    // LABEL
         100,    // BUTTON
@@ -1740,29 +1740,33 @@ void ExportStyleInPNG(const char *fileName, const char *rgsFileName)
             //---------------------------------------------------------------------------
             FILE *rgsFile = fopen(rgsFileName, "rb");
 
-            // TODO: Verify rGS file is a valid file
+            if (rgsFile != NULL)
+            {
+                // TODO: Verify rGS file is a valid file
 
-            fseek(rgsFile, 0, SEEK_END);    // Place cursor at the end of file
-            long rgsSize = ftell(rgsFile);  // Get file size
-            fseek(rgsFile, 0, SEEK_SET);    // Reset file pointer to beginning
+                fseek(rgsFile, 0, SEEK_END);    // Place cursor at the end of file
+                long rgsSize = ftell(rgsFile);  // Get file size
+                fseek(rgsFile, 0, SEEK_SET);    // Reset file pointer to beginning
 
-            unsigned char *rgsData = (unsigned char *)malloc(rgsSize);
-            fread(rgsData, rgsSize, 1, rgsFile);
+                unsigned char *rgsData = (unsigned char *)malloc(rgsSize);
+                fread(rgsData, rgsSize, 1, rgsFile);
 
-            unsigned char rgsType[4] = { 'r', 'G', 'S', 't' };
+                unsigned char rgsType[4] = { 'r', 'G', 'S', 't' };
 
-            fwrite(&rgsSize, 4, 1, pngrgsFile);
-            fwrite(&rgsType, 4, 1, pngrgsFile);
-            fwrite(&rgsData, rgsSize, 1, pngrgsFile);
+                fwrite(&rgsSize, 4, 1, pngrgsFile);
+                fwrite(&rgsType, 4, 1, pngrgsFile);
+                fwrite(&rgsData, rgsSize, 1, pngrgsFile);
 
-            unsigned int rgsDataCRC = 0;    // TODO: Compute CRC32 for rgsData
-            fwrite(&rgsDataCRC, 4, 1, pngrgsFile);
+                unsigned int rgsDataCRC = 0;    // TODO: Compute CRC32 for rgsData
+                fwrite(&rgsDataCRC, 4, 1, pngrgsFile);
+                
+                fclose(rgsFile);
+            }
             //---------------------------------------------------------------------------
 
             // Write the rest of the original PNG file
             fwrite(pngData + 33, pngSize - 33, 1, pngrgsFile);
 
-            fclose(rgsFile);
             fclose(pngrgsFile);
             free(pngData);
             free(rgsData);

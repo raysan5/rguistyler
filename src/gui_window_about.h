@@ -222,9 +222,9 @@ void GuiWindowAbout(GuiWindowAboutState *state)
         //state->chkLicenseChecked = GuiCheckBox((Rectangle){ state->position.x + 10, state->position.y + 310, 16, 16 }, chkLicenseText, state->chkLicenseChecked);
 #else
         //GuiDisable();state->chkLicenseChecked = GuiCheckBox((Rectangle){ state->position.x + 10, state->position.y + 310, 16, 16 }, chkLicenseText, state->chkLicenseChecked); GuiEnable();
-        if (GuiButton((Rectangle){ state->position.x + 175, state->position.y + 305, 75, 25 }, BtnBeONEText)) { OpenURL(linkToolDownloadText); }
+        if (GuiButton((Rectangle){ state->position.x + state->windowWidth - 80 - 85, state->position.y + 305, 75, 25 }, BtnBeONEText)) { OpenURL(linkToolDownloadText); }
 #endif
-        if (GuiButton((Rectangle){ state->position.x + 255, state->position.y + 305, 70, 25 }, BtnCloseText)) state->windowAboutActive = false;
+        if (GuiButton((Rectangle){ state->position.x + state->windowWidth - 80, state->position.y + 305, 70, 25 }, BtnCloseText)) state->windowAboutActive = false;
         GuiSetStyle(BUTTON, TEXT_ALIGNMENT, buttonTextAlign);
         
         GuiDisable();

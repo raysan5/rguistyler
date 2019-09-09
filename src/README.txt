@@ -1,4 +1,4 @@
-# rGuiStyler v3.0
+# rGuiStyler v3.1
 
 A simple and easy-to-use raygui styles editor.
 
