@@ -88,9 +88,9 @@ bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib
 // Style file type to export
 typedef enum {
     STYLE_TEXT = 0,         // Style text file (.rgs)
+    STYLE_TABLE_IMAGE,      // Style controls table image (for reference)
     STYLE_BINARY,           // Style binary file (.rgs)
-    STYLE_AS_CODE,          // Style as (ready-to-use) code (.h)
-    STYLE_TABLE_IMAGE       // Style controls table image (for reference)
+    STYLE_AS_CODE           // Style as (ready-to-use) code (.h)
 } GuiStyleFileType;
 
 // Dialog type
@@ -101,7 +101,14 @@ typedef enum DialogType {
     DIALOG_TEXTINPUT,
     DIALOG_OTHER
 } DialogType;
-
+/*
+// Style property
+typedef struct StyleProp {
+    int controlId;
+    int propertyId;
+    int propertyValue;
+} StyleProp;
+*/
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
@@ -147,19 +154,17 @@ static const char *guiPropsText[NUM_PROPS_DEFAULT] = {
     "RESERVED"
 };
 
-/*
 // Controls default extended properties
 static const char *guiPropsExText[NUM_PROPS_EXTENDED] = {
     "TEXT_SIZE",
     "TEXT_SPACING",
     "LINE_COLOR",
     "BACKGROUND_COLOR",
-    "RESERVED01",
-    "RESERVED02",
-    "RESERVED03",
-    "RESERVED04",
+    "EXTENDED01",
+    "EXTENDED02",
+    "EXTENDED03",
+    "EXTENDED04",
 };
-*/
 
 // Default style backup to check changed properties
 static unsigned int styleBackup[NUM_CONTROLS*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED)] = { 0 };
@@ -179,7 +184,7 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 #endif
 
 // Load/Save/Export data functions
-static bool SaveStyle(const char *fileName, int format);    // Save style file text or binary (.rgs) 
+static bool SaveStyle(const char *fileName, int format);    // Save style file text or binary (.rgs/.rgsb) 
 static void ExportStyleAsCode(const char *fileName, const char *styleName);        // Export gui style as color palette code
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
@@ -353,6 +358,12 @@ int main(int argc, char *argv[])
     };
 #endif
 
+    // Render texture to draw full screen, enables screen scaling
+    // NOTE: If screen is scaled, mouse input should be scaled proportionally
+    RenderTexture2D screenTarget = LoadRenderTexture(screenWidth, screenHeight);
+    SetTextureFilter(screenTarget.texture, FILTER_POINT);
+    int screenScale = 1;
+
     SetTargetFPS(60);
     //------------------------------------------------------------
 
@@ -447,7 +458,7 @@ int main(int argc, char *argv[])
         {
             if (inFileName[0] == '\0')
             {
-                if ((exportFormatActive == STYLE_AS_CODE) || (exportFormatActive == STYLE_TABLE_IMAGE)) exportFormatActive = STYLE_TEXT;
+                exportFormatActive = STYLE_TEXT;
                 showSaveFileDialog = true;
             }
             else
@@ -625,16 +636,37 @@ int main(int argc, char *argv[])
             if (font.texture.width*fontScale > GetScreenWidth()) fontScale = GetScreenWidth()/font.texture.width;
         }
         //----------------------------------------------------------------------------------
+        
+        // Screen scale logic (x2)
+        //----------------------------------------------------------------------------------
+        
+        // TODO: Use an interface button -> main bar?
+        if (IsKeyPressed(KEY_ONE))
+        {
+            screenScale = 1;
+            SetWindowSize(screenWidth, screenHeight);
+            SetMouseScale(1.0f, 1.0f);
+        }
+        else if (IsKeyPressed(KEY_TWO))
+        {
+            screenScale = 2;
+            SetWindowSize(screenWidth*2, screenHeight*2);
+            SetMouseScale(0.5f, 0.5f);
+        }
+        
+        //----------------------------------------------------------------------------------
 
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
-
+        
+            // Render all screen to a texture (for scaling)
+            BeginTextureMode(screenTarget);
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
             if (windowAboutState.windowAboutActive || windowExitActive) GuiDisable();
             else GuiEnable();
-
+            
             // Main GUI
             //---------------------------------------------------------------------------------------------------------
 
@@ -711,8 +743,11 @@ int main(int argc, char *argv[])
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, "Spacing:", &fontSpacingValue, 0, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
-
-                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "TEXT (.rgs); BINARY (.rgs);CODE (.h);TABLE (.png)", exportFormatActive);
+#if defined(VERSION_ONE)
+                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "Style Text (.rgs);Style Table (.png);Style Binary (.rgsb);Style Code (.h)", exportFormatActive);
+#else
+                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "Style Text (.rgs);Style Table (.png)", exportFormatActive);
+#endif
                 if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 30 }, "#7#Export Style")) showExportFileDialog = true;
             }
 
@@ -864,14 +899,10 @@ int main(int argc, char *argv[])
                 char filters[64] = { 0 };
                 strcpy(outFileName, styleNameText);
                 
-            #if !defined(VERSION_ONE)
-                if ((exportFormatActive == STYLE_BINARY) || (exportFormatActive == STYLE_AS_CODE)) exportFormatActive = STYLE_TEXT;
-            #endif
-                
                 switch (exportFormatActive)
                 {
-                    case STYLE_TEXT: 
-                    case STYLE_BINARY: strcpy(filters, "*.rgs"); strcat(outFileName, ".rgs"); break;
+                    case STYLE_TEXT: strcpy(filters, "*.rgs"); strcat(outFileName, ".rgs"); break;
+                    case STYLE_BINARY: strcpy(filters, "*.rgsb"); strcat(outFileName, ".rgsb"); break;
                     case STYLE_AS_CODE: strcpy(filters, "*.h"); strcat(outFileName, ".h"); break;
                     case STYLE_TABLE_IMAGE: strcpy(filters, "*.png"); strcat(outFileName, ".png");break;
                     default: break;
@@ -887,8 +918,8 @@ int main(int argc, char *argv[])
                     // Export file: outFileName
                     switch (exportFormatActive)
                     {
-                        case STYLE_TEXT: 
-                        case STYLE_BINARY: SaveStyle(outFileName, exportFormatActive); break;
+                        case STYLE_TEXT: SaveStyle(outFileName, STYLE_TEXT); break;
+                        case STYLE_BINARY: SaveStyle(outFileName, STYLE_BINARY); break;
                         case STYLE_AS_CODE: ExportStyleAsCode(outFileName, styleNameText); break;
                         case STYLE_TABLE_IMAGE:
                         {
@@ -909,6 +940,11 @@ int main(int argc, char *argv[])
                 if (result >= 0) showExportFileDialog = false;
             }
             //----------------------------------------------------------------------------------------
+            
+            EndTextureMode();
+            
+            // Draw render texture to screen (scaled if required)
+            DrawTexturePro(screenTarget.texture, (Rectangle){ 0, 0, screenTarget.texture.width, -screenTarget.texture.height }, (Rectangle){ 0, 0, screenTarget.texture.width*screenScale, screenTarget.texture.height*screenScale }, (Vector2){ 0, 0 }, 0.0f, WHITE);
 
         EndDrawing();
         //----------------------------------------------------------------------------------
@@ -1042,7 +1078,7 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_TEXT:
+            case STYLE_TEXT: SaveStyle(FormatText("%s%s", outFileName, ".rgsb"), outputFormat); break;
             case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgs"), outputFormat); break;
             case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
@@ -1067,11 +1103,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 static bool SaveStyle(const char *fileName, int format)
 {
     int success = false;
-    
-#if !defined(VERSION_ONE)
-    if (format == STYLE_BINARY) format = STYLE_TEXT;
-#endif
-    
+
     FILE *rgsFile = NULL;
 
     if (format == STYLE_TEXT)
@@ -1297,13 +1329,18 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
+        // TODO: Export only properties that change from default style
+        // Probably using an array of integers won't be enough, it would require and structure more aligned with
+        // .rgs text data information: struct Property { int controlId; int propertyId, int propertyValue; }
+        // Remove GuiLoadStyleProps(), it's a very bad design!
+        
         // Write byte data as hexadecimal text
         fprintf(txtFile, "// Custom style palette: %s\n", styleName);
         fprintf(txtFile, "static const int style%s[%i] = {\n", TextToPascal(styleName), NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
         for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
         {
             if (i < NUM_PROPS_DEFAULT) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
-            else fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), FormatText("EXT%02i", (i - NUM_PROPS_EXTENDED + 1)));
+            else fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsExText[i - NUM_PROPS_DEFAULT]);
         }
         fprintf(txtFile, "};\n\n");
         
@@ -1312,8 +1349,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "// WARNING: This style uses a custom font: %s (size: %i, spacing: %i)\n\n", 
                     GetFileName(fontFilePath), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
         }
-        
-#if defined(VERSION_ONE)
+
         Image imFont = { 0 };
         
         if (customFont)
@@ -1331,13 +1367,14 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             
             // Save font image data
             fprintf(txtFile, "// Font image pixels data\n");
-            fprintf(txtFile, "static unsigned char imFontData[%i] = { ", imFontSize);
+            fprintf(txtFile, "// NOTE: 2 bytes per pixel, GRAY + ALPHA channels\n");
+            fprintf(txtFile, "static unsigned char %sFontImageData[%i] = { ", styleName, imFontSize);
             for (int i = 0; i < imFontSize - 1; i++) fprintf(txtFile, ((i%BYTES_TEXT_PER_LINE == 0)? "0x%02x,\n    " : "0x%02x, "), ((unsigned char *)imFont.data)[i]);
             fprintf(txtFile, "0x%02x };\n\n", ((unsigned char *)imFont.data)[imFontSize - 1]);
 
             // Save font recs data
             fprintf(txtFile, "// Font characters rectangles data\n");
-            fprintf(txtFile, "static const Rectangle fontRecs[%i] = {\n", font.charsCount);
+            fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleName, font.charsCount);
             for (int i = 0; i < font.charsCount; i++) 
             {
                 fprintf(txtFile, "    { %1.0f, %1.0f, %1.0f , %1.0f },\n", font.recs[i].x, font.recs[i].y, font.recs[i].width, font.recs[i].height);
@@ -1348,7 +1385,8 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // NOTE: Characters Image data not saved (grayscale pixels), 
             // it could be generated from image and recs
             fprintf(txtFile, "// Font characters info data\n");
-            fprintf(txtFile, "static const CharInfo fontChars[%i] = {\n", font.charsCount);
+            fprintf(txtFile, "// NOTE: No chars.image data provided\n");
+            fprintf(txtFile, "static const CharInfo %sFontChars[%i] = {\n", styleName, font.charsCount);
             for (int i = 0; i < font.charsCount; i++) 
             {
                 fprintf(txtFile, "    { %i, %i, %i, %i, { 0 }},\n", font.chars[i].value, font.chars[i].offsetX, font.chars[i].offsetY, font.chars[i].advanceX);
@@ -1357,8 +1395,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             
             UnloadImage(imFont);
         }
-#endif
-        
+
         fprintf(txtFile, "// Style loading function: %s\n", styleName);
         fprintf(txtFile, "static void GuiLoadStyle%s(void)\n{\n", TextToPascal(styleName));
         fprintf(txtFile, "    // Load an populate global default style\n");
@@ -1380,11 +1417,10 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             }
         }
 
-#if defined(VERSION_ONE)
         if (customFont)
         {
             fprintf(txtFile, "\n    // Custom font loading\n");
-            fprintf(txtFile, "    Image imFont = { imFontData, %i, %i, 1, %i };\n\n", imFont.width, imFont.height, imFont.format);
+            fprintf(txtFile, "    Image imFont = { %sFontImageData, %i, %i, 1, %i };\n\n", styleName, imFont.width, imFont.height, imFont.format);
             fprintf(txtFile, "    Font font = { 0 };\n");
             fprintf(txtFile, "    font.baseSize = %i;\n", GuiGetStyle(DEFAULT, TEXT_SIZE));
             fprintf(txtFile, "    font.charsCount = %i;\n\n", font.charsCount);
@@ -1395,16 +1431,26 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
             fprintf(txtFile, "    font.recs = (Rectangle *)malloc(font.charsCount*sizeof(Rectangle));\n");
-            fprintf(txtFile, "    memcpy(font.recs, fontRecs, font.charsCount*sizeof(Rectangle));\n\n");
+            fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.charsCount*sizeof(Rectangle));\n\n", styleName);
             
             fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
             fprintf(txtFile, "    font.chars = (CharInfo *)malloc(font.charsCount*sizeof(CharInfo));\n");
-            fprintf(txtFile, "    memcpy(font.chars, fontChars, font.charsCount*sizeof(CharInfo));\n\n");
+            fprintf(txtFile, "    memcpy(font.chars, %sFontChars, font.charsCount*sizeof(CharInfo));\n\n", styleName);
             
-            fprintf(txtFile, "    GuiSetFont(font);\n");
+            fprintf(txtFile, "    GuiSetFont(font);\n\n");
+            
+            fprintf(txtFile, "    // TODO: Setup a white rectangle on the font to be used on shapes drawing,\n");
+            fprintf(txtFile, "    // this way we make sure all gui can be drawn on a single pass because no texture cahnge is required\n");
+            fprintf(txtFile, "    // NOTE: Setting up this rectangle is a manual process (for the moment)\n");
+            fprintf(txtFile, "    //Rectangle whiteChar = { 0, 0, 0, 0 };\n");
+            fprintf(txtFile, "    //SetShapesTexture(font.texture, whiteChar);\n\n");
         }
-#endif
+        
+        fprintf(txtFile, "    //-----------------------------------------------------------------\n\n");
+        fprintf(txtFile, "    // TODO: Custom user style setup: Set specific properties here (if required)\n");
+        fprintf(txtFile, "    // i.e. Controls specific BORDER_WIDTH, TEXT_PADDING, TEXT_ALIGNMENT\n");
+
         fprintf(txtFile, "}\n");
         
         fclose(txtFile);
