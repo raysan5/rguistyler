@@ -51,9 +51,8 @@
 #define GUI_WINDOW_ABOUT_IMPLEMENTATION
 #include "gui_window_about.h"               // GUI: About Window
 
-#if !defined(PLATFORM_WEB) && !defined(PLATFORM_ANDROID)
-    #include "external/tinyfiledialogs.h"   // Required for: Native open/save file dialogs
-#endif
+#define GUI_FILE_DIALOGS_IMPLEMENTATION
+#include "gui_file_dialogs.h"               // GUI: File Dialogs
 
 #include <stdlib.h>                         // Required for: malloc(), free()
 #include <string.h>                         // Required for: strcmp()
@@ -81,15 +80,6 @@ typedef enum {
     STYLE_BINARY,           // Style binary file (.rgs)
     STYLE_AS_CODE           // Style as (ready-to-use) code (.h)
 } GuiStyleFileType;
-
-// Dialog type
-typedef enum DialogType {
-    DIALOG_OPEN = 0,
-    DIALOG_SAVE,
-    DIALOG_MESSAGE,
-    DIALOG_TEXTINPUT,
-    DIALOG_OTHER
-} DialogType;
 
 //----------------------------------------------------------------------------------
 // Global Variables Definition
@@ -173,12 +163,6 @@ static Image GenImageStyleControlsTable(const char *styleName); // Draw controls
 // Auxiliar functions
 static int StyleChangesCounter(void);                       // Count changed properties in current style
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
-
-// Multiplatform file dialogs
-// NOTE 1: fileName parameters is used to display and store selected file name
-// NOTE 2: Value returned is the operation result, on custom dialogs represents button option pressed
-// NOTE 3: filters and message are used for buttons and dialog messages on DIALOG_MESSAGE and DIALOG_TEXTINPUT
-static int GuiFileDialog(int dialogType, const char *title, char *fileName, const char *filters, const char *message);
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -529,33 +513,17 @@ int main(int argc, char *argv[])
             }
 
             // Update control property
-            // NOTE: In case DEFAULT control selected, we propagate changes to all controls
             if (currentSelectedProperty <= TEXT_COLOR_DISABLED)
             {
-                if (currentSelectedControl == DEFAULT) 
-                {
-                    GuiSetStyle(0, currentSelectedProperty, ColorToInt(colorPickerValue));
-                    for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, ColorToInt(colorPickerValue));
-                }
-                else GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
+                GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
             }
             else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == TEXT_PADDING))
             {
-                if (currentSelectedControl == DEFAULT) 
-                {
-                    GuiSetStyle(0, currentSelectedProperty, propertyValue);
-                    for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, propertyValue);
-                }
-                else GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
+                GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
             }
             else if (currentSelectedProperty == TEXT_ALIGNMENT)
             {
-                if (currentSelectedControl == DEFAULT) 
-                {
-                    GuiSetStyle(0, currentSelectedProperty, textAlignmentActive);
-                    for (int i = 1; i < NUM_CONTROLS; i++) GuiSetStyle(i, currentSelectedProperty, textAlignmentActive);
-                }
-                else GuiSetStyle(currentSelectedControl, currentSelectedProperty, textAlignmentActive);
+                GuiSetStyle(currentSelectedControl, currentSelectedProperty, textAlignmentActive);
             }
         }
 
@@ -1311,21 +1279,36 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
-        // TODO: Export only properties that change from default style
-        // Probably using an array of integers won't be enough, it would require and structure more aligned with
-        // .rgs text data information: struct Property { int controlId; int propertyId, int propertyValue; }
-        // Remove GuiLoadStyleProps(), it's a very bad design!
-        
-        fprintf(txtFile, "#define %s_STYLE_PROPS_COUNT  %i\n\n", TextToUpper(styleName), CHANGED_PROPS);
+        // Export only properties that change from default style
+        fprintf(txtFile, "#define %s_STYLE_PROPS_COUNT  %i\n\n", TextToUpper(styleName), StyleChangesCounter());
         
         // Write byte data as hexadecimal text
         fprintf(txtFile, "// Custom style name: %s\n", styleName);
         fprintf(txtFile, "static const GuiStyleProp %sStyleProps[%s_STYLE_PROPS_COUNT] = {\n", styleName, TextToUpper(styleName));
+
+        // Count all properties that have changed in default style
         for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
         {
-            if (i < NUM_PROPS_DEFAULT) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
-            else fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsExText[i - NUM_PROPS_DEFAULT]);
+            if (styleBackup[i] != GuiGetStyle(0, i))
+            {
+                if (i < NUM_PROPS_DEFAULT) fprintf(txtFile, "    { 0, %i, 0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsText[i]);
+                else fprintf(txtFile, "    { 0, %i, 0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsExText[i - NUM_PROPS_DEFAULT]);
+            }
         }
+    
+        // Add to count all properties that have changed in comparison to default style
+        for (int i = 1; i < NUM_CONTROLS; i++)
+        {
+            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
+            {
+                if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+                {
+                    if (j < NUM_PROPS_DEFAULT) fprintf(txtFile, "    { %i, %i, 0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
+                    else fprintf(txtFile, "    { %i, %i, 0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], TextFormat("EXTENDED%02i", j - NUM_PROPS_DEFAULT + 1));
+                }
+            }
+        }
+
         fprintf(txtFile, "};\n\n");
         
         if (customFont)
@@ -1384,22 +1367,8 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "static void GuiLoadStyle%s(void)\n{\n", TextToPascal(styleName));
         fprintf(txtFile, "    // Load style properties provided\n");
         fprintf(txtFile, "    // NOTE: Default properties are propagated\n");
-        fprintf(txtFile, "for (int i = 0; i < %s_STYLE_PROPS_COUNT; i++)\n{\n", TextToUpper(styleName)); 
-        fprintf(txtFile, "GuiSetStyle(%sStyleProps[i].controlId, %sStyleProps[i].propertyId, %sStyleProps[i].propertyValue);\n}\n\n", styleName, styleName, styleName);
-
-        // Check all properties that have changed in comparison to default style
-        // and add custom style sets for those properties
-        for (int i = 1; i < NUM_CONTROLS; i++)
-        {
-            for (int j = 0; j < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); j++)
-            {
-                if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
-                {
-                    if (j < NUM_PROPS_DEFAULT) fprintf(txtFile, "    GuiSetStyle(%s, %s, 0x%08x);\n", guiControlText[i], guiPropsText[j], GuiGetStyle(i, j));
-                    else fprintf(txtFile, "    GuiSetStyle(%s, %i, 0x%08x); // %s_%s\n", guiControlText[i], j, GuiGetStyle(i, j), guiControlText[i], FormatText("EXT%02i", (j - NUM_PROPS_EXTENDED + 1)));
-                }
-            }
-        }
+        fprintf(txtFile, "    for (int i = 0; i < %s_STYLE_PROPS_COUNT; i++)\n    {\n", TextToUpper(styleName)); 
+        fprintf(txtFile, "        GuiSetStyle(%sStyleProps[i].controlId, %sStyleProps[i].propertyId, %sStyleProps[i].propertyValue);\n    }\n\n", styleName, styleName, styleName);
 
         if (customFont)
         {
@@ -1658,52 +1627,6 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
     DrawRectangleLinesEx(bounds, 1, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL)));
 
     return color;
-}
-
-// Multiplatform file dialogs
-static int GuiFileDialog(int dialogType, const char *title, char *fileName, const char *filters, const char *message)
-{
-    int result = -1;
-
-#if defined(CUSTOM_MODAL_DIALOGS)
-    static char tempFileName[256] = { 0 };
-    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
-
-    switch (dialogType)
-    {
-        case DIALOG_OPEN: /* TODO: Load file modal dialog */ break;
-        case DIALOG_SAVE: /* TODO: Load file modal dialog */ break;
-        case DIALOG_MESSAGE: result = GuiMessageBox((Rectangle){ GetScreenWidth()/2 - 120, GetScreenHeight()/2 - 60, 240, 120 }, GuiIconText(RICON_FILE_OPEN, title), message, filters); break;
-        case DIALOG_TEXTINPUT: result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 120, GetScreenHeight()/2 - 60, 240, 120 }, GuiIconText(RICON_FILE_SAVE, title), message, filters, tempFileName); break;
-        default: break;
-    }
-    
-    if ((result == 1) && (tempFileName[0] != '\0')) strcpy(fileName, tempFileName);
-    
-#else   // Use native OS dialogs (tinyfiledialogs)
-
-    const char *tempFileName = NULL;
-    int filterCount = 0;
-    const char **filterSplit = TextSplit(filters, ';', &filterCount);
-    
-    switch (dialogType)
-    {
-        case DIALOG_OPEN: tempFileName = tinyfd_openFileDialog(title, fileName, filterCount, filterSplit, message, 0); break;
-        case DIALOG_SAVE: tempFileName = tinyfd_saveFileDialog(title, fileName, filterCount, filterSplit, message); break;
-        case DIALOG_MESSAGE: result = tinyfd_messageBox(title, message, "ok", "info", 0); break;
-        case DIALOG_TEXTINPUT: tempFileName = tinyfd_inputBox(title, message, ""); break;
-        default: break;
-    }
-
-    if (tempFileName != NULL) 
-    {
-        strcpy(fileName, tempFileName);
-        result = 1;
-    }
-    else result = 0;
-#endif
-
-    return result;
 }
 
 #if 0
