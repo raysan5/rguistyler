@@ -11,7 +11,7 @@
 *
 *   LICENSE: Propietary License
 *
-*   Copyright (c) 2018 raylib technologies (@raylibtech). All Rights Reserved.
+*   Copyright (c) 2019 raylib technologies (@raylibtech). All Rights Reserved.
 *
 *   Unauthorized copying of this file, via any medium is strictly prohibited
 *   This project is proprietary and confidential unless the owner allows
