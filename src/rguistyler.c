@@ -90,14 +90,7 @@ typedef enum DialogType {
     DIALOG_TEXTINPUT,
     DIALOG_OTHER
 } DialogType;
-/*
-// Style property
-typedef struct StyleProp {
-    int controlId;
-    int propertyId;
-    int propertyValue;
-} StyleProp;
-*/
+
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
@@ -1323,9 +1316,11 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         // .rgs text data information: struct Property { int controlId; int propertyId, int propertyValue; }
         // Remove GuiLoadStyleProps(), it's a very bad design!
         
+        fprintf(txtFile, "#define %s_STYLE_PROPS_COUNT  %i\n\n", TextToUpper(styleName), CHANGED_PROPS);
+        
         // Write byte data as hexadecimal text
-        fprintf(txtFile, "// Custom style palette: %s\n", styleName);
-        fprintf(txtFile, "static const int style%s[%i] = {\n", TextToPascal(styleName), NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED);
+        fprintf(txtFile, "// Custom style name: %s\n", styleName);
+        fprintf(txtFile, "static const GuiStyleProp %sStyleProps[%s_STYLE_PROPS_COUNT] = {\n", styleName, TextToUpper(styleName));
         for (int i = 0; i < (NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED); i++)
         {
             if (i < NUM_PROPS_DEFAULT) fprintf(txtFile, "    0x%08x,    // DEFAULT_%s \n", GuiGetStyle(DEFAULT, i), guiPropsText[i]);
@@ -1387,11 +1382,11 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
         fprintf(txtFile, "// Style loading function: %s\n", styleName);
         fprintf(txtFile, "static void GuiLoadStyle%s(void)\n{\n", TextToPascal(styleName));
-        fprintf(txtFile, "    // Load an populate global default style\n");
-        fprintf(txtFile, "    GuiLoadStyleProps(style%s, 20);\n", TextToPascal(styleName));
-        fprintf(txtFile, "    GuiUpdateStyleComplete();\n\n");
-        fprintf(txtFile, "    // Set additional style properties (if required)\n");
-        
+        fprintf(txtFile, "    // Load style properties provided\n");
+        fprintf(txtFile, "    // NOTE: Default properties are propagated\n");
+        fprintf(txtFile, "for (int i = 0; i < %s_STYLE_PROPS_COUNT; i++)\n{\n", TextToUpper(styleName)); 
+        fprintf(txtFile, "GuiSetStyle(%sStyleProps[i].controlId, %sStyleProps[i].propertyId, %sStyleProps[i].propertyValue);\n}\n\n", styleName, styleName, styleName);
+
         // Check all properties that have changed in comparison to default style
         // and add custom style sets for those properties
         for (int i = 1; i < NUM_CONTROLS; i++)
