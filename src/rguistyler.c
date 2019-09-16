@@ -1328,17 +1328,30 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
             #define BYTES_TEXT_PER_LINE     20
             
-            // TODO: Compress font image data
-            // Image data is usually Grayscale + Alpha that can be reduced to Grayscale and 
-            // greatly compressed just using a simple RLE algorythm 
+#define SUPPORT_COMPRESSED_FONT
+#if defined(SUPPORT_COMPRESSED_FONT)
+            // Image data is usually GRAYSCALE + ALPHA and can be reduced to GRAYSCALE
+            //ImageFormat(&imFont, UNCOMPRESSED_GRAYSCALE);
             
-            // Save font image data
+            // Compress font image data
+            int compDataSize = 0;
+            unsigned char *compData = CompressData(imFont.data, imFontSize, &compDataSize);
+            
+            // Save font image data (compressed)
+            fprintf(txtFile, "#define %s_COMPRESSED_DATA_SIZE %i\n\n", TextToUpper(styleName), compDataSize);
+            fprintf(txtFile, "// Font image pixels data compressed (DEFLATE)\n");
+            fprintf(txtFile, "// NOTE: Original pixel data simplified to GRAYSCALE\n");
+            fprintf(txtFile, "static unsigned char %sFontData[%s_COMPRESSED_DATA_SIZE] = { ", styleName, TextToUpper(styleName));
+            for (int i = 0; i < compDataSize - 1; i++) fprintf(txtFile, ((i%BYTES_TEXT_PER_LINE == 0)? "0x%02x,\n    " : "0x%02x, "), compData[i]);
+            fprintf(txtFile, "0x%02x };\n\n", compData[compDataSize - 1]);
+#else
+            // Save font image data (uncompressed)
             fprintf(txtFile, "// Font image pixels data\n");
             fprintf(txtFile, "// NOTE: 2 bytes per pixel, GRAY + ALPHA channels\n");
             fprintf(txtFile, "static unsigned char %sFontImageData[%i] = { ", styleName, imFontSize);
             for (int i = 0; i < imFontSize - 1; i++) fprintf(txtFile, ((i%BYTES_TEXT_PER_LINE == 0)? "0x%02x,\n    " : "0x%02x, "), ((unsigned char *)imFont.data)[i]);
             fprintf(txtFile, "0x%02x };\n\n", ((unsigned char *)imFont.data)[imFontSize - 1]);
-
+#endif
             // Save font recs data
             fprintf(txtFile, "// Font characters rectangles data\n");
             fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleName, font.charsCount);
@@ -1372,7 +1385,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
         if (customFont)
         {
-            fprintf(txtFile, "\n    // Custom font loading\n");
+            fprintf(txtFile, "    // Custom font loading\n");
             fprintf(txtFile, "    Image imFont = { %sFontImageData, %i, %i, 1, %i };\n\n", styleName, imFont.width, imFont.height, imFont.format);
             fprintf(txtFile, "    Font font = { 0 };\n");
             fprintf(txtFile, "    font.baseSize = %i;\n", GuiGetStyle(DEFAULT, TEXT_SIZE));
