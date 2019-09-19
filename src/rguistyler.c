@@ -1386,14 +1386,22 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         if (customFont)
         {
             fprintf(txtFile, "    // Custom font loading\n");
+#if defined(SUPPORT_COMPRESSED_FONT)
+            fprintf(txtFile, "    // NOTE: Compressed font image data (DEFLATE), it requires DecompressData() function
+            fprintf(txtFile, "    int %sFontDataSize = 0;\n", styleName);
+            fprintf(txtFile, "    unsigned char *data = DecompressData(%sFontData, %s_COMPRESSED_DATA_SIZE, &%sFontDataSize);\n", styleName, TextToUpper(styleName), styleName);
+            fprintf(txtFile, "    Image imFont = { data, %i, %i, 1, %i };\n\n", imFont.width, imFont.height, imFont.format);
+            //fprintf(txtFile, "    ImageFormat(&imFont, UNCOMPRESSED_GRAY_ALPHA);
+#else
             fprintf(txtFile, "    Image imFont = { %sFontImageData, %i, %i, 1, %i };\n\n", styleName, imFont.width, imFont.height, imFont.format);
+#endif
             fprintf(txtFile, "    Font font = { 0 };\n");
             fprintf(txtFile, "    font.baseSize = %i;\n", GuiGetStyle(DEFAULT, TEXT_SIZE));
             fprintf(txtFile, "    font.charsCount = %i;\n\n", font.charsCount);
-    
+
             fprintf(txtFile, "    // Load texture from image\n");
             fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n\n");
-    
+
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
             fprintf(txtFile, "    font.recs = (Rectangle *)malloc(font.charsCount*sizeof(Rectangle));\n");
