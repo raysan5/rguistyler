@@ -1387,7 +1387,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         {
             fprintf(txtFile, "    // Custom font loading\n");
 #if defined(SUPPORT_COMPRESSED_FONT)
-            fprintf(txtFile, "    // NOTE: Compressed font image data (DEFLATE), it requires DecompressData() function
+            fprintf(txtFile, "    // NOTE: Compressed font image data (DEFLATE), it requires DecompressData() function\n");
             fprintf(txtFile, "    int %sFontDataSize = 0;\n", styleName);
             fprintf(txtFile, "    unsigned char *data = DecompressData(%sFontData, %s_COMPRESSED_DATA_SIZE, &%sFontDataSize);\n", styleName, TextToUpper(styleName), styleName);
             fprintf(txtFile, "    Image imFont = { data, %i, %i, 1, %i };\n\n", imFont.width, imFont.height, imFont.format);
