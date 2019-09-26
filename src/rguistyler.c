@@ -920,8 +920,9 @@ static void ShowCommandLineInfo(void)
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
     printf("// %s v%s ONE - %s             //\n", toolName, toolVersion, toolDescription);
-    printf("// powered by raylib v2.4 (www.raylib.com) and raygui v2.0                      //\n");
-    printf("// more info and bugs-report: github.com/raysan5/rguistyler                     //\n");
+    printf("// powered by raylib v2.6 (www.raylib.com) and raygui v2.6                      //\n");
+    printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
+    printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
     printf("// Copyright (c) 2017-2019 raylib technologies (@raylibtech)                    //\n");
     printf("//                                                                              //\n");
