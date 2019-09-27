@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
     bool selectingColor = false;
     
     // Load dropped file if provided
-    if (inFileName[0] != '\0') 
+    if ((inFileName[0] != '\0') && (IsFileExtension(inFileName, ".rgs")))
     {
         GuiLoadStyle(inFileName);
         SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
