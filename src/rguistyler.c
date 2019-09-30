@@ -278,6 +278,9 @@ int main(int argc, char *argv[])
     bool windowControlsActive = true;
     bool propertyValueEditMode = false;
     int propertyValue = 0;
+    
+    bool hiDpiActive = false;
+    bool prevHiDpiActive = hiDpiActive;
 
     Color colorPickerValue = RED;
     bool textHexColorEditMode = false;
@@ -589,21 +592,23 @@ int main(int argc, char *argv[])
         
         // Screen scale logic (x2)
         //----------------------------------------------------------------------------------
-        
-        // TODO: Use an interface button -> main bar?
-        if (IsKeyPressed(KEY_ONE))
+        if (hiDpiActive != prevHiDpiActive)
         {
-            screenScale = 1;
-            SetWindowSize(screenWidth, screenHeight);
-            SetMouseScale(1.0f, 1.0f);
+            if (hiDpiActive)
+            {
+                screenScale = 2;
+                SetWindowSize(screenWidth*2, screenHeight*2);
+                SetMouseScale(0.5f, 0.5f);
+            }
+            else
+            {
+                screenScale = 1;
+                SetWindowSize(screenWidth, screenHeight);
+                SetMouseScale(1.0f, 1.0f);
+            }
+            
+            prevHiDpiActive = hiDpiActive;
         }
-        else if (IsKeyPressed(KEY_TWO))
-        {
-            screenScale = 2;
-            SetWindowSize(screenWidth*2, screenHeight*2);
-            SetMouseScale(0.5f, 0.5f);
-        }
-        
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -631,6 +636,7 @@ int main(int argc, char *argv[])
             viewStyleTableActive = GuiToggle((Rectangle){ 345, 10, 30, 30 }, "#101#", viewStyleTableActive);
             viewFontActive = GuiToggle((Rectangle){ 380, 10, 30, 30 }, "#31#", viewFontActive);
             windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
+            hiDpiActive = GuiToggle((Rectangle){ 450, 10, 30, 30 }, "#199#", hiDpiActive);
 
             // NOTE: Supporting custom gui state set makes a bit difficult to disable all gui on WindowAbout,
             // tried different options and allowing direct state change is the less problematic,
