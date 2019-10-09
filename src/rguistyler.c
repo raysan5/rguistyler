@@ -1024,7 +1024,7 @@ static void ProcessCommandLine(int argc, char *argv[])
     if (inFileName[0] != '\0')
     {
         // Set a default name for output in case not provided
-        if (outFileName[0] == '\0') strcpy(outFileName, "output.ext");
+        if (outFileName[0] == '\0') strcpy(outFileName, "output");
 
         printf("\nInput file:       %s", inFileName);
         printf("\nOutput file:      %s", outFileName);
