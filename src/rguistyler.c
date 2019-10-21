@@ -444,12 +444,12 @@ int main(int argc, char *argv[])
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) showExportFileDialog = true;
 
         // Show window: about
-        if (IsKeyPressed(KEY_F1)) windowAboutState.windowAboutActive = true;
+        if (IsKeyPressed(KEY_F1)) windowAboutState.windowActive = true;
 
         // Show closing window on ESC
         if (IsKeyPressed(KEY_ESCAPE))
         {
-            if (windowAboutState.windowAboutActive) windowAboutState.windowAboutActive = false;
+            if (windowAboutState.windowActive) windowAboutState.windowActive = false;
             else if (changedPropsCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
         }
@@ -619,7 +619,7 @@ int main(int argc, char *argv[])
             BeginTextureMode(screenTarget);
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
-            if (windowAboutState.windowAboutActive || windowExitActive) GuiDisable();
+            if (windowAboutState.windowActive || windowExitActive) GuiDisable();
             else GuiEnable();
 
             // Main GUI
@@ -629,7 +629,7 @@ int main(int argc, char *argv[])
             GuiPanel((Rectangle){ 0, 0, 740, 50 });
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
             if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) showSaveFileDialog = true;
-            if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowAboutActive = true;
+            if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowActive = true;
 
             if (GuiTextBox((Rectangle){ 155, 10, 180, 30 }, styleNameText, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
@@ -650,7 +650,7 @@ int main(int argc, char *argv[])
 
             if ((currentSelectedControl == -1) && (propsStateActive == 0)) GuiDisable();
             currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, NUM_PROPS_DEFAULT - 1, NULL, NULL, currentSelectedProperty);
-            if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowAboutActive || windowExitActive)) GuiEnable();
+            if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowActive || windowExitActive)) GuiEnable();
 
             if (windowControlsActive)
             {
@@ -661,7 +661,7 @@ int main(int argc, char *argv[])
                 if ((currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH) && (propsStateActive == 0)) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, propertyValue, 0, 20);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-                if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowAboutActive || windowExitActive)) GuiEnable();
+                if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowActive || windowExitActive)) GuiEnable();
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
@@ -690,7 +690,7 @@ int main(int argc, char *argv[])
                 if ((currentSelectedProperty != TEXT_ALIGNMENT) && (propsStateActive == 0)) GuiDisable();
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 25 }, "Text Alignment:");
                 textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 85, 25 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
-                if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowAboutActive || windowExitActive)) GuiEnable();
+                if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowActive || windowExitActive)) GuiEnable();
 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) showLoadFontFileDialog = true;

@@ -177,7 +177,6 @@ void GuiWindowAbout(GuiWindowAboutState *state)
         GuiEnable();
         
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
-        state->position = (Vector2){ GetScreenWidth()/2 - state->windowWidth/2, GetScreenHeight()/2 - state->windowHeight/2 };
         
         state->windowAboutActive = !GuiWindowBox((Rectangle){ state->position.x + 0, state->position.y + 0, state->windowWidth, state->windowHeight }, FormatText("%s %s", windowAboutText, mode));
 
