@@ -968,7 +968,7 @@ static void ProcessCommandLine(int argc, char *argv[])
     char outFileName[256] = { 0 };      // Output file name
     int outputFormat = STYLE_BINARY;    // Formats: STYLE_TEXT, STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
 
-    // Arguments scan and processing
+    // Process command line arguments
     for (int i = 1; i < argc; i++)
     {
         if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0))
