@@ -1014,6 +1014,8 @@ static void ProcessCommandLine(int argc, char *argv[])
                 int format = atoi(argv[i + 1]);
 
                 if ((format >= 0) && (format <= 3)) outputFormat = format;
+                
+                i++;
             }
             else printf("WARNING: Format parameters provided not valid\n");
         }
