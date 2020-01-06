@@ -930,7 +930,7 @@ static void ShowCommandLineInfo(void)
     printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
     printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
-    printf("// Copyright (c) 2017-2019 raylib technologies (@raylibtech)                    //\n");
+    printf("// Copyright (c) 2017-2020 raylib technologies (@raylibtech)                    //\n");
     printf("//                                                                              //\n");
     printf("//////////////////////////////////////////////////////////////////////////////////\n\n");
 
@@ -1284,7 +1284,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/raygui                        //\n");
         fprintf(txtFile, "// feedback and support:       ray[at]raylibtech.com                            //\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// Copyright (c) 2019 raylib technologies (@raylibtech)                         //\n");
+        fprintf(txtFile, "// Copyright (c) 2020 raylib technologies (@raylibtech)                         //\n");
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
