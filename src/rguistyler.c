@@ -1011,7 +1011,7 @@ static void ProcessCommandLine(int argc, char *argv[])
             // Check for valid argumment and valid parameters
             if (((i + 1) < argc) && (argv[i + 1][0] != '-'))
             {
-                int format = atoi(argv[i + 1]);
+                int format = TextToInteger(argv[i + 1]);
 
                 if ((format >= 0) && (format <= 3)) outputFormat = format;
 
