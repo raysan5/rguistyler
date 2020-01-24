@@ -1037,8 +1037,8 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_TEXT: SaveStyle(FormatText("%s%s", outFileName, ".rgsb"), outputFormat); break;
-            case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgs"), outputFormat); break;
+            case STYLE_TEXT: SaveStyle(FormatText("%s%s", outFileName, ".rgs"), outputFormat); break;
+            case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgsb"), outputFormat); break;
             case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
             {
