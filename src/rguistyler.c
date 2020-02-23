@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v3.1 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v3.2 - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
 *
@@ -12,9 +12,9 @@
 *       NOTE: Avoids including tinyfiledialogs depencency library
 *
 *   DEPENDENCIES:
-*       raylib 2.6-dev          - Windowing/input management and drawing.
-*       raygui 2.6              - Immediate-mode GUI controls.
-*       tinyfiledialogs 3.3.9   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
+*       raylib 3.0              - Windowing/input management and drawing.
+*       raygui 2.7              - Immediate-mode GUI controls.
+*       tinyfiledialogs 3.4.3   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
 *   COMPILATION (Windows - MinGW):
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99
@@ -42,8 +42,13 @@
 
 #include "raylib.h"
 
+#if defined(PLATFORM_WEB)
+    #define CUSTOM_MODAL_DIALOGS            // Force custom modal dialogs usage
+    #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
+#endif
+
 #define RAYGUI_IMPLEMENTATION
-#define RAYGUI_SUPPORT_RICONS
+#define RAYGUI_SUPPORT_ICONS
 #include "external/raygui.h"                // Required for: IMGUI controls
 
 #undef RAYGUI_IMPLEMENTATION                // Avoid including raygui implementation again
@@ -62,7 +67,7 @@
 // Defines and Macros
 //----------------------------------------------------------------------------------
 const char *toolName = "rGuiStyler";
-const char *toolVersion = "3.1";
+const char *toolVersion = "3.2";
 const char *toolDescription = "A simple and easy-to-use raygui styles editor";
 
 #if (!defined(DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
@@ -486,7 +491,7 @@ int main(int argc, char *argv[])
         if (changedPropsCounter > 0) saveChangesRequired = true;
 
         // Reload font to new size if required
-        if (fontFileProvided && !genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath != NULL))
+        if (fontFileProvided && !genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath[0] != '\0'))
         {
             UnloadFont(font);
             font = LoadFontEx(fontFilePath, genFontSizeValue, NULL, 0);
@@ -614,6 +619,7 @@ int main(int argc, char *argv[])
         // Draw
         //----------------------------------------------------------------------------------
         BeginDrawing();
+            ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
             // Render all screen to a texture (for scaling)
             BeginTextureMode(screenTarget);
@@ -636,8 +642,11 @@ int main(int argc, char *argv[])
             viewStyleTableActive = GuiToggle((Rectangle){ 345, 10, 30, 30 }, "#101#", viewStyleTableActive);
             viewFontActive = GuiToggle((Rectangle){ 380, 10, 30, 30 }, "#31#", viewFontActive);
             windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
+#if defined(PLATFORM_WEB)
+            if (GuiButton((Rectangle){ 450, 10, 30, 30 }, "#53#")) ToggleFullscreen();
+#else
             hiDpiActive = GuiToggle((Rectangle){ 450, 10, 30, 30 }, "#199#", hiDpiActive);
-
+#endif
             // NOTE: Supporting custom gui state set makes a bit difficult to disable all gui on WindowAbout,
             // tried different options and allowing direct state change is the less problematic,
             // left other tests commented just in case
@@ -839,7 +848,7 @@ int main(int argc, char *argv[])
                 #if defined(PLATFORM_WEB)
                     // Download file from MEMFS (emscripten memory filesystem)
                     // NOTE: Second argument must be a simple filename (we can't use directories)
-                    emscripten_run_script(TextFormat("SaveFileFromMEMFSToDisk('%s','%s')", outFileName, GetFileName(outFileName)));
+                    emscripten_run_script(TextFormat("saveFileFromMEMFSToDisk('%s','%s')", outFileName, GetFileName(outFileName)));
                 #endif
                 }
 
@@ -874,22 +883,38 @@ int main(int argc, char *argv[])
                     // Export file: outFileName
                     switch (exportFormatActive)
                     {
-                        case STYLE_TEXT: SaveStyle(outFileName, STYLE_TEXT); break;
-                        case STYLE_BINARY: SaveStyle(outFileName, STYLE_BINARY); break;
-                        case STYLE_AS_CODE: ExportStyleAsCode(outFileName, styleNameText); break;
+                        case STYLE_TEXT: 
+                        {
+                            // Check for valid extension and make sure it is
+                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+                            SaveStyle(outFileName, STYLE_TEXT); 
+                        } break;
+                        case STYLE_BINARY:
+                        {
+                            // Check for valid extension and make sure it is
+                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+                            SaveStyle(outFileName, STYLE_BINARY);
+                        } break;
+                        case STYLE_AS_CODE:
+                        {
+                            // Check for valid extension and make sure it is
+                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".h")) strcat(outFileName, ".h\0");
+                            ExportStyleAsCode(outFileName, styleNameText);
+                        } break;
                         case STYLE_TABLE_IMAGE:
                         {
+                            // Check for valid extension and make sure it is
+                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
                             Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                             ExportImage(imStyleTable, outFileName);
                             UnloadImage(imStyleTable);
                         } break;
                         default: break;
                     }
-
                 #if defined(PLATFORM_WEB)
                     // Download file from MEMFS (emscripten memory filesystem)
                     // NOTE: Second argument must be a simple filename (we can't use directories)
-                    emscripten_run_script(TextFormat("SaveFileFromMEMFSToDisk('%s','%s')", outFileName, GetFileName(outFileName)));
+                    emscripten_run_script(TextFormat("saveFileFromMEMFSToDisk('%s','%s')", outFileName, GetFileName(outFileName)));
                 #endif
                 }
 
@@ -1331,6 +1356,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         if (customFont)
         {
             // Support font export and initialization
+            // NOTE: This mechanism is highly coupled to raylib
             // NOTE: This mechanism is highly coupled to raylib
             imFont = GetTextureData(font.texture);
             int imFontSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
