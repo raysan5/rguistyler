@@ -840,7 +840,7 @@ int main(int argc, char *argv[])
                 {
                     // Save file: outFileName
                     // Check for valid extension and make sure it is
-                    if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+                    if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
 
                     // Save style file (text or binary)
                     SaveStyle(outFileName, STYLE_TEXT);
@@ -886,25 +886,25 @@ int main(int argc, char *argv[])
                         case STYLE_TEXT: 
                         {
                             // Check for valid extension and make sure it is
-                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+                            if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
                             SaveStyle(outFileName, STYLE_TEXT); 
                         } break;
                         case STYLE_BINARY:
                         {
                             // Check for valid extension and make sure it is
-                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+                            if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
                             SaveStyle(outFileName, STYLE_BINARY);
                         } break;
                         case STYLE_AS_CODE:
                         {
                             // Check for valid extension and make sure it is
-                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".h")) strcat(outFileName, ".h\0");
+                            if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".h")) strcat(outFileName, ".h\0");
                             ExportStyleAsCode(outFileName, styleNameText);
                         } break;
                         case STYLE_TABLE_IMAGE:
                         {
                             // Check for valid extension and make sure it is
-                            if ((GetExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
+                            if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
                             Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                             ExportImage(imStyleTable, outFileName);
                             UnloadImage(imStyleTable);
