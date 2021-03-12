@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
     const int screenWidth = 740;
     const int screenHeight = 660;
 
-    InitWindow(screenWidth, screenHeight, FormatText("%s v%s - %s", toolName, toolVersion, toolDescription));
+    InitWindow(screenWidth, screenHeight, TextFormat("%s v%s - %s", toolName, toolVersion, toolDescription));
     SetExitKey(0);
 
     // General pourpose variables
@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
     if ((inFileName[0] != '\0') && (IsFileExtension(inFileName, ".rgs")))
     {
         GuiLoadStyle(inFileName);
-        SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+        SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
     }
     else
     {
@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
                 GuiLoadStyle(droppedFiles[0]);  // Load new style properties
 
                 strcpy(inFileName, droppedFiles[0]);
-                SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+                SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                 strcpy(styleNameText, GetFileNameWithoutExt(droppedFiles[0]));
 
                 genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
@@ -407,7 +407,7 @@ int main(int argc, char *argv[])
             GuiLoadStyle(stylesList[styleCounter]);  // Load new style properties
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
-            SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+            SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
             strcpy(styleNameText, GetFileNameWithoutExt(inFileName));
 
             genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
@@ -440,7 +440,7 @@ int main(int argc, char *argv[])
                 // TODO: Use same style type as loaded or previously saved
                 // ISSUE: Style is loaded by raygui, GuiLoadStyle() checks for format internally!
                 SaveStyle(inFileName, STYLE_TEXT);
-                SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+                SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                 saveChangesRequired = false;
             }
         }
@@ -468,7 +468,7 @@ int main(int argc, char *argv[])
             GuiLoadStyleDefault();
 
             memset(inFileName, 0, 512);
-            SetWindowTitle(FormatText("%s v%s", toolName, toolVersion));
+            SetWindowTitle(TextFormat("%s v%s", toolName, toolVersion));
             strcpy(styleNameText, "default");
             memset(fontFilePath, 0, 512);
             customFont = false;
@@ -676,13 +676,13 @@ int main(int argc, char *argv[])
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, FormatText("R:   %03i", colorPickerValue.r));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 20, 20 }, FormatText("G:   %03i", colorPickerValue.g));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 95, 20, 20 }, FormatText("B:   %03i", colorPickerValue.b));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, TextFormat("R:   %03i", colorPickerValue.r));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 20, 20 }, TextFormat("G:   %03i", colorPickerValue.g));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 95, 20, 20 }, TextFormat("B:   %03i", colorPickerValue.b));
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 125, 60, 55 }, "HSV");
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 130, 20, 20 }, FormatText("H:  %.0f", colorHSV.x));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 20, 20 }, FormatText("S:  %.0f%%", colorHSV.y*100));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 160, 20, 20 }, FormatText("V:  %.0f%%", colorHSV.z*100));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 130, 20, 20 }, TextFormat("H:  %.0f", colorHSV.x));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 20, 20 }, TextFormat("S:  %.0f%%", colorHSV.y*100));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 160, 20, 20 }, TextFormat("V:  %.0f%%", colorHSV.z*100));
 
                 if (GuiTextBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 275, 60, 20 }, hexColorText, 9, textHexColorEditMode))
                 {
@@ -717,10 +717,10 @@ int main(int argc, char *argv[])
             }
 
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
-            GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, FormatText("CHANGED PROPERTIES: %i", changedPropsCounter));
+            GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, TextFormat("CHANGED PROPERTIES: %i", changedPropsCounter));
 
-            if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
-            else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, FormatText("FONT: %s (%i x %i) - %i bytes", (customFont)? "style custom font" : "raylib default", font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
+            if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
+            else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFont)? "style custom font" : "raylib default", font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
 
             //if (GuiGetState() != GUI_STATE_DISABLED)
             GuiSetState(GUI_STATE_NORMAL);
@@ -782,7 +782,7 @@ int main(int argc, char *argv[])
                     // Load style
                     GuiLoadStyle(inFileName);
 
-                    SetWindowTitle(FormatText("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                     saveChangesRequired = false;
 
                     // Load .rgs custom font in font
@@ -1062,13 +1062,13 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_TEXT: SaveStyle(FormatText("%s%s", outFileName, ".rgs"), outputFormat); break;
-            case STYLE_BINARY: SaveStyle(FormatText("%s%s", outFileName, ".rgsb"), outputFormat); break;
-            case STYLE_AS_CODE: ExportStyleAsCode(FormatText("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
+            case STYLE_TEXT: SaveStyle(TextFormat("%s%s", outFileName, ".rgs"), outputFormat); break;
+            case STYLE_BINARY: SaveStyle(TextFormat("%s%s", outFileName, ".rgsb"), outputFormat); break;
+            case STYLE_AS_CODE: ExportStyleAsCode(TextFormat("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
             {
                 Image imStyleTable = GenImageStyleControlsTable(GetFileNameWithoutExt(outFileName));
-                ExportImage(imStyleTable, FormatText("%s%s", outFileName, ".png"));
+                ExportImage(imStyleTable, TextFormat("%s%s", outFileName, ".png"));
                 UnloadImage(imStyleTable);
             } break;
             default: break;
@@ -1114,7 +1114,7 @@ static bool SaveStyle(const char *fileName, int format)
                 if (styleBackup[j] != GuiGetStyle(0, j))
                 {
                     // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                    fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
+                    fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : TextFormat("EXT%02i", (j - NUM_PROPS_DEFAULT)));
                 }
             }
 
@@ -1127,7 +1127,7 @@ static bool SaveStyle(const char *fileName, int format)
                     if ((styleBackup[i*(NUM_PROPS_DEFAULT + NUM_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
                     {
                         // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                        fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : FormatText("EXT%02i", (j - NUM_PROPS_DEFAULT)));
+                        fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < NUM_PROPS_DEFAULT)? guiPropsText[j] : TextFormat("EXT%02i", (j - NUM_PROPS_DEFAULT)));
                     }
                 }
             }
@@ -1551,7 +1551,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
 
         // Draw style title
         DrawText("raygui style:  ", TABLE_LEFT_PADDING, 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-        DrawText(FormatText("%s", styleName), TABLE_LEFT_PADDING + MeasureText("raygui style:  ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
+        DrawText(TextFormat("%s", styleName), TABLE_LEFT_PADDING + MeasureText("raygui style:  ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
 
         // Draw left column
         //----------------------------------------------------------------------------------------
