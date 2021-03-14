@@ -1243,7 +1243,7 @@ static bool SaveStyle(const char *fileName, int format)
             if (customFont)
             {
                 Image imFont = GetTextureData(font.texture);
-                //ImageFormat(&imFont, UNCOMPRESSED_R8G8B8A8);    // TODO: WARNING: It could be required on OpenGL ES 2.0
+                //ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);    // TODO: WARNING: It could be required on OpenGL ES 2.0
 
                 // Write font parameters
                 int fontParamsSize = 32;
@@ -1366,7 +1366,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 #define SUPPORT_COMPRESSED_FONT
 #if defined(SUPPORT_COMPRESSED_FONT)
             // Image data is usually GRAYSCALE + ALPHA and can be reduced to GRAYSCALE
-            //ImageFormat(&imFont, UNCOMPRESSED_GRAYSCALE);
+            //ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
 
             // Compress font image data
             int compDataSize = 0;
@@ -1426,7 +1426,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    int %sFontDataSize = 0;\n", styleName);
             fprintf(txtFile, "    unsigned char *data = DecompressData(%sFontData, %s_COMPRESSED_DATA_SIZE, &%sFontDataSize);\n", styleName, TextToUpper(styleName), styleName);
             fprintf(txtFile, "    Image imFont = { data, %i, %i, 1, %i };\n\n", imFont.width, imFont.height, imFont.format);
-            //fprintf(txtFile, "    ImageFormat(&imFont, UNCOMPRESSED_GRAY_ALPHA);
+            //fprintf(txtFile, "    ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
 #else
             fprintf(txtFile, "    Image imFont = { %sFontImageData, %i, %i, 1, %i };\n\n", styleName, imFont.width, imFont.height, imFont.format);
 #endif
