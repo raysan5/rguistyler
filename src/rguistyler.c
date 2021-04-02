@@ -1450,7 +1450,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    GuiSetFont(font);\n\n");
 
             fprintf(txtFile, "    // TODO: Setup a white rectangle on the font to be used on shapes drawing,\n");
-            fprintf(txtFile, "    // this way we make sure all gui can be drawn on a single pass because no texture cahnge is required\n");
+            fprintf(txtFile, "    // this way we make sure all gui can be drawn on a single pass because no texture change is required\n");
             fprintf(txtFile, "    // NOTE: Setting up this rectangle is a manual process (for the moment)\n");
             fprintf(txtFile, "    //Rectangle whiteChar = { 0, 0, 0, 0 };\n");
             fprintf(txtFile, "    //SetShapesTexture(font.texture, whiteChar);\n\n");
