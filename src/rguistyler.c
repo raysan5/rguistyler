@@ -1242,7 +1242,7 @@ static bool SaveStyle(const char *fileName, int format)
             // Write font data (embedding)
             if (customFont)
             {
-                Image imFont = GetTextureData(font.texture);
+                Image imFont = LoadImageFromTexture(font.texture);
                 //ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);    // TODO: WARNING: It could be required on OpenGL ES 2.0
 
                 // Write font parameters
@@ -1358,7 +1358,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // Support font export and initialization
             // NOTE: This mechanism is highly coupled to raylib
             // NOTE: This mechanism is highly coupled to raylib
-            imFont = GetTextureData(font.texture);
+            imFont = LoadImageFromTexture(font.texture);
             int imFontSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
 
             #define BYTES_TEXT_PER_LINE     20
@@ -1633,7 +1633,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
 
     GuiSetStyle(SLIDER, SLIDER_WIDTH, sliderWidth);
 
-    Image imStyleTable = GetTextureData(target.texture);
+    Image imStyleTable = LoadImageFromTexture(target.texture);
     ImageFlipVertical(&imStyleTable);
 
     UnloadRenderTexture(target);
