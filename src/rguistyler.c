@@ -883,11 +883,11 @@ int main(int argc, char *argv[])
                     // Export file: outFileName
                     switch (exportFormatActive)
                     {
-                        case STYLE_TEXT: 
+                        case STYLE_TEXT:
                         {
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
-                            SaveStyle(outFileName, STYLE_TEXT); 
+                            SaveStyle(outFileName, STYLE_TEXT);
                         } break;
                         case STYLE_BINARY:
                         {
