@@ -1401,7 +1401,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // it could be generated from image and recs
             fprintf(txtFile, "// Font characters info data\n");
             fprintf(txtFile, "// NOTE: No chars.image data provided\n");
-            fprintf(txtFile, "static const CharInfo %sFontChars[%i] = {\n", styleName, font.charsCount);
+            fprintf(txtFile, "static const GlyphInfo %sFontChars[%i] = {\n", styleName, font.charsCount);
             for (int i = 0; i < font.charsCount; i++)
             {
                 fprintf(txtFile, "    { %i, %i, %i, %i, { 0 }},\n", font.chars[i].value, font.chars[i].offsetX, font.chars[i].offsetY, font.chars[i].advanceX);
@@ -1444,8 +1444,8 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
             fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
-            fprintf(txtFile, "    font.chars = (CharInfo *)malloc(font.charsCount*sizeof(CharInfo));\n");
-            fprintf(txtFile, "    memcpy(font.chars, %sFontChars, font.charsCount*sizeof(CharInfo));\n\n", styleName);
+            fprintf(txtFile, "    font.chars = (GlyphInfo *)malloc(font.charsCount*sizeof(GlyphInfo));\n");
+            fprintf(txtFile, "    memcpy(font.chars, %sFontChars, font.charsCount*sizeof(GlyphInfo));\n\n", styleName);
 
             fprintf(txtFile, "    GuiSetFont(font);\n\n");
 
