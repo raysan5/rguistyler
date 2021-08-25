@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v3.2 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v3.5 - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
 *
@@ -12,9 +12,9 @@
 *       NOTE: Avoids including tinyfiledialogs depencency library
 *
 *   DEPENDENCIES:
-*       raylib 3.0              - Windowing/input management and drawing.
-*       raygui 2.7              - Immediate-mode GUI controls.
-*       tinyfiledialogs 3.4.3   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
+*       raylib 4.0              - Windowing/input management and drawing.
+*       raygui 3.0              - Immediate-mode GUI controls.
+*       tinyfiledialogs 3.8.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
 *
 *   COMPILATION (Windows - MinGW):
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99
@@ -32,7 +32,7 @@
 *
 *   LICENSE: Propietary License
 *
-*   Copyright (c) 2017-2020 raylib technologies (@raylibtech). All Rights Reserved.
+*   Copyright (c) 2017-2021 raylib technologies (@raylibtech). All Rights Reserved.
 *
 *   Unauthorized copying of this file, via any medium is strictly prohibited
 *   This project is proprietary and confidential unless the owner allows
@@ -48,7 +48,7 @@
 #endif
 
 #define RAYGUI_IMPLEMENTATION
-#define RAYGUI_SUPPORT_ICONS
+#define RAYGUI_SUPPORT_RICONS
 #include "external/raygui.h"                // Required for: IMGUI controls
 
 #undef RAYGUI_IMPLEMENTATION                // Avoid including raygui implementation again
@@ -67,7 +67,7 @@
 // Defines and Macros
 //----------------------------------------------------------------------------------
 const char *toolName = "rGuiStyler";
-const char *toolVersion = "3.2";
+const char *toolVersion = "4.0";
 const char *toolDescription = "A simple and easy-to-use raygui styles editor";
 
 #if (!defined(DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
     // Render texture to draw full screen, enables screen scaling
     // NOTE: If screen is scaled, mouse input should be scaled proportionally
     RenderTexture2D screenTarget = LoadRenderTexture(screenWidth, screenHeight);
-    SetTextureFilter(screenTarget.texture, FILTER_POINT);
+    SetTextureFilter(screenTarget.texture, TEXTURE_FILTER_POINT);
     int screenScale = 1;
 
     SetTargetFPS(60);

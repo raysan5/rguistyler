@@ -148,13 +148,13 @@ void GuiWindowAbout(GuiWindowAboutState *state)
 {
     const char *windowAboutText = "#191#About rGuiStyler";
     const char *lblDescriptionText = "A simple and easy-to-use raygui styles editor";
-    const char *lblNameVersionText = "rGuiStyler v3.1";
-    const char *lblDateText = "(Sept. 2019)";
+    const char *lblNameVersionText = "rGuiStyler v4.0";
+    const char *lblDateText = "(Nov. 2021)";
     const char *lblUsedLibsText = "Powered by:";
     const char *linkraylibText = "www.raylib.com";
     const char *linkGitraylibText = "github.com/raysan5/raylib";
     const char *linkGitrayguiText = "github.com/raysan5/raygui";
-    const char *lblCopyrightText = "Copyright (c) 2019 raylib technologies.";
+    const char *lblCopyrightText = "Copyright (c) 2021 raylib technologies.";
     const char *linkraylibtechText = "[@raylibtech]";
     const char *lblMoreInfoText = "More info:";
     const char *linkToolWebText = "www.raylibtech.com/rguistyler";
