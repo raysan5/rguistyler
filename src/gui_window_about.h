@@ -11,7 +11,7 @@
 *
 *   LICENSE: Propietary License
 *
-*   Copyright (c) 2019 raylib technologies (@raylibtech). All Rights Reserved.
+*   Copyright (c) 2019-2021 raylib technologies (@raylibtech). All Rights Reserved.
 *
 *   Unauthorized copying of this file, via any medium is strictly prohibited
 *   This project is proprietary and confidential unless the owner allows
@@ -92,7 +92,30 @@ void GuiWindowAbout(GuiWindowAboutState *state);
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
-//...
+static const char *windowAboutText = "#191#About rGuiStyler";
+static const char *lblDescriptionText = "A simple and easy-to-use raygui styles editor";
+static const char *lblNameVersionText = "rGuiStyler v4.0";
+static const char *lblDateText = "(Nov. 2021)";
+static const char *lblUsedLibsText = "Powered by:";
+static const char *linkraylibText = "www.raylib.com";
+static const char *linkGitraylibText = "github.com/raysan5/raylib";
+static const char *linkGitrayguiText = "github.com/raysan5/raygui";
+static const char *lblCopyrightText = "Copyright (c) 2021 raylib technologies.";
+static const char *linkraylibtechText = "[@raylibtech]";
+static const char *lblMoreInfoText = "More info:";
+static const char *linkToolWebText = "www.raylibtech.com/rguistyler";
+static const char *linkToolDownloadText = "https://raylibtech.itch.io/rguistyler";
+static const char *linkMailText = "ray@raylibtech.com";
+static const char *lblSupportText = "Support:";
+static const char *chkLicenseText = "License Agreement (EULA)";
+static const char *BtnBeONEText = "#186#Be ONE";
+static const char *BtnCloseText = "#159#Close";
+#if defined(VERSION_ONE)
+static const char *mode = "ONE";
+#else
+static const char *mode = "ZERO";
+#endif
+static const int toolColor = 0x62bde3ff;
 
 //----------------------------------------------------------------------------------
 // Internal Module Functions Definition
@@ -146,32 +169,6 @@ GuiWindowAboutState InitGuiWindowAbout(void)
 // Gui about window
 void GuiWindowAbout(GuiWindowAboutState *state)
 {
-    const char *windowAboutText = "#191#About rGuiStyler";
-    const char *lblDescriptionText = "A simple and easy-to-use raygui styles editor";
-    const char *lblNameVersionText = "rGuiStyler v4.0";
-    const char *lblDateText = "(Nov. 2021)";
-    const char *lblUsedLibsText = "Powered by:";
-    const char *linkraylibText = "www.raylib.com";
-    const char *linkGitraylibText = "github.com/raysan5/raylib";
-    const char *linkGitrayguiText = "github.com/raysan5/raygui";
-    const char *lblCopyrightText = "Copyright (c) 2021 raylib technologies.";
-    const char *linkraylibtechText = "[@raylibtech]";
-    const char *lblMoreInfoText = "More info:";
-    const char *linkToolWebText = "www.raylibtech.com/rguistyler";
-    const char *linkToolDownloadText = "https://raylibtech.itch.io/rguistyler";
-    const char *linkMailText = "ray@raylibtech.com";
-    const char *lblSupportText = "Support:";
-    const char *chkLicenseText = "License Agreement (EULA)";
-    const char *BtnBeONEText = "#186#Be ONE";
-    const char *BtnCloseText = "#159#Close";
-#if defined(VERSION_ONE)
-    const char *mode = "ONE";
-#else
-    const char *mode = "ZERO";
-#endif
-
-    const int toolColor = 0x62bde3ff;
-
     if (state->windowActive)
     {
         GuiEnable();
