@@ -219,9 +219,9 @@ int main(int argc, char *argv[])
 
     // General pourpose variables
     Vector2 mousePos = { 0.0f, 0.0f };
-    int framesCounter = 0;
+    int frameCounter = 0;
 
-    int changedPropsCounter = 0;
+    int changedPropCounter = 0;
     bool obtainProperty = false;
     bool selectingColor = false;
 
@@ -348,8 +348,8 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         if (IsFileDropped())
         {
-            int dropsCount = 0;
-            char **droppedFiles = GetDroppedFiles(&dropsCount);
+            int dropFileCount = 0;
+            char **droppedFiles = GetDroppedFiles(&dropFileCount);
 
             // Supports loading .rgs style files (text or binary) and .png style palette images
             if (IsFileExtension(droppedFiles[0], ".rgs"))
@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
                 customFont = true;
 
                 // TODO: Reset style backup for changes?
-                //changedPropsCounter = 0;
+                //changedPropCounter = 0;
                 //saveChangesRequired = false;
             }
             else if (IsFileExtension(droppedFiles[0], ".ttf") || IsFileExtension(droppedFiles[0], ".otf"))
@@ -455,7 +455,7 @@ int main(int argc, char *argv[])
         if (IsKeyPressed(KEY_ESCAPE))
         {
             if (windowAboutState.windowActive) windowAboutState.windowActive = false;
-            else if (changedPropsCounter > 0) windowExitActive = !windowExitActive;
+            else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
         }
 
@@ -482,13 +482,13 @@ int main(int argc, char *argv[])
 
         // Basic program flow logic
         //----------------------------------------------------------------------------------
-        framesCounter++;                    // General usage frames counter
+        frameCounter++;                    // General usage frames counter
         mousePos = GetMousePosition();      // Get mouse position each frame
         if (WindowShouldClose()) exitWindow = true;
 
         // Check for changed properties
-        changedPropsCounter = StyleChangesCounter();
-        if (changedPropsCounter > 0) saveChangesRequired = true;
+        changedPropCounter = StyleChangesCounter();
+        if (changedPropCounter > 0) saveChangesRequired = true;
 
         // Reload font to new size if required
         if (fontFileProvided && !genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath[0] != '\0'))
@@ -717,7 +717,7 @@ int main(int argc, char *argv[])
             }
 
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
-            GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, TextFormat("CHANGED PROPERTIES: %i", changedPropsCounter));
+            GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
 
             if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
             else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFont)? "style custom font" : "raylib default", font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
@@ -1197,9 +1197,9 @@ static bool SaveStyle(const char *fileName, int format)
             fwrite(&version, 1, sizeof(short), rgsFile);
             fwrite(&reserved, 1, sizeof(short), rgsFile);
 
-            int changedPropsCounter = StyleChangesCounter();
+            int changedPropCounter = StyleChangesCounter();
 
-            fwrite(&changedPropsCounter, 1, sizeof(int), rgsFile);
+            fwrite(&changedPropCounter, 1, sizeof(int), rgsFile);
 
             short controlId = 0;
             short propertyId = 0;
@@ -1248,13 +1248,13 @@ static bool SaveStyle(const char *fileName, int format)
                 // Write font parameters
                 int fontParamsSize = 32;
                 int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-                int fontCharsDataSize = font.charsCount*32;       // 32 bytes by char
+                int fontCharsDataSize = font.glyphCount*32;       // 32 bytes by char
                 int fontDataSize = fontParamsSize + fontImageSize + fontCharsDataSize;
                 int fontType = 0;       // 0-NORMAL, 1-SDF
 
                 fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
                 fwrite(&font.baseSize, 1, sizeof(int), rgsFile);
-                fwrite(&font.charsCount, 1, sizeof(int), rgsFile);
+                fwrite(&font.glyphCount, 1, sizeof(int), rgsFile);
                 fwrite(&fontType, 1, sizeof(int), rgsFile);
 
                 // TODO: Define font white rectangle?
@@ -1271,15 +1271,15 @@ static bool SaveStyle(const char *fileName, int format)
                 UnloadImage(imFont);
 
                 // Write font recs data
-                for (int i = 0; i < font.charsCount; i++) fwrite(&font.recs[i], 1, sizeof(Rectangle), rgsFile);
+                for (int i = 0; i < font.glyphCount; i++) fwrite(&font.recs[i], 1, sizeof(Rectangle), rgsFile);
 
                 // Write font chars info data
-                for (int i = 0; i < font.charsCount; i++)
+                for (int i = 0; i < font.glyphCount; i++)
                 {
-                    fwrite(&font.chars[i].value, 1, sizeof(int), rgsFile);
-                    fwrite(&font.chars[i].offsetX, 1, sizeof(int), rgsFile);
-                    fwrite(&font.chars[i].offsetY, 1, sizeof(int), rgsFile);
-                    fwrite(&font.chars[i].advanceX, 1, sizeof(int), rgsFile);
+                    fwrite(&font.glyphs[i].value, 1, sizeof(int), rgsFile);
+                    fwrite(&font.glyphs[i].offsetX, 1, sizeof(int), rgsFile);
+                    fwrite(&font.glyphs[i].offsetY, 1, sizeof(int), rgsFile);
+                    fwrite(&font.glyphs[i].advanceX, 1, sizeof(int), rgsFile);
                 }
             }
             else fwrite(&fontSize, 1, sizeof(int), rgsFile);
@@ -1389,8 +1389,8 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 #endif
             // Save font recs data
             fprintf(txtFile, "// Font characters rectangles data\n");
-            fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleName, font.charsCount);
-            for (int i = 0; i < font.charsCount; i++)
+            fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleName, font.glyphCount);
+            for (int i = 0; i < font.glyphCount; i++)
             {
                 fprintf(txtFile, "    { %1.0f, %1.0f, %1.0f , %1.0f },\n", font.recs[i].x, font.recs[i].y, font.recs[i].width, font.recs[i].height);
             }
@@ -1401,10 +1401,10 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // it could be generated from image and recs
             fprintf(txtFile, "// Font characters info data\n");
             fprintf(txtFile, "// NOTE: No chars.image data provided\n");
-            fprintf(txtFile, "static const GlyphInfo %sFontChars[%i] = {\n", styleName, font.charsCount);
-            for (int i = 0; i < font.charsCount; i++)
+            fprintf(txtFile, "static const GlyphInfo %sFontChars[%i] = {\n", styleName, font.glyphCount);
+            for (int i = 0; i < font.glyphCount; i++)
             {
-                fprintf(txtFile, "    { %i, %i, %i, %i, { 0 }},\n", font.chars[i].value, font.chars[i].offsetX, font.chars[i].offsetY, font.chars[i].advanceX);
+                fprintf(txtFile, "    { %i, %i, %i, %i, { 0 }},\n", font.glyphs[i].value, font.glyphs[i].offsetX, font.glyphs[i].offsetY, font.glyphs[i].advanceX);
             }
             fprintf(txtFile, "};\n\n");
 
@@ -1432,20 +1432,20 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 #endif
             fprintf(txtFile, "    Font font = { 0 };\n");
             fprintf(txtFile, "    font.baseSize = %i;\n", GuiGetStyle(DEFAULT, TEXT_SIZE));
-            fprintf(txtFile, "    font.charsCount = %i;\n\n", font.charsCount);
+            fprintf(txtFile, "    font.glyphCount = %i;\n\n", font.glyphCount);
 
             fprintf(txtFile, "    // Load texture from image\n");
             fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n\n");
 
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
-            fprintf(txtFile, "    font.recs = (Rectangle *)malloc(font.charsCount*sizeof(Rectangle));\n");
-            fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.charsCount*sizeof(Rectangle));\n\n", styleName);
+            fprintf(txtFile, "    font.recs = (Rectangle *)malloc(font.glyphCount*sizeof(Rectangle));\n");
+            fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.glyphCount*sizeof(Rectangle));\n\n", styleName);
 
             fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
-            fprintf(txtFile, "    font.chars = (GlyphInfo *)malloc(font.charsCount*sizeof(GlyphInfo));\n");
-            fprintf(txtFile, "    memcpy(font.chars, %sFontChars, font.charsCount*sizeof(GlyphInfo));\n\n", styleName);
+            fprintf(txtFile, "    font.glyphs = (GlyphInfo *)malloc(font.glyphCount*sizeof(GlyphInfo));\n");
+            fprintf(txtFile, "    memcpy(font.glyphs, %sFontChars, font.glyphCount*sizeof(GlyphInfo));\n\n", styleName);
 
             fprintf(txtFile, "    GuiSetFont(font);\n\n");
 
