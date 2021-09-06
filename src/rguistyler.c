@@ -5,11 +5,15 @@
 *   CONFIGURATION:
 *
 *   #define VERSION_ONE
-*       Enable PRO features for the tool. Usually command-line and export options related.
+*       Enable PRO features for the tool:
+*       - Support command line usage
 *
 *   #define CUSTOM_MODAL_DIALOGS
 *       Use custom raygui generated modal dialogs instead of native OS ones
 *       NOTE: Avoids including tinyfiledialogs depencency library
+*
+*   VERSIONS HISTORY:
+*       3.5  (xx-Nov-2021) Updated to raylib 4.0 and raygui 3.0
 *
 *   DEPENDENCIES:
 *       raylib 4.0              - Windowing/input management and drawing.
@@ -708,11 +712,9 @@ int main(int argc, char *argv[])
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, "Spacing:", &fontSpacingValue, 0, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
-#if defined(VERSION_ONE)
+
                 exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "Style Text (.rgs);Style Table (.png);Style Binary (.rgsb);Style Code (.h)", exportFormatActive);
-#else
-                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "Style Text (.rgs);Style Table (.png)", exportFormatActive);
-#endif
+
                 if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 30 }, "#7#Export Style")) showExportFileDialog = true;
             }
 
