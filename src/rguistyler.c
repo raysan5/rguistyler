@@ -72,7 +72,7 @@
 // Defines and Macros
 //----------------------------------------------------------------------------------
 const char *toolName = "rGuiStyler";
-const char *toolVersion = "4.0";
+const char *toolVersion = "3.5";
 const char *toolDescription = "A simple and easy-to-use raygui styles editor";
 
 #if (!defined(DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
