@@ -47,6 +47,13 @@
 
 #include "raylib.h"
 
+#define TOOL_NAME               "rGuiStyler"
+#define TOOL_SHORT_NAME         "rGS"
+#define TOOL_VERSION            "3.5"
+#define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
+#define TOOL_RELEASE_DATE       "Dec.2021"
+#define TOOL_LOGO_COLOR         0x62bde3ff
+
 #if defined(PLATFORM_WEB)
     #define CUSTOM_MODAL_DIALOGS            // Force custom modal dialogs usage
     #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
