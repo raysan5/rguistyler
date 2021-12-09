@@ -226,7 +226,7 @@ int main(int argc, char *argv[])
     const int screenWidth = 740;
     const int screenHeight = 660;
 
-    InitWindow(screenWidth, screenHeight, TextFormat("%s v%s - %s", toolName, toolVersion, toolDescription));
+    InitWindow(screenWidth, screenHeight, TextFormat("%s v%s | %s", toolName, toolVersion, toolDescription));
     SetExitKey(0);
 
     // General pourpose variables
