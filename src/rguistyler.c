@@ -107,7 +107,7 @@ typedef enum {
 static const char *guiControlText[RAYGUI_MAX_CONTROLS] = {
     "DEFAULT",
     "LABEL",        // LABELBUTTON
-    "BUTTON",       // IMAGEBUTTON
+    "BUTTON",
     "TOGGLE",       // TOGGLEGROUP
     "SLIDER",       // SLIDERBAR
     "PROGRESSBAR",
@@ -123,7 +123,8 @@ static const char *guiControlText[RAYGUI_MAX_CONTROLS] = {
     "STATUSBAR"
 };
 
-// Controls default properties name text
+// Controls properties name text (common to all controls)
+// NOTE: +2 extra: Background color and Line color
 static const char *guiPropsText[RAYGUI_MAX_PROPS_BASE] = {
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
@@ -143,17 +144,27 @@ static const char *guiPropsText[RAYGUI_MAX_PROPS_BASE] = {
     "RESERVED"
 };
 
-// Controls default extended properties
-static const char *guiPropsExText[RAYGUI_MAX_PROPS_EXTENDED] = {
-    "TEXT_SIZE",
-    "TEXT_SPACING",
-    "LINE_COLOR",
-    "BACKGROUND_COLOR",
-    "EXTENDED01",
-    "EXTENDED02",
-    "EXTENDED03",
-    "EXTENDED04",
+// DEFAULT control properties name text
+// NOTE: This list removes some of the common properties for all controls (BORDER_WIDTH, TEXT_PADDING, TEXT_ALIGNMENT)
+// to force individual set of those ones and it also adds some DEFAULT extended properties for convenience (BACKGROUND_COLOR, LINE_COLOR)
+static const char *guiPropsDefaultText[14] = {
+    "BORDER_COLOR_NORMAL",
+    "BASE_COLOR_NORMAL",
+    "TEXT_COLOR_NORMAL",
+    "BORDER_COLOR_FOCUSED",
+    "BASE_COLOR_FOCUSED",
+    "TEXT_COLOR_FOCUSED",
+    "BORDER_COLOR_PRESSED",
+    "BASE_COLOR_PRESSED",
+    "TEXT_COLOR_PRESSED",
+    "BORDER_COLOR_DISABLED",
+    "BASE_COLOR_DISABLED",
+    "TEXT_COLOR_DISABLED",
+    // Additional extended properties for DEFAULT control
+    "BACKGROUND_COLOR",          // DEFAULT extended property
+    "LINE_COLOR"                 // DEFAULT extended property
 };
+
 
 // Default style backup to check changed properties
 static unsigned int styleBackup[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
@@ -525,25 +536,38 @@ int main(int argc, char *argv[])
 
             if (obtainProperty)
             {
-                if (currentSelectedProperty <= TEXT_COLOR_DISABLED) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
-                else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == TEXT_PADDING)) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
-                else if (currentSelectedProperty == TEXT_ALIGNMENT) textAlignmentActive = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                // Get the previous style property for the control
+                if (currentSelectedControl == DEFAULT)
+                {
+                    if (currentSelectedProperty <= TEXT_COLOR_DISABLED) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
+                    else if (currentSelectedProperty == 13) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, LINE_COLOR));
+                    else if (currentSelectedProperty == 12) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, BACKGROUND_COLOR));
+                }
+                else
+                {
+                    if (currentSelectedProperty <= TEXT_COLOR_DISABLED) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
+                    else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == TEXT_PADDING)) propertyValue = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                    else if (currentSelectedProperty == TEXT_ALIGNMENT) textAlignmentActive = GuiGetStyle(currentSelectedControl, currentSelectedProperty);
+                }
 
                 obtainProperty = false;
             }
 
-            // Update control property
-            if (currentSelectedProperty <= TEXT_COLOR_DISABLED)
+            // Set selected value for current selected property
+            if (currentSelectedControl == DEFAULT)
             {
-                GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
+                // Update special default extended properties: BACKGROUND_COLOR and LINE_COLOR
+                if (currentSelectedProperty <= TEXT_COLOR_DISABLED) GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
+                else if (currentSelectedProperty == 13) GuiSetStyle(currentSelectedControl, LINE_COLOR, ColorToInt(colorPickerValue));
+                else if (currentSelectedProperty == 12) GuiSetStyle(currentSelectedControl, BACKGROUND_COLOR, ColorToInt(colorPickerValue));
+
             }
-            else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == TEXT_PADDING))
+            else
             {
-                GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
-            }
-            else if (currentSelectedProperty == TEXT_ALIGNMENT)
-            {
-                GuiSetStyle(currentSelectedControl, currentSelectedProperty, textAlignmentActive);
+                // Update control property
+                if (currentSelectedProperty <= TEXT_COLOR_DISABLED) GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
+                else if ((currentSelectedProperty == BORDER_WIDTH) || (currentSelectedProperty == TEXT_PADDING)) GuiSetStyle(currentSelectedControl, currentSelectedProperty, propertyValue);
+                else if (currentSelectedProperty == TEXT_ALIGNMENT) GuiSetStyle(currentSelectedControl, currentSelectedProperty, textAlignmentActive);
             }
         }
 
@@ -642,7 +666,6 @@ int main(int argc, char *argv[])
 
             // Main GUI
             //---------------------------------------------------------------------------------------------------------
-
             // Main toolbar panel
             GuiPanel((Rectangle){ 0, 0, 740, 50 });
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
@@ -670,7 +693,8 @@ int main(int argc, char *argv[])
             currentSelectedControl = GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 60, 140, 560 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, currentSelectedControl);
 
             if ((currentSelectedControl == -1) && (propsStateActive == 0)) GuiDisable();
-            currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, NULL, currentSelectedProperty);
+            if (currentSelectedControl != DEFAULT) currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, NULL, currentSelectedProperty);
+            else currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsDefaultText, 14, NULL, NULL, currentSelectedProperty);
             if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowActive || windowExitActive)) GuiEnable();
 
             if (windowControlsActive)
@@ -679,7 +703,7 @@ int main(int argc, char *argv[])
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
 
-                if ((currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH) && (propsStateActive == 0)) GuiDisable();
+                if ((currentSelectedControl == DEFAULT) || ((currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH) && (propsStateActive == 0))) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, propertyValue, 0, 20);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 if ((propsStateActive == GUI_STATE_NORMAL) && !(windowAboutState.windowActive || windowExitActive)) GuiEnable();
@@ -961,11 +985,11 @@ static void ShowCommandLineInfo(void)
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
     printf("// %s v%s ONE - %s             //\n", toolName, toolVersion, toolDescription);
-    printf("// powered by raylib v2.6 (www.raylib.com) and raygui v2.6                      //\n");
+    printf("// powered by raylib v4.0 (www.raylib.com) and raygui v3.0                      //\n");
     printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
     printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
-    printf("// Copyright (c) 2017-2020 raylib technologies (@raylibtech)                    //\n");
+    printf("// Copyright (c) 2017-2021 raylib technologies (@raylibtech)                    //\n");
     printf("//                                                                              //\n");
     printf("//////////////////////////////////////////////////////////////////////////////////\n\n");
 
@@ -1306,6 +1330,18 @@ static bool SaveStyle(const char *fileName, int format)
 // NOTE: Code file already implements a function to load style
 static void ExportStyleAsCode(const char *fileName, const char *styleName)
 {
+    // DEFAULT extended properties
+    static const char *guiPropsExText[RAYGUI_MAX_PROPS_EXTENDED] = {
+        "TEXT_SIZE",
+        "TEXT_SPACING",
+        "LINE_COLOR",
+        "BACKGROUND_COLOR",
+        "EXTENDED01",
+        "EXTENDED02",
+        "EXTENDED03",
+        "EXTENDED04",
+    };
+
     FILE *txtFile = fopen(fileName, "wt");
 
     if (txtFile != NULL)
@@ -1319,7 +1355,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/raygui                        //\n");
         fprintf(txtFile, "// feedback and support:       ray[at]raylibtech.com                            //\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// Copyright (c) 2020 raylib technologies (@raylibtech)                         //\n");
+        fprintf(txtFile, "// Copyright (c) 2020-2021 raylib technologies (@raylibtech)                    //\n");
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
@@ -1367,7 +1403,6 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         {
             // Support font export and initialization
             // NOTE: This mechanism is highly coupled to raylib
-            // NOTE: This mechanism is highly coupled to raylib
             imFont = LoadImageFromTexture(font.texture);
             int imFontSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
 
@@ -1375,6 +1410,10 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
 #define SUPPORT_COMPRESSED_FONT
 #if defined(SUPPORT_COMPRESSED_FONT)
+            // NOTE: If data is compressed using raylib CompressData() DEFLATE,
+            // it requires to be decompressed with raylib DecompressData(), that requires
+            // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
+            
             // Image data is usually GRAYSCALE + ALPHA and can be reduced to GRAYSCALE
             //ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
 
