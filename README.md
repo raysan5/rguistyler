@@ -8,25 +8,24 @@ Useful for tools style customization. The best mate for [rGuiLayout](https://git
 rGuiStyler comes in two flavours: **ZERO** (free version) and **ONE** (low-cost version). You can get them [here](https://raylibtech.itch.io/rguistyler).
 
 <br>
+<br>
 
 _NOTE: This tool is itended to be used with [**raygui 3.0**](https://github.com/raysan5/raygui)_
 
-## rGuiStyler ZERO features
+## rGuiStyler features
 
  - **Global style editing or control specific**
  - **Preview** style in real time and **test individual** controls
  - Select controls state: **NORMAL, FOCUSED, PRESSED, DISABLED**
- - Save style as **.rgs (text mode)** and load **.rgs (text or binary mode)**
+ - Save and load style custom format: **.rgs** (binary)
+ - Export style as an embeddable **code file (.h)**
  - Export your style as **controls table image (.png)**
- - Import, configure and preview **style font (.ttf)**
- - Color palette menu for quick save/selection
+ - Import, configure and preview **style fonts (.ttf/.otf)**
+ - Color palette for quick color save/selection
+ - **8 custom style examples** with fonts as reference
  - **Completely portable (single file)**
  
-## rGuiStyler ONE plus features
-
- - **Powerful command line** for batch conversion
- - **Export style** as **.rgs (binary)** or embeddable **code file (.h)**
- - **Export font embedded in style**: .rgs (binary) and code (.h)
+**rGuiStyler DESKTOP tool includes a powerful command line** for batch format conversion.**
  
 ## rGuiStyler Usage
 
@@ -46,6 +45,6 @@ rGuiStyler ONE also allows exporting style as binary style file (.rgs) and a por
 
 ## rGuiStyler License
 
-*Copyright (c) 2015-2020 raylib technologies ([@raylibtech](https://twitter.com/raylibtech)). All Rights Reserved.* Check [LICENSE](LICENSE) for details.
+*Copyright (c) 2015-2021 raylib technologies ([@raylibtech](https://twitter.com/raylibtech)). All Rights Reserved.* Check [LICENSE](LICENSE) for details.
 
 In case you want a custom version of the tool, just get in touch: ray[at]raylibtech.com
