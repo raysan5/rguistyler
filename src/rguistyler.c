@@ -1183,7 +1183,7 @@ static bool SaveStyle(const char *fileName, int format)
             // 0       | 4       | char       | Signature: "rGS "
             // 4       | 2       | short      | Version: 200
             // 6       | 2       | short      | reserved
-            // 8       | 4       | int        | Num properties (N)
+            // 8       | 4       | int        | Num properties (only changed ones from default style)
 
             // Properties Data: (controlId (2 byte) +  propertyId (2 byte) + propertyValue (4 bytes))*N
             // foreach (property)
@@ -1196,30 +1196,30 @@ static bool SaveStyle(const char *fileName, int format)
             // Custom Font Data : Parameters (32 bytes)
             // 16+4*N  | 4       | int        | Font data size (0 - no font)
             // 20+4*N  | 4       | int        | Font base size
-            // 24+4*N  | 4       | int        | Font chars count [charCount]
+            // 24+4*N  | 4       | int        | Font glyph count [glyphCount]
             // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
             // 32+4*N  | 16      | Rectangle  | Font white rectangle
 
             // Custom Font Data : Image (16 bytes + imSize)
-            // 48+4*N  | 4       | int        | Image size [imSize = IS]
+            // 48+4*N  | 4       | int        | Image data size
             // 52+4*N  | 4       | int        | Image width
             // 56+4*N  | 4       | int        | Image height
             // 60+4*N  | 4       | int        | Image format
             // 64+4*N  | imSize  | *          | Image data
 
-            // Custom Font Data : Recs (32 bytes * charCount)
-            // foreach (charCount)
+            // Custom Font Data : Recs (32 bytes*glyphCount)
+            // foreach (glyph)
             // {
-            //   ...   | 16      | Rectangle  | Char rectangle (in image)
+            //   ...   | 16      | Rectangle  | Glyph rectangle (in image)
             // }
 
-            // Custom Font Data : Chars Info (32 bytes * charCount)
-            // foreach (charCount)
+            // Custom Font Data : Glyph Info (32 bytes*glyphCount)
+            // foreach (glyph)
             // {
-            //   ...   | 4       | int        | Char value
-            //   ...   | 4       | int        | Char offset X
-            //   ...   | 4       | int        | Char offset Y
-            //   ...   | 4       | int        | Char advance X
+            //   ...   | 4       | int        | Glyph value
+            //   ...   | 4       | int        | Glyph offset X
+            //   ...   | 4       | int        | Glyph offset Y
+            //   ...   | 4       | int        | Glyph advance X
             // }
             // ------------------------------------------------------
 
@@ -1239,7 +1239,7 @@ static bool SaveStyle(const char *fileName, int format)
             short propertyId = 0;
             int propertyValue = 0;
 
-            // Save first all properties that have changed in default style
+            // Save first all properties that have changed in DEFAULT style
             for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++)
             {
                 if (styleBackup[i] != GuiGetStyle(0, i))
@@ -1253,7 +1253,7 @@ static bool SaveStyle(const char *fileName, int format)
                 }
             }
 
-            // Save all properties that have changed in comparison to default style
+            // Save all properties that have changed in comparison to DEFAULT style
             for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
             {
                 for (int j = 0; j < RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED; j++)
@@ -1277,13 +1277,12 @@ static bool SaveStyle(const char *fileName, int format)
             if (customFont)
             {
                 Image imFont = LoadImageFromTexture(font.texture);
-                //ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);    // TODO: WARNING: It could be required on OpenGL ES 2.0
 
                 // Write font parameters
                 int fontParamsSize = 32;
                 int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-                int fontCharsDataSize = font.glyphCount*32;       // 32 bytes by char
-                int fontDataSize = fontParamsSize + fontImageSize + fontCharsDataSize;
+                int fontGlyphDataSize = font.glyphCount*32;       // 32 bytes by char
+                int fontDataSize = fontParamsSize + fontImageSize + fontGlyphDataSize;
                 int fontType = 0;       // 0-NORMAL, 1-SDF
 
                 fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
@@ -1300,7 +1299,7 @@ static bool SaveStyle(const char *fileName, int format)
                 fwrite(&imFont.width, 1, sizeof(int), rgsFile);
                 fwrite(&imFont.height, 1, sizeof(int), rgsFile);
                 fwrite(&imFont.format, 1, sizeof(int), rgsFile);
-                fwrite(imFont.data, 1, fontImageSize, rgsFile);
+                fwrite(imFont.data, 1, fontImageSize, rgsFile);         // TODO: Compress image data?
 
                 UnloadImage(imFont);
 
