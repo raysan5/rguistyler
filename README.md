@@ -9,6 +9,8 @@ rGuiStyler comes in two flavours: **ZERO** (free version) and **ONE** (low-cost 
 
 <br>
 
+_NOTE: This tool is itended to be used with [**raygui 3.0**](https://github.com/raysan5/raygui)_
+
 ## rGuiStyler ZERO features
 
  - **Global style editing or control specific**
