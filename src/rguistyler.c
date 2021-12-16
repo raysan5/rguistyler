@@ -37,7 +37,7 @@
 *
 *   LICENSE: Propietary License
 *
-*   Copyright (c) 2017-2021 raylib technologies (@raylibtech). All Rights Reserved.
+*   Copyright (c) 2017-2022 raylib technologies (@raylibtech). All Rights Reserved.
 *
 *   Unauthorized copying of this file, via any medium is strictly prohibited
 *   This project is proprietary and confidential unless the owner allows
@@ -60,7 +60,6 @@
 #endif
 
 #define RAYGUI_IMPLEMENTATION
-#define RAYGUI_SUPPORT_RICONS
 #include "external/raygui.h"                // Required for: IMGUI controls
 
 #undef RAYGUI_IMPLEMENTATION                // Avoid including raygui implementation again
@@ -978,7 +977,7 @@ int main(int argc, char *argv[])
 // Module Functions Definitions (local)
 //--------------------------------------------------------------------------------------------
 
-#if defined(VERSION_ONE)
+#if defined(VERSION_ONE)            // Command line
 // Show command line usage info
 static void ShowCommandLineInfo(void)
 {
@@ -989,7 +988,7 @@ static void ShowCommandLineInfo(void)
     printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
     printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
-    printf("// Copyright (c) 2017-2021 raylib technologies (@raylibtech)                    //\n");
+    printf("// Copyright (c) 2017-2022 raylib technologies (@raylibtech)                    //\n");
     printf("//                                                                              //\n");
     printf("//////////////////////////////////////////////////////////////////////////////////\n\n");
 
@@ -1111,7 +1110,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 
     if (showUsageInfo) ShowCommandLineInfo();
 }
-#endif      // VERSION_ONE
+#endif      // VERSION_ONE: Command line
 
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
@@ -1354,7 +1353,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/raygui                        //\n");
         fprintf(txtFile, "// feedback and support:       ray[at]raylibtech.com                            //\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// Copyright (c) 2020-2021 raylib technologies (@raylibtech)                    //\n");
+        fprintf(txtFile, "// Copyright (c) 2020-2022 raylib technologies (@raylibtech)                    //\n");
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
