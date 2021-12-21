@@ -11,6 +11,11 @@
 *   #define CUSTOM_MODAL_DIALOGS
 *       Use custom raygui generated modal dialogs instead of native OS ones
 *       NOTE: Avoids including tinyfiledialogs depencency library
+* 
+*   #define SUPPORT_COMPRESSED_FONT_ATLAS
+*       Export font atlas image data compressed using raylib CompressData() DEFLATE algorythm,
+*       NOTE: It requires to be decompressed with raylib DecompressData(),
+*       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
 *       3.5  (xx-Nov-2021) Updated to raylib 4.0 and raygui 3.0
@@ -54,6 +59,8 @@
 #define TOOL_RELEASE_DATE       "Dec.2021"
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
+#define SUPPORT_COMPRESSED_FONT_ATLAS
+
 #if defined(PLATFORM_WEB)
     #define CUSTOM_MODAL_DIALOGS            // Force custom modal dialogs usage
     #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
@@ -77,11 +84,11 @@
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
-const char *toolName = "rGuiStyler";
-const char *toolVersion = "3.5";
-const char *toolDescription = "A simple and easy-to-use raygui styles editor";
+const char *toolName = TOOL_NAME;
+const char *toolVersion = TOOL_VERSION;
+const char *toolDescription = TOOL_DESCRIPTION;
 
-#if (!defined(DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
+#if (!defined(_DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
 bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib)
 #endif
 
@@ -90,11 +97,13 @@ bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib
 //----------------------------------------------------------------------------------
 
 // Style file type to export
+// NOTE: Exported style files (.rgs, .h) always embed the custom font (if provided)
+// and the custom font atlas image is always GRAY+ALPHA and saved compressed (DEFLATE)
 typedef enum {
-    STYLE_TEXT = 0,         // Style text file (.rgs)
+    STYLE_BINARY = 0,       // Style binary file (.rgs)
+    STYLE_AS_CODE,          // Style as (ready-to-use) code (.h)
     STYLE_TABLE_IMAGE,      // Style controls table image (for reference)
-    STYLE_BINARY,           // Style binary file (.rgs)
-    STYLE_AS_CODE           // Style as (ready-to-use) code (.h)
+    STYLE_TEXT              // Style text file (.rgs), only supported on command-line
 } GuiStyleFileType;
 
 //----------------------------------------------------------------------------------
@@ -169,8 +178,8 @@ static const char *guiPropsDefaultText[14] = {
 static unsigned int styleBackup[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
 
 // Custom font variables
-static Font font = { 0 };               // Custom font
-static bool customFont = false;         // Using custom font
+static Font customFont = { 0 };         // Custom font
+static bool customFontLoaded = false;   // Custom font loaded
 static char fontFilePath[512] = { 0 };  // Font file path (register font path for reloading)
 static bool fontFileProvided = false;   // Font loaded from a file provided (required for reloading)
 
@@ -196,7 +205,7 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    
 //------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-#if !defined(DEBUG)
+#if !defined(_DEBUG)
     SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
 #endif
     char inFileName[512] = { 0 };       // Input file name (required in case of drag & drop over executable)
@@ -224,7 +233,7 @@ int main(int argc, char *argv[])
 #endif      // VERSION_ONE
     }
 
-#if (!defined(DEBUG) && defined(VERSION_ONE) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
+#if (!defined(_DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
     // WARNING (Windows): If program is compiled as Window application (instead of console),
     // no console is available to show output info... solution is compiling a console application
     // and closing console (FreeConsole()) when changing to GUI interface
@@ -256,7 +265,7 @@ int main(int argc, char *argv[])
     else
     {
         GuiLoadStyleDefault();
-        font = GetFontDefault();
+        customFont = GetFontDefault();
     }
 
     // Keep a backup for default light style (used to track changes)
@@ -387,10 +396,10 @@ int main(int argc, char *argv[])
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
                 // Load .rgs custom font in font
-                font = GuiGetFont();
+                customFont = GuiGetFont();
                 memset(fontFilePath, 0, 512);
                 fontFileProvided = false;
-                customFont = true;
+                customFontLoaded = true;
 
                 // TODO: Reset style backup for changes?
                 //changedPropCounter = 0;
@@ -398,17 +407,17 @@ int main(int argc, char *argv[])
             }
             else if (IsFileExtension(droppedFiles[0], ".ttf") || IsFileExtension(droppedFiles[0], ".otf"))
             {
-                UnloadFont(font);
+                UnloadFont(customFont);
 
                 // NOTE: Font generation size depends on spinner size selection
-                font = LoadFontEx(droppedFiles[0], genFontSizeValue, NULL, 0);
+                customFont = LoadFontEx(droppedFiles[0], genFontSizeValue, NULL, 0);
 
-                if (font.texture.id > 0)
+                if (customFont.texture.id > 0)
                 {
-                    GuiSetFont(font);
+                    GuiSetFont(customFont);
                     strcpy(fontFilePath, droppedFiles[0]);
                     fontFileProvided = true;
-                    customFont = true;
+                    customFontLoaded = true;
                 }
             }
 
@@ -454,14 +463,14 @@ int main(int argc, char *argv[])
         {
             if (inFileName[0] == '\0')
             {
-                exportFormatActive = STYLE_TEXT;
+                exportFormatActive = STYLE_BINARY;
                 showSaveFileDialog = true;
             }
             else
             {
                 // TODO: Use same style type as loaded or previously saved
                 // ISSUE: Style is loaded by raygui, GuiLoadStyle() checks for format internally!
-                SaveStyle(inFileName, STYLE_TEXT);
+                SaveStyle(inFileName, STYLE_BINARY);
                 SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                 saveChangesRequired = false;
             }
@@ -493,7 +502,7 @@ int main(int argc, char *argv[])
             SetWindowTitle(TextFormat("%s v%s", toolName, toolVersion));
             strcpy(styleNameText, "default");
             memset(fontFilePath, 0, 512);
-            customFont = false;
+            customFontLoaded = false;
 
             genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
@@ -515,9 +524,9 @@ int main(int argc, char *argv[])
         // Reload font to new size if required
         if (fontFileProvided && !genFontSizeEditMode && (prevGenFontSize != genFontSizeValue) && (fontFilePath[0] != '\0'))
         {
-            UnloadFont(font);
-            font = LoadFontEx(fontFilePath, genFontSizeValue, NULL, 0);
-            GuiSetFont(font);
+            UnloadFont(customFont);
+            customFont = LoadFontEx(fontFilePath, genFontSizeValue, NULL, 0);
+            GuiSetFont(customFont);
         }
 
         GuiSetStyle(DEFAULT, TEXT_SIZE, genFontSizeValue);
@@ -626,7 +635,7 @@ int main(int argc, char *argv[])
         {
             fontScale += GetMouseWheelMove();
             if (fontScale < 1.0f) fontScale = 1.0f;
-            if (font.texture.width*fontScale > GetScreenWidth()) fontScale = GetScreenWidth()/font.texture.width;
+            if (customFont.texture.width*fontScale > GetScreenWidth()) fontScale = GetScreenWidth()/customFont.texture.width;
         }
         //----------------------------------------------------------------------------------
 
@@ -744,7 +753,7 @@ int main(int argc, char *argv[])
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
-                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "Style Text (.rgs);Style Table (.png);Style Binary (.rgsb);Style Code (.h)", exportFormatActive);
+                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "Style Binary (.rgs);Style Code (.h);Style Table (.png)", exportFormatActive);
 
                 if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 30 }, "#7#Export Style")) showExportFileDialog = true;
             }
@@ -752,15 +761,15 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
             GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
 
-            if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
-            else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFont)? "style custom font" : "raylib default", font.texture.width, font.texture.height, GetPixelDataSize(font.texture.width, font.texture.height, font.texture.format)));
+            if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
+            else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
 
             //if (GuiGetState() != GUI_STATE_DISABLED)
             GuiSetState(GUI_STATE_NORMAL);
 
             GuiUnlock();
 
-            GuiLabel((Rectangle){ 580 - MeasureTextEx(font, "State:", genFontSizeValue, fontSpacingValue).x - 10, 10, 35, 30 }, "State:");
+            GuiLabel((Rectangle){ 580 - MeasureTextEx(customFont, "State:", genFontSizeValue, fontSpacingValue).x - 10, 10, 35, 30 }, "State:");
             if (GuiDropdownBox((Rectangle){ 580, 10, 150, 30 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &propsStateActive, propsStateEditMode)) propsStateEditMode = !propsStateEditMode;
             //------------------------------------------------------------------------------------------------------------------------
 
@@ -768,9 +777,9 @@ int main(int argc, char *argv[])
             if (viewFontActive)
             {
                 DrawRectangle(0, 50, GetScreenWidth(), GetScreenHeight() - 75, Fade(GRAY, 0.8f));
-                DrawRectangle(GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2, font.texture.width*fontScale, font.texture.height*fontScale, BLACK);
-                DrawRectangleLines(GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2, font.texture.width*fontScale, font.texture.height*fontScale, RED);
-                DrawTextureEx(font.texture, (Vector2){ GetScreenWidth()/2 - font.texture.width*fontScale/2, GetScreenHeight()/2 - font.texture.height*fontScale/2 }, 0.0f, fontScale, WHITE);
+                DrawRectangle(GetScreenWidth()/2 - customFont.texture.width*fontScale/2, GetScreenHeight()/2 - customFont.texture.height*fontScale/2, customFont.texture.width*fontScale, customFont.texture.height*fontScale, BLACK);
+                DrawRectangleLines(GetScreenWidth()/2 - customFont.texture.width*fontScale/2, GetScreenHeight()/2 - customFont.texture.height*fontScale/2, customFont.texture.width*fontScale, customFont.texture.height*fontScale, RED);
+                DrawTextureEx(customFont.texture, (Vector2){ GetScreenWidth()/2 - customFont.texture.width*fontScale/2, GetScreenHeight()/2 - customFont.texture.height*fontScale/2 }, 0.0f, fontScale, WHITE);
             }
 
             // Draw style table image (if active and reloaded)
@@ -819,10 +828,10 @@ int main(int argc, char *argv[])
                     saveChangesRequired = false;
 
                     // Load .rgs custom font in font
-                    font = GuiGetFont();
+                    customFont = GuiGetFont();
                     memset(fontFilePath, 0, 512);
                     fontFileProvided = false;
-                    customFont = true;
+                    customFontLoaded = true;
                 }
 
                 if (result >= 0) showLoadFileDialog = false;
@@ -845,13 +854,13 @@ int main(int argc, char *argv[])
 
                     if (tempFont.texture.id > 0)
                     {
-                        UnloadFont(font);
-                        font = tempFont;
+                        UnloadFont(customFont);
+                        customFont = tempFont;
 
-                        GuiSetFont(font);
+                        GuiSetFont(customFont);
                         strcpy(fontFilePath, inFileName);
                         fontFileProvided = true;
-                        customFont = true;
+                        customFontLoaded = true;
                     }
                 }
 
@@ -876,7 +885,7 @@ int main(int argc, char *argv[])
                     if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
 
                     // Save style file (text or binary)
-                    SaveStyle(outFileName, STYLE_TEXT);
+                    SaveStyle(outFileName, STYLE_BINARY);
 
                 #if defined(PLATFORM_WEB)
                     // Download file from MEMFS (emscripten memory filesystem)
@@ -899,8 +908,8 @@ int main(int argc, char *argv[])
 
                 switch (exportFormatActive)
                 {
-                    case STYLE_TEXT: strcpy(filters, "*.rgs"); strcat(outFileName, ".rgs"); break;
-                    case STYLE_BINARY: strcpy(filters, "*.rgsb"); strcat(outFileName, ".rgsb"); break;
+                    //case STYLE_TEXT: strcpy(filters, "*.rgs"); strcat(outFileName, ".rgs"); break;
+                    case STYLE_BINARY: strcpy(filters, "*.rgs"); strcat(outFileName, ".rgs"); break;
                     case STYLE_AS_CODE: strcpy(filters, "*.h"); strcat(outFileName, ".h"); break;
                     case STYLE_TABLE_IMAGE: strcpy(filters, "*.png"); strcat(outFileName, ".png");break;
                     default: break;
@@ -916,12 +925,14 @@ int main(int argc, char *argv[])
                     // Export file: outFileName
                     switch (exportFormatActive)
                     {
+                        /*
                         case STYLE_TEXT:
                         {
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
                             SaveStyle(outFileName, STYLE_TEXT);
                         } break;
+                        */
                         case STYLE_BINARY:
                         {
                             // Check for valid extension and make sure it is
@@ -965,7 +976,7 @@ int main(int argc, char *argv[])
     }
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    UnloadFont(font);           // Unload font data
+    UnloadFont(customFont);           // Unload font data
 
     CloseWindow();              // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
@@ -984,7 +995,7 @@ static void ShowCommandLineInfo(void)
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
     printf("// %s v%s - %s                 //\n", toolName, toolVersion, toolDescription);
-    printf("// powered by raylib v4.0 (www.raylib.com) and raygui v3.0                      //\n");
+    printf("// powered by raylib v%s and raygui v%s                                       //\n", RAYLIB_VERSION, RAYGUI_VERSION);
     printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
     printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
@@ -1024,7 +1035,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 
     char inFileName[256] = { 0 };       // Input file name
     char outFileName[256] = { 0 };      // Output file name
-    int outputFormat = STYLE_BINARY;    // Formats: STYLE_TEXT, STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
+    int outputFormat = STYLE_BINARY;    // Formats: STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
 
     // Process command line arguments
     for (int i = 1; i < argc; i++)
@@ -1095,8 +1106,8 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_TEXT: SaveStyle(TextFormat("%s%s", outFileName, ".rgs"), outputFormat); break;
-            case STYLE_BINARY: SaveStyle(TextFormat("%s%s", outFileName, ".rgsb"), outputFormat); break;
+            //case STYLE_TEXT: SaveStyle(TextFormat("%s%s", outFileName, ".rgs"), outputFormat); break;
+            case STYLE_BINARY: SaveStyle(TextFormat("%s%s", outFileName, ".rgs"), outputFormat); break;
             case STYLE_AS_CODE: ExportStyleAsCode(TextFormat("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
             {
@@ -1117,59 +1128,14 @@ static void ProcessCommandLine(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 
 // Save raygui style file (.rgs)
+// NOTE: By default style is saved as binary file
 static bool SaveStyle(const char *fileName, int format)
 {
     int success = false;
 
     FILE *rgsFile = NULL;
 
-    if (format == STYLE_TEXT)
-    {
-        rgsFile = fopen(fileName, "wt");
-
-        if (rgsFile != NULL)
-        {
-            #define RGS_FILE_VERSION_TEXT  "3.1"
-
-            // Write some description comments
-            fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
-            fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
-
-            if (customFont)
-            {
-                fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n");
-                fprintf(rgsFile, "f %i %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetFileName(fontFilePath));
-            }
-
-            // Save DEFAULT properties that changed
-            for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
-            {
-                if (styleBackup[j] != GuiGetStyle(0, j))
-                {
-                    // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                    fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < RAYGUI_MAX_PROPS_BASE)? guiPropsText[j] : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
-                }
-            }
-
-            // Save other controls properties that changed
-            for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
-            {
-                for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
-                {
-                    // Check all properties that have changed in comparison to default style and add custom style sets for those properties
-                    if ((styleBackup[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
-                    {
-                        // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                        fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < RAYGUI_MAX_PROPS_BASE)? guiPropsText[j] : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
-                    }
-                }
-            }
-
-            fclose(rgsFile);
-            success = true;
-        }
-    }
-    else if (format == STYLE_BINARY)
+    if (format == STYLE_BINARY)
     {
         rgsFile = fopen(fileName, "wb");
 
@@ -1199,12 +1165,15 @@ static bool SaveStyle(const char *fileName, int format)
             // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
             // 32+4*N  | 16      | Rectangle  | Font white rectangle
 
-            // Custom Font Data : Image (16 bytes + imSize)
-            // 48+4*N  | 4       | int        | Image data size
-            // 52+4*N  | 4       | int        | Image width
-            // 56+4*N  | 4       | int        | Image height
-            // 60+4*N  | 4       | int        | Image format
-            // 64+4*N  | imSize  | *          | Image data
+            // Custom Font Data : Image (20 bytes + imSize)
+            // NOTE: Font image atlas is always converted to GRAY+ALPHA
+            // and atlas image data can be compressed (DEFLATE)
+            // 48+4*N  | 4       | int        | Image data size (uncompressed)
+            // 52+4*N  | 4       | int        | Image data size (compressed)
+            // 56+4*N  | 4       | int        | Image width
+            // 60+4*N  | 4       | int        | Image height
+            // 64+4*N  | 4       | int        | Image format
+            // 68+4*N  | imSize  | *          | Image data (comp or uncomp)
 
             // Custom Font Data : Recs (32 bytes*glyphCount)
             // foreach (glyph)
@@ -1273,20 +1242,39 @@ static bool SaveStyle(const char *fileName, int format)
             int fontSize = 0;
 
             // Write font data (embedding)
-            if (customFont)
+            if (customFontLoaded)
             {
-                Image imFont = LoadImageFromTexture(font.texture);
+                Image imFont = LoadImageFromTexture(customFont.texture);
 
                 // Write font parameters
                 int fontParamsSize = 32;
-                int fontImageSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-                int fontGlyphDataSize = font.glyphCount*32;       // 32 bytes by char
-                int fontDataSize = fontParamsSize + fontImageSize + fontGlyphDataSize;
+                int fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
+                int fontImageCompSize = fontImageUncompSize;
+                int fontGlyphDataSize = customFont.glyphCount*32;       // 32 bytes by char
+                int fontDataSize = fontParamsSize + fontImageUncompSize + fontGlyphDataSize;
                 int fontType = 0;       // 0-NORMAL, 1-SDF
 
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
+                // NOTE: If data is compressed using raylib CompressData() DEFLATE,
+                // it requires to be decompressed with raylib DecompressData(), that requires
+                // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
+
+                // Make sure font atlas image data is GRAY + ALPHA for better compression
+                if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA)
+                {
+                    ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
+                    fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
+                }
+
+                // Compress font atlas image data
+                unsigned char *compData = CompressData(imFont.data, fontImageUncompSize, &fontImageCompSize);
+
+                // NOTE: Actually, fontDataSize is only used to check that there is font data included in the file
+                fontDataSize = fontParamsSize + fontImageCompSize + fontGlyphDataSize;
+#endif
                 fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
-                fwrite(&font.baseSize, 1, sizeof(int), rgsFile);
-                fwrite(&font.glyphCount, 1, sizeof(int), rgsFile);
+                fwrite(&customFont.baseSize, 1, sizeof(int), rgsFile);
+                fwrite(&customFont.glyphCount, 1, sizeof(int), rgsFile);
                 fwrite(&fontType, 1, sizeof(int), rgsFile);
 
                 // TODO: Define font white rectangle?
@@ -1294,27 +1282,79 @@ static bool SaveStyle(const char *fileName, int format)
                 fwrite(&rec, 1, sizeof(Rectangle), rgsFile);
 
                 // Write font image parameters
-                fwrite(&fontImageSize, 1, sizeof(int), rgsFile);
+                fwrite(&fontImageUncompSize, 1, sizeof(int), rgsFile);
+                fwrite(&fontImageCompSize, 1, sizeof(int), rgsFile);
                 fwrite(&imFont.width, 1, sizeof(int), rgsFile);
                 fwrite(&imFont.height, 1, sizeof(int), rgsFile);
                 fwrite(&imFont.format, 1, sizeof(int), rgsFile);
-                fwrite(imFont.data, 1, fontImageSize, rgsFile);         // TODO: Compress image data?
-
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
+                fwrite(compData, 1, fontImageCompSize, rgsFile);
+                MemFree(compData);
+#else
+                fwrite(imFont.data, 1, fontImageUncompSize, rgsFile);
+#endif
                 UnloadImage(imFont);
 
                 // Write font recs data
-                for (int i = 0; i < font.glyphCount; i++) fwrite(&font.recs[i], 1, sizeof(Rectangle), rgsFile);
+                for (int i = 0; i < customFont.glyphCount; i++) fwrite(&customFont.recs[i], 1, sizeof(Rectangle), rgsFile);
 
                 // Write font chars info data
-                for (int i = 0; i < font.glyphCount; i++)
+                for (int i = 0; i < customFont.glyphCount; i++)
                 {
-                    fwrite(&font.glyphs[i].value, 1, sizeof(int), rgsFile);
-                    fwrite(&font.glyphs[i].offsetX, 1, sizeof(int), rgsFile);
-                    fwrite(&font.glyphs[i].offsetY, 1, sizeof(int), rgsFile);
-                    fwrite(&font.glyphs[i].advanceX, 1, sizeof(int), rgsFile);
+                    fwrite(&customFont.glyphs[i].value, 1, sizeof(int), rgsFile);
+                    fwrite(&customFont.glyphs[i].offsetX, 1, sizeof(int), rgsFile);
+                    fwrite(&customFont.glyphs[i].offsetY, 1, sizeof(int), rgsFile);
+                    fwrite(&customFont.glyphs[i].advanceX, 1, sizeof(int), rgsFile);
                 }
             }
             else fwrite(&fontSize, 1, sizeof(int), rgsFile);
+
+            fclose(rgsFile);
+            success = true;
+        }
+    }
+
+    if (format == STYLE_TEXT)
+    {
+        rgsFile = fopen(fileName, "wt");
+
+        if (rgsFile != NULL)
+        {
+            #define RGS_FILE_VERSION_TEXT  "3.5"
+
+            // Write some description comments
+            fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
+            fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
+
+            if (customFontLoaded)
+            {
+                fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n");
+                fprintf(rgsFile, "f %i %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetFileName(fontFilePath));
+            }
+
+            // Save DEFAULT properties that changed
+            for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
+            {
+                if (styleBackup[j] != GuiGetStyle(0, j))
+                {
+                    // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
+                    fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < RAYGUI_MAX_PROPS_BASE)? guiPropsText[j] : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
+                }
+            }
+
+            // Save other controls properties that changed
+            for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
+            {
+                for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
+                {
+                    // Check all properties that have changed in comparison to default style and add custom style sets for those properties
+                    if ((styleBackup[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+                    {
+                        // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
+                        fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < RAYGUI_MAX_PROPS_BASE)? guiPropsText[j] : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
+                    }
+                }
+            }
 
             fclose(rgsFile);
             success = true;
@@ -1346,7 +1386,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
     {
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// StyleAsCode exporter v1.1 - Style data exported as a values array            //\n");
+        fprintf(txtFile, "// StyleAsCode exporter v1.2 - Style data exported as a values array            //\n");
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "// USAGE: On init call: GuiLoadStyle%s();                             //\n", TextToPascal(styleName));
         fprintf(txtFile, "//                                                                              //\n");
@@ -1389,7 +1429,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
         fprintf(txtFile, "};\n\n");
 
-        if (customFont)
+        if (customFontLoaded)
         {
             fprintf(txtFile, "// WARNING: This style uses a custom font: %s (size: %i, spacing: %i)\n\n",
                     GetFileName(fontFilePath), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
@@ -1397,17 +1437,17 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
         Image imFont = { 0 };
 
-        if (customFont)
+        if (customFontLoaded)
         {
             // Support font export and initialization
             // NOTE: This mechanism is highly coupled to raylib
-            imFont = LoadImageFromTexture(font.texture);
+            imFont = LoadImageFromTexture(customFont.texture);
+            if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA) TRACELOG(LOG_WARNING, "Font image format is not GRAY+ALPHA!");
             int imFontSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
 
             #define BYTES_TEXT_PER_LINE     20
 
-#define SUPPORT_COMPRESSED_FONT
-#if defined(SUPPORT_COMPRESSED_FONT)
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
             // NOTE: If data is compressed using raylib CompressData() DEFLATE,
             // it requires to be decompressed with raylib DecompressData(), that requires
             // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
@@ -1426,6 +1466,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "static unsigned char %sFontData[%s_COMPRESSED_DATA_SIZE] = { ", styleName, TextToUpper(styleName));
             for (int i = 0; i < compDataSize - 1; i++) fprintf(txtFile, ((i%BYTES_TEXT_PER_LINE == 0)? "0x%02x,\n    " : "0x%02x, "), compData[i]);
             fprintf(txtFile, "0x%02x };\n\n", compData[compDataSize - 1]);
+            MemFree(compData);
 #else
             // Save font image data (uncompressed)
             fprintf(txtFile, "// Font image pixels data\n");
@@ -1436,10 +1477,10 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 #endif
             // Save font recs data
             fprintf(txtFile, "// Font characters rectangles data\n");
-            fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleName, font.glyphCount);
-            for (int i = 0; i < font.glyphCount; i++)
+            fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleName, customFont.glyphCount);
+            for (int i = 0; i < customFont.glyphCount; i++)
             {
-                fprintf(txtFile, "    { %1.0f, %1.0f, %1.0f , %1.0f },\n", font.recs[i].x, font.recs[i].y, font.recs[i].width, font.recs[i].height);
+                fprintf(txtFile, "    { %1.0f, %1.0f, %1.0f , %1.0f },\n", customFont.recs[i].x, customFont.recs[i].y, customFont.recs[i].width, customFont.recs[i].height);
             }
             fprintf(txtFile, "};\n\n");
 
@@ -1448,10 +1489,10 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // it could be generated from image and recs
             fprintf(txtFile, "// Font characters info data\n");
             fprintf(txtFile, "// NOTE: No chars.image data provided\n");
-            fprintf(txtFile, "static const GlyphInfo %sFontChars[%i] = {\n", styleName, font.glyphCount);
-            for (int i = 0; i < font.glyphCount; i++)
+            fprintf(txtFile, "static const GlyphInfo %sFontChars[%i] = {\n", styleName, customFont.glyphCount);
+            for (int i = 0; i < customFont.glyphCount; i++)
             {
-                fprintf(txtFile, "    { %i, %i, %i, %i, { 0 }},\n", font.glyphs[i].value, font.glyphs[i].offsetX, font.glyphs[i].offsetY, font.glyphs[i].advanceX);
+                fprintf(txtFile, "    { %i, %i, %i, %i, { 0 }},\n", customFont.glyphs[i].value, customFont.glyphs[i].offsetX, customFont.glyphs[i].offsetY, customFont.glyphs[i].advanceX);
             }
             fprintf(txtFile, "};\n\n");
 
@@ -1465,10 +1506,10 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "    for (int i = 0; i < %s_STYLE_PROPS_COUNT; i++)\n    {\n", TextToUpper(styleName));
         fprintf(txtFile, "        GuiSetStyle(%sStyleProps[i].controlId, %sStyleProps[i].propertyId, %sStyleProps[i].propertyValue);\n    }\n\n", styleName, styleName, styleName);
 
-        if (customFont)
+        if (customFontLoaded)
         {
             fprintf(txtFile, "    // Custom font loading\n");
-#if defined(SUPPORT_COMPRESSED_FONT)
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
             fprintf(txtFile, "    // NOTE: Compressed font image data (DEFLATE), it requires DecompressData() function\n");
             fprintf(txtFile, "    int %sFontDataSize = 0;\n", styleName);
             fprintf(txtFile, "    unsigned char *data = DecompressData(%sFontData, %s_COMPRESSED_DATA_SIZE, &%sFontDataSize);\n", styleName, TextToUpper(styleName), styleName);
@@ -1479,7 +1520,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 #endif
             fprintf(txtFile, "    Font font = { 0 };\n");
             fprintf(txtFile, "    font.baseSize = %i;\n", GuiGetStyle(DEFAULT, TEXT_SIZE));
-            fprintf(txtFile, "    font.glyphCount = %i;\n\n", font.glyphCount);
+            fprintf(txtFile, "    font.glyphCount = %i;\n\n", customFont.glyphCount);
 
             fprintf(txtFile, "    // Load texture from image\n");
             fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n\n");
