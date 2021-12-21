@@ -18,12 +18,12 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       3.5  (xx-Nov-2021) Updated to raylib 4.0 and raygui 3.0
+*       3.5  (xx-Nov-2021) Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
-*       raylib 4.0              - Windowing/input management and drawing.
-*       raygui 3.0              - Immediate-mode GUI controls.
-*       tinyfiledialogs 3.8.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs.
+*       raylib 4.0              - Windowing/input management and drawing
+*       raygui 3.1              - Immediate-mode GUI controls with custom styling and icons
+*       tinyfiledialogs 3.8.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   COMPILATION (Windows - MinGW):
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99
@@ -84,12 +84,17 @@
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
-const char *toolName = TOOL_NAME;
-const char *toolVersion = TOOL_VERSION;
-const char *toolDescription = TOOL_DESCRIPTION;
-
 #if (!defined(_DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
 bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib)
+#endif
+
+// Simple log system to avoid printf() calls if required
+// NOTE: Avoiding those calls, also avoids const strings memory usage
+#define SUPPORT_LOG_INFO
+#if defined(SUPPORT_LOG_INFO)
+  #define LOG(...) printf(__VA_ARGS__)
+#else
+  #define LOG(...)
 #endif
 
 //----------------------------------------------------------------------------------
@@ -109,6 +114,9 @@ typedef enum {
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
+static const char *toolName = TOOL_NAME;
+static const char *toolVersion = TOOL_VERSION;
+static const char *toolDescription = TOOL_DESCRIPTION;
 
 // Controls name text
 // NOTE: Some styles are shared by multiple controls
@@ -486,8 +494,10 @@ int main(int argc, char *argv[])
         if (IsKeyPressed(KEY_ESCAPE))
         {
             if (windowAboutState.windowActive) windowAboutState.windowActive = false;
+        #if !defined(PLATFORM_WEB)
             else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
+        #endif
         }
 
         // Reset to default light style
@@ -513,10 +523,11 @@ int main(int argc, char *argv[])
 
         // Basic program flow logic
         //----------------------------------------------------------------------------------
-        frameCounter++;                    // General usage frames counter
+        frameCounter++;                     // General usage frames counter
         mousePos = GetMousePosition();      // Get mouse position each frame
+#if !defined(PLATFORM_WEB)
         if (WindowShouldClose()) exitWindow = true;
-
+#endif
         // Check for changed properties
         changedPropCounter = StyleChangesCounter();
         if (changedPropCounter > 0) saveChangesRequired = true;
@@ -985,9 +996,8 @@ int main(int argc, char *argv[])
 }
 
 //--------------------------------------------------------------------------------------------
-// Module Functions Definitions (local)
+// Module functions definition
 //--------------------------------------------------------------------------------------------
-
 #if defined(VERSION_ONE)            // Command line
 // Show command line usage info
 static void ShowCommandLineInfo(void)
@@ -1442,7 +1452,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // Support font export and initialization
             // NOTE: This mechanism is highly coupled to raylib
             imFont = LoadImageFromTexture(customFont.texture);
-            if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA) TRACELOG(LOG_WARNING, "Font image format is not GRAY+ALPHA!");
+            if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA) LOG("WARNING: Font image format is not GRAY+ALPHA!");
             int imFontSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
 
             #define BYTES_TEXT_PER_LINE     20
