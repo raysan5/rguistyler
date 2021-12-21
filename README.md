@@ -1,6 +1,7 @@
 <img align="left" src="logo/rguistyler_256x256.png" width=256>
 
 # rGuiStyler
+
 A simple and easy-to-use raygui styles editor.
 
 Useful for tools style customization. The best mate for [rGuiLayout](https://github.com/raysan5/rguilayout) tool.
