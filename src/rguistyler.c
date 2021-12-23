@@ -1533,7 +1533,10 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    font.glyphCount = %i;\n\n", customFont.glyphCount);
 
             fprintf(txtFile, "    // Load texture from image\n");
-            fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n\n");
+            fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n");
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
+            fprintf(txtFile, "    UnloadImage(imFont);  // Uncompressed data can be unloaded from memory\n\n");
+#endif
 
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
