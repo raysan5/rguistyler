@@ -5,8 +5,7 @@
 *   CONFIGURATION:
 *
 *   #define VERSION_ONE
-*       Enable PRO features for the tool:
-*       - Support command line usage
+*       Enable command-line usage and PRO features for the tool
 *
 *   #define CUSTOM_MODAL_DIALOGS
 *       Use custom raygui generated modal dialogs instead of native OS ones
@@ -50,8 +49,6 @@
 *
 **********************************************************************************************/
 
-#include "raylib.h"
-
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
 #define TOOL_VERSION            "3.5"
@@ -60,6 +57,8 @@
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
 #define SUPPORT_COMPRESSED_FONT_ATLAS
+
+#include "raylib.h"
 
 #if defined(PLATFORM_WEB)
     #define CUSTOM_MODAL_DIALOGS            // Force custom modal dialogs usage
@@ -232,13 +231,11 @@ int main(int argc, char *argv[])
                 strcpy(inFileName, argv[1]);    // Read input filename to open with gui interface
             }
         }
-#if defined(VERSION_ONE)
         else
         {
             ProcessCommandLine(argc, argv);
             return 0;
         }
-#endif      // VERSION_ONE
     }
 
 #if (!defined(_DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
@@ -383,6 +380,8 @@ int main(int argc, char *argv[])
     // Main game loop
     while (!exitWindow)             // Detect window close button
     {
+        if (WindowShouldClose()) exitWindow = true;
+        
         // Dropped files logic
         //----------------------------------------------------------------------------------
         if (IsFileDropped())
@@ -525,9 +524,7 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         frameCounter++;                     // General usage frames counter
         mousePos = GetMousePosition();      // Get mouse position each frame
-#if !defined(PLATFORM_WEB)
-        if (WindowShouldClose()) exitWindow = true;
-#endif
+
         // Check for changed properties
         changedPropCounter = StyleChangesCounter();
         if (changedPropCounter > 0) saveChangesRequired = true;
@@ -673,11 +670,8 @@ int main(int argc, char *argv[])
 
         // Draw
         //----------------------------------------------------------------------------------
-        BeginDrawing();
-            ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-
-            // Render all screen to a texture (for scaling)
-            BeginTextureMode(screenTarget);
+        // Render all screen to a texture (for scaling)
+        BeginTextureMode(screenTarget);
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
             if (windowAboutState.windowActive || windowExitActive) GuiDisable();
@@ -977,7 +971,10 @@ int main(int argc, char *argv[])
             }
             //----------------------------------------------------------------------------------------
 
-            EndTextureMode();
+        EndTextureMode();
+            
+        BeginDrawing();
+            ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
             // Draw render texture to screen (scaled if required)
             DrawTexturePro(screenTarget.texture, (Rectangle){ 0, 0, screenTarget.texture.width, -screenTarget.texture.height }, (Rectangle){ 0, 0, screenTarget.texture.width*screenScale, screenTarget.texture.height*screenScale }, (Vector2){ 0, 0 }, 0.0f, WHITE);
@@ -987,7 +984,7 @@ int main(int argc, char *argv[])
     }
     // De-Initialization
     //--------------------------------------------------------------------------------------
-    UnloadFont(customFont);           // Unload font data
+    UnloadFont(customFont);     // Unload font data
 
     CloseWindow();              // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
@@ -998,14 +995,14 @@ int main(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 // Module functions definition
 //--------------------------------------------------------------------------------------------
-#if defined(VERSION_ONE)            // Command line
+#if defined(VERSION_ONE)
 // Show command line usage info
 static void ShowCommandLineInfo(void)
 {
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
     printf("// %s v%s - %s                 //\n", toolName, toolVersion, toolDescription);
-    printf("// powered by raylib v%s and raygui v%s                                       //\n", RAYLIB_VERSION, RAYGUI_VERSION);
+    printf("// powered by raylib v%s and raygui v%s                                   //\n", RAYLIB_VERSION, RAYGUI_VERSION);
     printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
     printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
@@ -1063,11 +1060,11 @@ static void ProcessCommandLine(int argc, char *argv[])
                 {
                     strcpy(inFileName, argv[i + 1]);    // Read input filename
                 }
-                else printf("WARNING: Input file extension not recognized\n");
+                else LOG("WARNING: Input file extension not recognized\n");
 
                 i++;
             }
-            else printf("WARNING: No input file provided\n");
+            else LOG("WARNING: No input file provided\n");
         }
         else if ((strcmp(argv[i], "-o") == 0) || (strcmp(argv[i], "--output") == 0))
         {
@@ -1079,11 +1076,11 @@ static void ProcessCommandLine(int argc, char *argv[])
                 {
                     strcpy(outFileName, argv[i + 1]);   // Read output filename
                 }
-                else printf("WARNING: Output file extension not recognized\n");
+                else LOG("WARNING: Output file extension not recognized\n");
 
                 i++;
             }
-            else printf("WARNING: No output file provided\n");
+            else LOG("WARNING: No output file provided\n");
         }
         else if ((strcmp(argv[i], "-f") == 0) || (strcmp(argv[i], "--format") == 0))
         {
@@ -1096,10 +1093,8 @@ static void ProcessCommandLine(int argc, char *argv[])
 
                 i++;
             }
-            else printf("WARNING: Format parameters provided not valid\n");
+            else LOG("WARNING: Format parameters provided not valid\n");
         }
-
-        // TODO: Support font parameters and individual property edition
     }
 
     if (inFileName[0] != '\0')
@@ -1107,8 +1102,8 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Set a default name for output in case not provided
         if (outFileName[0] == '\0') strcpy(outFileName, "output");
 
-        printf("\nInput file:       %s", inFileName);
-        printf("\nOutput file:      %s", outFileName);
+        LOG("\nInput file:       %s", inFileName);
+        LOG("\nOutput file:      %s", outFileName);
 
         // Process input .rgs file
         GuiLoadStyle(inFileName);
@@ -1131,7 +1126,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 
     if (showUsageInfo) ShowCommandLineInfo();
 }
-#endif      // VERSION_ONE: Command line
+#endif      // VERSION_ONE
 
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
