@@ -212,12 +212,13 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    
 //------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-#if !defined(_DEBUG)
-    SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
-#endif
     char inFileName[512] = { 0 };       // Input file name (required in case of drag & drop over executable)
     char outFileName[512] = { 0 };      // Output file name (required for file save/export)
 
+#if !defined(_DEBUG)
+    SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
+#endif
+#if defined(VERSION_ONE)
     // Command-line usage mode
     //--------------------------------------------------------------------------------------
     if (argc > 1)
@@ -237,7 +238,7 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
-
+#endif  // VERSION_ONE
 #if (!defined(_DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
     // WARNING (Windows): If program is compiled as Window application (instead of console),
     // no console is available to show output info... solution is compiling a console application
@@ -1023,8 +1024,8 @@ static void ShowCommandLineInfo(void)
 {
     printf("\n//////////////////////////////////////////////////////////////////////////////////\n");
     printf("//                                                                              //\n");
-    printf("// %s v%s - %s                 //\n", toolName, toolVersion, toolDescription);
-    printf("// powered by raylib v%s and raygui v%s                                   //\n", RAYLIB_VERSION, RAYGUI_VERSION);
+    printf("// %s v%s - %s             //\n", toolName, toolVersion, toolDescription);
+    printf("// powered by raylib v%s and raygui v%s                             //\n", RAYLIB_VERSION, RAYGUI_VERSION);
     printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
     printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
@@ -1594,7 +1595,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
 
     #define TABLE_CONTROLS_COUNT    12
 
-    typedef enum {
+    enum TableControlType {
         TYPE_LABEL = 0,
         TYPE_BUTTON,
         TYPE_TOGGLE,
@@ -1607,7 +1608,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         TYPE_TEXTBOX,
         TYPE_VALUEBOX,
         TYPE_SPINNER
-    } TableControlType;
+    };
 
     static const char *tableStateName[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
     static const char *tableControlsName[TABLE_CONTROLS_COUNT] = {
