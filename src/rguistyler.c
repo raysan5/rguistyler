@@ -674,12 +674,9 @@ int main(int argc, char *argv[])
         BeginTextureMode(screenTarget);
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
-            if (windowAboutState.windowActive || windowExitActive) GuiDisable();
-            else GuiEnable();
-
             // Main GUI
             //---------------------------------------------------------------------------------------------------------
-            // Main toolbar panel
+            // Menu toolbar panel
             GuiPanel((Rectangle){ 0, 0, 740, 50 });
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
             if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) showSaveFileDialog = true;
@@ -690,9 +687,7 @@ int main(int argc, char *argv[])
             viewStyleTableActive = GuiToggle((Rectangle){ 345, 10, 30, 30 }, "#101#", viewStyleTableActive);
             viewFontActive = GuiToggle((Rectangle){ 380, 10, 30, 30 }, "#31#", viewFontActive);
             windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
-#if defined(PLATFORM_WEB)
-            if (GuiButton((Rectangle){ 450, 10, 30, 30 }, "#53#")) ToggleFullscreen();
-#else
+#if !defined(PLATFORM_WEB)
             hiDpiActive = GuiToggle((Rectangle){ 450, 10, 30, 30 }, "#199#", hiDpiActive);
 #endif
             // NOTE: Supporting custom gui state set makes a bit difficult to disable all gui on WindowAbout,
@@ -701,8 +696,10 @@ int main(int argc, char *argv[])
             //if ((GuiGetState() != GUI_STATE_DISABLED) || (propsStateActive == GUI_STATE_DISABLED))
             GuiSetState(propsStateActive);
 
-            if (viewStyleTableActive || viewFontActive || propsStateEditMode) GuiLock();
-
+            // WARNING: Some windows should lock the main screen controls when shown
+            if (windowAboutState.windowActive || windowExitActive || showLoadFileDialog || showSaveFileDialog || showExportFileDialog || viewStyleTableActive || viewFontActive || propsStateEditMode) GuiLock();
+            
+            // Main screen controls
             currentSelectedControl = GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 60, 140, 560 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, currentSelectedControl);
 
             if ((currentSelectedControl == -1) && (propsStateActive == 0)) GuiDisable();
@@ -769,7 +766,6 @@ int main(int argc, char *argv[])
             if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
 
-            //if (GuiGetState() != GUI_STATE_DISABLED)
             GuiSetState(GUI_STATE_NORMAL);
 
             GuiUnlock();
@@ -805,13 +801,14 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (windowExitActive)
             {
-                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(WHITE, 0.7f));
-                windowExitActive = !GuiWindowBox((Rectangle){ GetScreenWidth()/2 - 125, GetScreenHeight()/2 - 50, 250, 100 }, "Closing rGuiStyler");
+                // TODO: Use a custom GuiFileDialog()
+                
+                windowExitActive = !GuiWindowBox((Rectangle){ screenWidth/2 - 125, screenHeight/2 - 50, 250, 100 }, "Closing rGuiStyler");
 
-                GuiLabel((Rectangle){ GetScreenWidth()/2 - 95, GetScreenHeight()/2 - 60, 200, 100 }, "Do you want to save before quitting?");
+                GuiLabel((Rectangle){ screenWidth/2 - 95, screenHeight/2 - 60, 200, 100 }, "Do you want to save before quitting?");
 
-                if (GuiButton((Rectangle){ GetScreenWidth()/2 - 94, GetScreenHeight()/2 + 10, 85, 25 }, "Yes")) showExportFileDialog = true;
-                else if (GuiButton((Rectangle){ GetScreenWidth()/2 + 10, GetScreenHeight()/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
+                if (GuiButton((Rectangle){ screenWidth/2 - 94, screenHeight/2 + 10, 85, 25 }, "Yes")) showExportFileDialog = true;
+                else if (GuiButton((Rectangle){ screenWidth/2 + 10, screenHeight/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
             }
             //----------------------------------------------------------------------------------------
 
