@@ -48,7 +48,7 @@ jobs:
     - name: Build raylib Library + Product (VS2022 solution)
       run: |
         dir
-        cd rfxgen/projects/VS2022
+        cd ${{ env.PROJECT_NAME }}/projects/VS2022
         msbuild.exe ${{ env.PROJECT_NAME }}.sln /target:${{ env.PROJECT_NAME }} /property:Configuration=Release /property:Platform=x64
         cd ../..
       shell: cmd
@@ -58,7 +58,15 @@ jobs:
         dir ${{ env.PROJECT_BUILD_PATH }}
         copy /Y ${{ env.PROJECT_BUILD_PATH }}\${{ env.PROJECT_NAME }}.exe ${{ env.PROJECT_RELEASE_PATH }}\${{ env.PROJECT_NAME }}.exe
         copy /Y ${{ env.PROJECT_NAME }}\README.md ${{ env.PROJECT_RELEASE_PATH }}\README.md
-        copy /Y ${{ env.PROJECT_NAME }}\LICENSE ${{ env.PROJECT_RELEASE_PATH }}\LICENSE
+        mkdir ${{ env.PROJECT_RELEASE_PATH }}\styles
+        copy /Y ${{ env.PROJECT_NAME }}\styles\jungle.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\jungle.rgs
+        copy /Y ${{ env.PROJECT_NAME }}\styles\candy.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\candy.rgs
+        copy /Y ${{ env.PROJECT_NAME }}\styles\bluish.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\bluish.rgs
+        copy /Y ${{ env.PROJECT_NAME }}\styles\cherry.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\cherry.rgs
+        copy /Y ${{ env.PROJECT_NAME }}\styles\ashes.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\ashes.rgs
+        copy /Y ${{ env.PROJECT_NAME }}\styles\cyber.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\cyber.rgs
+        copy /Y ${{ env.PROJECT_NAME }}\styles\lavanda.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\lavanda.rgs
+        copy /Y ${{ env.PROJECT_NAME }}\styles\terminal.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\terminal.rgs
         dir ${{ env.PROJECT_RELEASE_PATH }}
         7z a .\${{ env.PROJECT_RELEASE_PATH }}.zip .\${{ env.PROJECT_RELEASE_PATH }}
       shell: cmd
