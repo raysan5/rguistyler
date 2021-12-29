@@ -33,7 +33,7 @@ _NOTE: This tool is itended to be used with [**raygui 3.1**](https://github.com/
 
 ## rGuiStyler Screenshot
 
-![rGuiStyler](screenshots/rguistyler_v210_light_shot01.png)
+![rGuiStyler](screenshots/rguistyler_v350_light_shot01.png)
  
 ## rGuiStyler Usage
 
