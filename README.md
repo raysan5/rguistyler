@@ -9,7 +9,6 @@ Useful for tools style customization. The best tool companion for [rGuiLayout](h
 rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rfxgen) and it can also be downloaded as a **standalone tool** for _Windows_ and _Linux_ with some extra features.
 
 <br>
-<br>
 
 _NOTE: This tool is itended to be used with [**raygui 3.1**](https://github.com/raysan5/raygui)_
 
@@ -54,6 +53,8 @@ Once the desired style has been created, press the `Export Style` button to save
 
 `rGuiStyler` online tool can be used completely for free.
 
-`rGuiStyler Standalone` desktop tool is distributed as freeware. In any case, consider some donation to help the author keep working on software for games development.
+`rGuiStyler Standalone` desktop tool is distributed as freeware. 
+
+In any case, consider some donation to help the author keep working on software for games development.
 
 *Copyright (c) 2015-2021 raylib technologies ([@raylibtech](https://twitter.com/raylibtech))*
