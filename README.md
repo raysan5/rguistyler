@@ -17,9 +17,9 @@ _NOTE: This tool is itended to be used with [**raygui 3.1**](https://github.com/
  - **Global and control specific styles edition**
  - **Style preview** in real time with individual test controls
  - Selectable controls state: **NORMAL, FOCUSED, PRESSED, DISABLED**
- - Save and load style custom format: `.rgs` (binary)
- - Export style as an embeddable **code file** (`.h`)
- - Export style as a controls **table image** (`.png`)
+ - Save and load as binary style file `.rgs` (font included!)
+ - Export style as an embeddable **code file** (`.h`) (font included!)
+ - Export style as a `.png` **controls table image** for showcase
  - Import, configure and preview **style fonts** (`.ttf`/`.otf`)
  - Color palette for quick color save/selection
  - **8 custom style examples** included
