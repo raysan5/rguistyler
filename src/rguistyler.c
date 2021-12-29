@@ -17,7 +17,7 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       3.5  (xx-Nov-2021) Updated to raylib 4.0 and raygui 3.1
+*       3.5  (29-Dec-2021) Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
 *       raylib 4.0              - Windowing/input management and drawing
@@ -382,7 +382,7 @@ int main(int argc, char *argv[])
     // Main game loop
     while (!exitWindow)             // Detect window close button
     {
-        if (WindowShouldClose()) exitWindow = true;
+        if (WindowShouldClose()) windowExitActive = true;
         
         // Dropped files logic
         //----------------------------------------------------------------------------------
@@ -506,6 +506,10 @@ int main(int argc, char *argv[])
         #if !defined(PLATFORM_WEB)
             else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
+        #else
+            else if (showLoadFileDialog) showLoadFileDialog = false;
+            else if (showSaveFileDialog) showSaveFileDialog = false;
+            else if (showExportFileDialog) showExportFileDialog = false;
         #endif
         }
 
@@ -767,7 +771,6 @@ int main(int argc, char *argv[])
             if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             //----------------------------------------------------------------------------------------
-            
             
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
             if (GuiIsLocked()) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
