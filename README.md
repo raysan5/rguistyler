@@ -53,6 +53,8 @@ Once the desired style has been created, press the `Export Style` button to save
 
 `rGuiStyler` online tool can be used completely for free.
 
-`rGuiStyler Standalone` desktop tool is distributed as freeware. In any case, consider some donation to help the author keep working on software for games development.
+`rGuiStyler Standalone` desktop tool is distributed as freeware. 
+
+In any case, consider some donation to help the author keep working on software for games development.
 
 *Copyright (c) 2015-2021 raylib technologies ([@raylibtech](https://twitter.com/raylibtech))*
