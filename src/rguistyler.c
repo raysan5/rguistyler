@@ -354,17 +354,18 @@ int main(int argc, char *argv[])
     bool showExportFileDialog = false;
     //-----------------------------------------------------------------------------------
 
+//#define STYLES_SPINNING_DEMO
 #if defined(STYLES_SPINNING_DEMO)
     int styleCounter = 0;
     char stylesList[8][64] = {
-        "D:\\GitHub\\raygui/styles/jungle/jungle.rgs\0",
-        "D:\\GitHub\\raygui/styles/candy/candy.rgs\0",
-        "D:\\GitHub\\raygui/styles/bluish/bluish.rgs\0",
-        "D:\\GitHub\\raygui/styles/cherry/cherry.rgs\0",
-        "D:\\GitHub\\raygui/styles/ashes/ashes.rgs\0",
-        "D:\\GitHub\\raygui/styles/cyber/cyber.rgs\0",
-        "D:\\GitHub\\raygui/styles/lavanda/lavanda.rgs\0",
-        "D:\\GitHub\\raygui/styles/terminal/terminal.rgs\0"
+        "../styles/jungle.rgs\0",
+        "../styles/candy.rgs\0",
+        "../styles/bluish.rgs\0",
+        "../styles/cherry.rgs\0",
+        "../styles/ashes.rgs\0",
+        "../styles/cyber.rgs\0",
+        "../styles/lavanda.rgs\0",
+        "../styles/terminal.rgs\0"
     };
 #endif
 
@@ -439,9 +440,11 @@ int main(int argc, char *argv[])
         // Keyboard shortcuts
         //----------------------------------------------------------------------------------
 #if defined(STYLES_SPINNING_DEMO)
-        if (IsKeyPressed(KEY_RIGHT))
+        if (IsKeyPressed(KEY_SPACE))
         {
-            GuiLoadStyleDefault();          // Reset to base default style
+            currentSelectedProperty = -1;
+
+            //GuiLoadStyleDefault();          // Reset to base default style
             GuiLoadStyle(stylesList[styleCounter]);  // Load new style properties
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
@@ -452,10 +455,16 @@ int main(int argc, char *argv[])
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
             // Load .rgs custom font in font
-            font = GuiGetFont();
+            customFont = GuiGetFont();
             memset(fontFilePath, 0, 512);
             fontFileProvided = false;
-            customFont = true;
+            customFontLoaded = true;
+
+            // Regenerate style table
+            UnloadTexture(texStyleTable);
+            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
+            texStyleTable = LoadTextureFromImage(imStyleTable);
+            UnloadImage(imStyleTable);
 
             styleCounter++;
             if (styleCounter > 7) styleCounter = 0;
