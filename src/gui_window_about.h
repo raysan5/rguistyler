@@ -113,7 +113,7 @@ void GuiWindowAbout(GuiWindowAboutState *state);
     #define TOOL_RELEASE_DATE   "Dec.2021"
 #endif
 #if !defined(TOOL_LOGO_COLOR)
-    #define TOOL_LOGO_COLOR       0x000000ff
+    #define TOOL_LOGO_COLOR      0x000000ff
 #endif
 
 //----------------------------------------------------------------------------------
