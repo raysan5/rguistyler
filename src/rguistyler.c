@@ -65,6 +65,9 @@
     #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
 #endif
 
+#define RPNG_IMPLEMENTATION
+#include "external/rpng.h"                  // PNG chunks management
+
 #define RAYGUI_IMPLEMENTATION
 #include "external/raygui.h"                // Required for: IMGUI controls
 
@@ -199,6 +202,7 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 #endif
 
 // Load/Save/Export data functions
+static unsigned char *SaveStyleToMemory(int *size);         // Save style to memory buffer
 static bool SaveStyle(const char *fileName, int format);    // Save style file text or binary (.rgs/.rgsb)
 static void ExportStyleAsCode(const char *fileName, const char *styleName);        // Export gui style as color palette code
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
@@ -983,6 +987,14 @@ int main(int argc, char *argv[])
                             Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                             ExportImage(imStyleTable, outFileName);
                             UnloadImage(imStyleTable);
+                            
+                            // Write a custom chunk - rGSf (rGuiStyler file)
+                            rpng_chunk chunk = { 0 };
+                            memcpy(chunk.type, "rGSf", 4);  // Chunk type FOURCC
+                            chunk.data = SaveStyleToMemory(&chunk.length);
+                            rpng_chunk_write(outFileName, chunk);
+                            RPNG_FREE(chunk.data);
+                            
                         } break;
                         default: break;
                     }
@@ -1157,6 +1169,146 @@ static void ProcessCommandLine(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
 //--------------------------------------------------------------------------------------------
+
+static unsigned char *SaveStyleToMemory(int *size)
+{
+    unsigned char *buffer = (unsigned char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
+    int dataSize = 0;
+    
+    char signature[5] = "rGS ";
+    short version = 200;
+    short reserved = 0;
+    int changedPropCounter = StyleChangesCounter();
+
+    memcpy(buffer, signature, 4);
+    memcpy(buffer + 4, &version, sizeof(short));
+    memcpy(buffer + 6, &reserved, sizeof(short));
+    memcpy(buffer + 8, &changedPropCounter, sizeof(int));
+    dataSize += 12;
+
+    short controlId = 0;
+    short propertyId = 0;
+    int propertyValue = 0;
+
+    // Save first all properties that have changed in DEFAULT style
+    for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++)
+    {
+        if (styleBackup[i] != GuiGetStyle(0, i))
+        {
+            propertyId = (short)i;
+            propertyValue = GuiGetStyle(0, i);
+
+            memcpy(buffer + dataSize, &controlId, sizeof(short));
+            memcpy(buffer + dataSize + 2, &propertyId, sizeof(short));
+            memcpy(buffer + dataSize + 4, &propertyValue, sizeof(int));
+            dataSize += 8;
+        }
+    }
+
+    // Save all properties that have changed in comparison to DEFAULT style
+    for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
+    {
+        for (int j = 0; j < RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED; j++)
+        {
+            if ((styleBackup[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+            {
+                controlId = (short)i;
+                propertyId = (short)j;
+                propertyValue = GuiGetStyle(i, j);
+
+                memcpy(buffer + dataSize, &controlId, sizeof(short));
+                memcpy(buffer + dataSize + 2, &propertyId, sizeof(short));
+                memcpy(buffer + dataSize + 4, &propertyValue, sizeof(int));
+                dataSize += 8;
+            }
+        }
+    }
+
+    int fontSize = 0;
+
+    // Write font data (embedding)
+    if (customFontLoaded)
+    {
+        Image imFont = LoadImageFromTexture(customFont.texture);
+
+        // Write font parameters
+        int fontParamsSize = 32;
+        int fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
+        int fontImageCompSize = fontImageUncompSize;
+        int fontGlyphDataSize = customFont.glyphCount*32;       // 32 bytes by char
+        int fontDataSize = fontParamsSize + fontImageUncompSize + fontGlyphDataSize;
+        int fontType = 0;       // 0-NORMAL, 1-SDF
+
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
+        // NOTE: If data is compressed using raylib CompressData() DEFLATE,
+        // it requires to be decompressed with raylib DecompressData(), that requires
+        // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
+
+        // Make sure font atlas image data is GRAY + ALPHA for better compression
+        if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA)
+        {
+            ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
+            fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
+        }
+
+        // Compress font atlas image data
+        unsigned char *compData = CompressData(imFont.data, fontImageUncompSize, &fontImageCompSize);
+
+        // NOTE: Actually, fontDataSize is only used to check that there is font data included in the file
+        fontDataSize = fontParamsSize + fontImageCompSize + fontGlyphDataSize;
+#endif
+        memcpy(buffer + dataSize, &fontDataSize, sizeof(int));
+        memcpy(buffer + dataSize + 4, &customFont.baseSize, sizeof(int));
+        memcpy(buffer + dataSize + 8, &customFont.glyphCount, sizeof(int));
+        memcpy(buffer + dataSize + 12, &fontType, sizeof(int));
+
+        // TODO: Define font white rectangle?
+        Rectangle rec = { 0 };
+        memcpy(buffer + dataSize + 16, &rec, sizeof(Rectangle));
+        dataSize += (16 + sizeof(Rectangle));
+
+        // Write font image parameters
+        memcpy(buffer + dataSize, &fontImageUncompSize, sizeof(int));
+        memcpy(buffer + dataSize + 4, &fontImageCompSize, sizeof(int));
+        memcpy(buffer + dataSize + 8, &imFont.width, sizeof(int));
+        memcpy(buffer + dataSize + 12, &imFont.height, sizeof(int));
+        memcpy(buffer + dataSize + 16, &imFont.format, sizeof(int));
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
+        memcpy(buffer + dataSize + 20, compData, fontImageCompSize);
+        dataSize += (20 + fontImageCompSize);
+        MemFree(compData);
+#else
+        memcpy(buffer + dataSize, imFont.data, fontImageUncompSize);
+        dataSize += (20 + fontImageUncompSize);
+#endif
+        UnloadImage(imFont);
+
+        // Write font recs data
+        for (int i = 0; i < customFont.glyphCount; i++) 
+        {
+            memcpy(buffer + dataSize, &customFont.recs[i], sizeof(Rectangle));
+            dataSize += sizeof(Rectangle);
+        }
+
+        // Write font chars info data
+        for (int i = 0; i < customFont.glyphCount; i++)
+        {
+            memcpy(buffer + dataSize, &customFont.glyphs[i].value, sizeof(int));
+            memcpy(buffer + dataSize + 4, &customFont.glyphs[i].offsetX, sizeof(int));
+            memcpy(buffer + dataSize + 8, &customFont.glyphs[i].offsetY, sizeof(int));
+            memcpy(buffer + dataSize + 12, &customFont.glyphs[i].advanceX, sizeof(int));
+            dataSize += 16;
+        }
+    }
+    else 
+    {
+        memcpy(buffer + dataSize, &fontSize, sizeof(int));
+        dataSize += 4;
+    }
+    
+    *size = dataSize;
+    return buffer;
+}
 
 // Save raygui style file (.rgs)
 // NOTE: By default style is saved as binary file
