@@ -6,7 +6,7 @@ A simple and easy-to-use [raygui](https://github.com/raysan5/raygui) styles edit
 
 Useful for tools style customization. The best tool companion for [rGuiLayout](https://raylibtech.itch.io/rguilayout) and [rGuiIcons](https://raylibtech.itch.io/rguiicons).
 
-rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rfxgen) and it can also be downloaded as a **standalone tool** for _Windows_ and _Linux_ with some extra features.
+rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rguistyler) and it can also be downloaded as a **standalone tool** for _Windows_ and _Linux_ with some extra features.
 
 <br>
 
@@ -45,7 +45,7 @@ NOTE: Changes are previewed in real time in the same tool!
 
 Once the desired style has been created, press the `Export Style` button to save it as a `.rgs`**binary style file**. Style can also be exported as an embeddable `.h` **code file** or a `.png` **controls table image** (intended for preview and style showcase)
 
-`rGuiStyler Standalone` comes with command-line support for batch conversion and audio playing. For usage help:
+`rGuiStyler Standalone` comes with command-line support for batch conversion. For usage help:
 
  > rguistyler.exe --help
 
