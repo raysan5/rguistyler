@@ -758,7 +758,7 @@ int main(int argc, char *argv[])
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) showLoadFontFileDialog = true;
 
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 15, 80, 30 }, "Size:", &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, "Spacing:", &fontSpacingValue, 0, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, "Spacing:", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
@@ -1667,11 +1667,11 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             }
             fprintf(txtFile, "};\n\n");
 
-            // Save font chars data
-            // NOTE: Characters Image data not saved (grayscale pixels),
+            // Save font glyphs data
+            // NOTE: Glyphs image data not saved (grayscale pixels),
             // it could be generated from image and recs
-            fprintf(txtFile, "// Font characters info data\n");
-            fprintf(txtFile, "// NOTE: No chars.image data provided\n");
+            fprintf(txtFile, "// Font glyphs info data\n");
+            fprintf(txtFile, "// NOTE: No glyphs.image data provided\n");
             fprintf(txtFile, "static const GlyphInfo %sFontChars[%i] = {\n", styleName, customFont.glyphCount);
             for (int i = 0; i < customFont.glyphCount; i++)
             {
