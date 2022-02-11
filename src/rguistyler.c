@@ -21,7 +21,7 @@
 *
 *   DEPENDENCIES:
 *       raylib 4.0              - Windowing/input management and drawing
-*       raygui 3.1              - Immediate-mode GUI controls with custom styling and icons
+*       raygui 3.2-dev          - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.0                - PNG chunks management
 *       tinyfiledialogs 3.8.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
@@ -726,7 +726,7 @@ int main(int argc, char *argv[])
                 if (propsStateActive != GUI_STATE_DISABLED) GuiEnable();
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
-                colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, colorPickerValue);
+                colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, colorPickerValue);
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, TextFormat("R:   %03i", colorPickerValue.r));
@@ -789,7 +789,7 @@ int main(int argc, char *argv[])
             
             // GUI: Icons menu toolbar
             //----------------------------------------------------------------------------------------
-            GuiPanel((Rectangle){ 0, 0, 740, 50 });
+            GuiPanel((Rectangle){ 0, 0, 740, 50 }, NULL);
             if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
             if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) showSaveFileDialog = true;
             if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowActive = true;
