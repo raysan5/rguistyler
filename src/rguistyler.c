@@ -839,7 +839,7 @@ int main(int argc, char *argv[])
                 
                 windowExitActive = !GuiWindowBox((Rectangle){ screenWidth/2 - 125, screenHeight/2 - 50, 250, 100 }, "Closing rGuiStyler");
 
-                GuiLabel((Rectangle){ screenWidth/2 - 95, screenHeight/2 - 60, 200, 100 }, "Do you want to save before quitting?");
+                GuiLabel((Rectangle){ screenWidth/2 - 95, screenHeight/2 - 60, 250, 100 }, "Do you want to save before quitting?");
 
                 if (GuiButton((Rectangle){ screenWidth/2 - 94, screenHeight/2 + 10, 85, 25 }, "Yes")) showExportFileDialog = true;
                 else if (GuiButton((Rectangle){ screenWidth/2 + 10, screenHeight/2 + 10, 85, 25 }, "No")) { exitWindow = true; }
