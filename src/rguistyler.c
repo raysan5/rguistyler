@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
     // GUI usage mode - Initialization
     //--------------------------------------------------------------------------------------
     const int screenWidth = 740;
-    const int screenHeight = 660;
+    const int screenHeight = 648;
 
     InitWindow(screenWidth, screenHeight, TextFormat("%s v%s | %s", toolName, toolVersion, toolDescription));
     SetExitKey(0);
@@ -304,8 +304,8 @@ int main(int argc, char *argv[])
     // GUI: Main Layout
     //-----------------------------------------------------------------------------------
     Vector2 anchorMain = { 0, 0 };
-    Vector2 anchorWindow = { 345, 60 };
-    Vector2 anchorPropEditor = { 355, 95 };
+    Vector2 anchorWindow = { 345, 52 };
+    Vector2 anchorPropEditor = { 355, 92 };
     Vector2 anchorFontOptions = { 355, 465 };
 
     bool viewStyleTableActive = false;
@@ -314,6 +314,7 @@ int main(int argc, char *argv[])
     int propsStateActive = 0;
 
     bool styleNameEditMode = false;
+    bool btnNextStylePressed = false;
 
     bool prevViewStyleTableState = viewStyleTableActive;
 
@@ -709,9 +710,10 @@ int main(int argc, char *argv[])
             if (propsStateActive != GUI_STATE_NORMAL) currentSelectedProperty = -1;
 
             // List views
-            currentSelectedControl = GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 60, 140, 560 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, currentSelectedControl);
-            if (currentSelectedControl != DEFAULT) currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, NULL, currentSelectedProperty);
-            else currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 60, 180, 560 }, guiPropsDefaultText, 14, NULL, NULL, currentSelectedProperty);
+            GuiSetStyle(LISTVIEW, LIST_ITEMS_HEIGHT, 28);
+            currentSelectedControl = GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 140, 560 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, currentSelectedControl);
+            if (currentSelectedControl != DEFAULT) currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 52, 180, 560 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, NULL, currentSelectedProperty);
+            else currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 52, 180, 560 }, guiPropsDefaultText, 14, NULL, NULL, currentSelectedProperty);
 
             if (windowControlsActive)
             {
@@ -750,35 +752,35 @@ int main(int argc, char *argv[])
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 300, 365, 15 }, NULL);
 
                 if ((propsStateActive == GUI_STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
-                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 25 }, "Text Alignment:");
-                textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 85, 25 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
+                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 24 }, "Text Alignment:");
+                textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 86, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
                 if (propsStateActive != GUI_STATE_DISABLED) GuiEnable();
 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
-                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 15, 85, 30 }, "#30#Load")) showLoadFontFileDialog = true;
+                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 85, 28 }, "#30#Load")) showLoadFontFileDialog = true;
 
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 15, 80, 30 }, "Size:", &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 15, 80, 30 }, "Spacing:", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 16, 80, 28 }, "Size:", &genFontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 16, 80, 28 }, "Spacing:", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
-                if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 55, 345, 35 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
+                if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 56, 345, 28 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
 
-                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 30 }, "Style Binary (.rgs);Style Code (.h);Style Table (.png)", exportFormatActive);
+                exportFormatActive = GuiComboBox((Rectangle){ anchorPropEditor.x, 575, 190, 28 }, "Style Binary (.rgs);Style Code (.h);Style Table (.png)", exportFormatActive);
 
-                if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 30 }, "#7#Export Style")) showExportFileDialog = true;
+                if (GuiButton((Rectangle){ anchorPropEditor.x + 195, 575, 170, 28 }, "#7#Export Style")) showExportFileDialog = true;
             }
             //---------------------------------------------------------------------------------------------------------
 
             // GUI: Status bar
             //----------------------------------------------------------------------------------------
-            GuiStatusBar((Rectangle){ anchorMain.x + 0, anchorMain.y + 635, 151, 25 }, NULL);
-            GuiStatusBar((Rectangle){ anchorMain.x + 150, anchorMain.y + 635, 186, 25 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
+            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 151, 24 }, NULL);
+            GuiStatusBar((Rectangle){150, GetScreenHeight() - 24, 186, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
 
-            if (fontFileProvided) GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
-            else GuiStatusBar((Rectangle){ anchorMain.x + 335, anchorMain.y + 635, 405, 25 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
+            if (fontFileProvided) GuiStatusBar((Rectangle){ 335, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
+            else GuiStatusBar((Rectangle){ 335, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             //----------------------------------------------------------------------------------------
             
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
-            if (GuiIsLocked()) DrawRectangle(0, 0, screenWidth, screenHeight, Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
+            if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
             
             // WARNING: Before drawing the windows, we unlock them
             GuiUnlock();
@@ -789,21 +791,23 @@ int main(int argc, char *argv[])
             
             // GUI: Icons menu toolbar
             //----------------------------------------------------------------------------------------
-            GuiPanel((Rectangle){ 0, 0, 740, 50 }, NULL);
-            if (GuiButton((Rectangle){ anchorMain.x + 10, anchorMain.y + 10, 30, 30 }, "#1#")) showLoadFileDialog = true;
-            if (GuiButton((Rectangle){ 45, 10, 30, 30 }, "#2#")) showSaveFileDialog = true;
-            if (GuiButton((Rectangle){ 80, 10, 70, 30 }, "#191#ABOUT")) windowAboutState.windowActive = true;
+            GuiPanel((Rectangle){ anchorMain.x, anchorMain.y, 740, 40 }, NULL);
+            if (GuiButton((Rectangle){ anchorMain.x + 12, anchorMain.y + 8, 24, 24 }, "#1#")) showLoadFileDialog = true;
+            if (GuiButton((Rectangle){ anchorMain.x + 12 + 24 + 4, 8, 24, 24 }, "#2#")) showSaveFileDialog = true;
+            if (GuiButton((Rectangle){ anchorMain.x + 12 + 48 + 12, 8, 80, 24 }, "#191#ABOUT")) windowAboutState.windowActive = true;
 
-            if (GuiTextBox((Rectangle){ 155, 10, 180, 30 }, styleNameText, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
+            if (GuiTextBox((Rectangle){ anchorMain.x + 164, 8, 140, 24 }, styleNameText, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
-            viewStyleTableActive = GuiToggle((Rectangle){ 345, 10, 30, 30 }, "#101#", viewStyleTableActive);
-            viewFontActive = GuiToggle((Rectangle){ 380, 10, 30, 30 }, "#31#", viewFontActive);
-            windowControlsActive = GuiToggle((Rectangle){ 415, 10, 30, 30 }, "#198#", windowControlsActive);
+            btnNextStylePressed = GuiButton((Rectangle){ anchorMain.x + 164 + 140 + 4, 8, 24, 24 }, "#119#");
+
+            viewStyleTableActive = GuiToggle((Rectangle){ anchorMain.x + 380, 8, 24, 24 }, "#101#", viewStyleTableActive);
+            viewFontActive = GuiToggle((Rectangle){ anchorMain.x + 380 + 24 + 4, 8, 24, 24 }, "#31#", viewFontActive);
+            windowControlsActive = GuiToggle((Rectangle){ anchorMain.x + 380 + 48 + 8, 8, 24, 24 }, "#198#", windowControlsActive);
 #if !defined(PLATFORM_WEB)
-            hiDpiActive = GuiToggle((Rectangle){ 450, 10, 30, 30 }, "#199#", hiDpiActive);
+            hiDpiActive = GuiToggle((Rectangle){ anchorMain.x + 380 + 112, 8, 24, 24 }, "#199#", hiDpiActive);
 #endif
-            GuiLabel((Rectangle){ 580 - MeasureTextEx(customFont, "State:", genFontSizeValue, fontSpacingValue).x - 10, 10, 35, 30 }, "State:");
-            if (GuiDropdownBox((Rectangle){ 580, 10, 150, 30 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &propsStateActive, propsStateEditMode)) propsStateEditMode = !propsStateEditMode;
+            GuiLabel((Rectangle){ 580 - MeasureTextEx(customFont, "State:", genFontSizeValue, fontSpacingValue).x - 8, 8, 35, 24 }, "State:");
+            if (GuiDropdownBox((Rectangle){ 580, 8, 150, 24 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &propsStateActive, propsStateEditMode)) propsStateEditMode = !propsStateEditMode;
             //------------------------------------------------------------------------------------------------------------------------
 
             // GUI: Show font texture
