@@ -707,7 +707,7 @@ int main(int argc, char *argv[])
             GuiSetState(propsStateActive);
 
             // In case a custom gui state is selected for review, we reset the selected property
-            if (propsStateActive != GUI_STATE_NORMAL) currentSelectedProperty = -1;
+            if (propsStateActive != STATE_NORMAL) currentSelectedProperty = -1;
 
             // List views
             GuiSetStyle(LISTVIEW, LIST_ITEMS_HEIGHT, 28);
@@ -721,11 +721,11 @@ int main(int argc, char *argv[])
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
 
-                if ((propsStateActive == GUI_STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
+                if ((propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
                 if (currentSelectedControl == DEFAULT) GuiDisable();
                 propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 45, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, propertyValue, 0, 20);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-                if (propsStateActive != GUI_STATE_DISABLED) GuiEnable();
+                if (propsStateActive != STATE_DISABLED) GuiEnable();
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, colorPickerValue);
@@ -751,10 +751,10 @@ int main(int argc, char *argv[])
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 300, 365, 15 }, NULL);
 
-                if ((propsStateActive == GUI_STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
+                if ((propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 24 }, "Text Alignment:");
                 textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 95, anchorPropEditor.y + 320, 86, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
-                if (propsStateActive != GUI_STATE_DISABLED) GuiEnable();
+                if (propsStateActive != STATE_DISABLED) GuiEnable();
 
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 100 }, "Font Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 85, 28 }, "#30#Load")) showLoadFontFileDialog = true;
@@ -786,7 +786,7 @@ int main(int argc, char *argv[])
             GuiUnlock();
             
             // Set default NORMAL state for all controls not in main screen
-            GuiSetState(GUI_STATE_NORMAL);
+            GuiSetState(STATE_NORMAL);
             
             
             // GUI: Icons menu toolbar
@@ -1845,7 +1845,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         }
         //----------------------------------------------------------------------------------------
 
-        GuiSetState(GUI_STATE_NORMAL);
+        GuiSetState(STATE_NORMAL);
 
         int offsetWidth = TABLE_LEFT_PADDING + tableStateNameWidth;
 
@@ -1857,7 +1857,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
             // Draw grid lines: control name
             GuiGroupBox(rec, NULL);
             int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
-            GuiSetStyle(LABEL, TEXT_ALIGNMENT, GUI_TEXT_ALIGN_CENTER);
+            GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
             GuiLabel(rec, tableControlsName[i]);
 
             rec.y += TABLE_CELL_HEIGHT/2;
@@ -1892,7 +1892,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
                         case TYPE_SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, NULL, &value, 0, 100, false); break;
                         default: break;
                     }
-                GuiSetState(GUI_STATE_NORMAL);
+                GuiSetState(STATE_NORMAL);
 
                 rec.y += TABLE_CELL_HEIGHT - 1;
             }
