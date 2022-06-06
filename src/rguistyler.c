@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
         if (IsFileDropped())
         {
             int dropFileCount = 0;
-            char **droppedFiles = GetDroppedFiles(&dropFileCount);
+            char **droppedFiles = LoadDroppedFiles(&dropFileCount);
 
             // Supports loading .rgs style files (text or binary) and .png style palette images
             if (IsFileExtension(droppedFiles[0], ".rgs"))
@@ -438,7 +438,7 @@ int main(int argc, char *argv[])
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
 
-            ClearDroppedFiles();
+            UnloadDroppedFiles();
 
             currentSelectedControl = -1;    // Reset selected control
         }
