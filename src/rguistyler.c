@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v3.5 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v4.0 - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
 *
@@ -17,11 +17,13 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       3.5  (29-Dec-2021) Updated to raylib 4.0 and raygui 3.1
+*       4.0 (June-2022) Updated to raylib 4.2 and raygui 3.2
+*                       REDESIGNED: Main toolbar, for consistency with other tools
+*       3.5 (29-Dec-2021) Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
-*       raylib 4.0              - Windowing/input management and drawing
-*       raygui 3.2-dev          - Immediate-mode GUI controls with custom styling and icons
+*       raylib 4.2              - Windowing/input management and drawing
+*       raygui 3.2              - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.0                - PNG chunks management
 *       tinyfiledialogs 3.8.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
@@ -40,21 +42,32 @@
 *       Sergio Martinez (@anidealgift): Development and testing v1.0 (2015..2017)
 *
 *
-*   LICENSE: Propietary License
+*   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2017-2022 raylib technologies (@raylibtech). All Rights Reserved.
+*   Copyright (c) 2017-2022 raylib technologies (@raylibtech) / Ramon Santamaria (@raysan5)
 *
-*   Unauthorized copying of this file, via any medium is strictly prohibited
-*   This project is proprietary and confidential unless the owner allows
-*   usage in any other form by expresely written permission.
+*   This software is provided "as-is", without any express or implied warranty. In no event
+*   will the authors be held liable for any damages arising from the use of this software.
+*
+*   Permission is granted to anyone to use this software for any purpose, including commercial
+*   applications, and to alter it and redistribute it freely, subject to the following restrictions:
+*
+*     1. The origin of this software must not be misrepresented; you must not claim that you
+*     wrote the original software. If you use this software in a product, an acknowledgment
+*     in the product documentation would be appreciated but is not required.
+*
+*     2. Altered source versions must be plainly marked as such, and must not be misrepresented
+*     as being the original software.
+*
+*     3. This notice may not be removed or altered from any source distribution.
 *
 **********************************************************************************************/
 
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
-#define TOOL_VERSION            "3.5"
+#define TOOL_VERSION            "4.0"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
-#define TOOL_RELEASE_DATE       "Dec.2021"
+#define TOOL_RELEASE_DATE       "Jun.2022"
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
 #define SUPPORT_COMPRESSED_FONT_ATLAS
@@ -66,11 +79,8 @@
     #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
 #endif
 
-#define RPNG_IMPLEMENTATION
-#include "external/rpng.h"                  // PNG chunks management
-
 #define RAYGUI_IMPLEMENTATION
-#include "external/raygui.h"                // Required for: IMGUI controls
+#include "raygui.h"                         // Required for: IMGUI controls
 
 #undef RAYGUI_IMPLEMENTATION                // Avoid including raygui implementation again
 
@@ -79,6 +89,20 @@
 
 #define GUI_FILE_DIALOGS_IMPLEMENTATION
 #include "gui_file_dialogs.h"               // GUI: File Dialogs
+
+//#define GUI_MAIN_TOOLBAR_IMPLEMENTATION
+//#include "gui_main_toolbar.h"               // GUI: Main toolbar
+
+// raygui embedded styles
+#include "styles/style_cyber.h"             // raygui style: cyber
+#include "styles/style_jungle.h"            // raygui style: jungle
+#include "styles/style_lavanda.h"           // raygui style: lavanda
+#include "styles/style_dark.h"              // raygui style: dark
+#include "styles/style_bluish.h"            // raygui style: bluish
+#include "styles/style_terminal.h"          // raygui style: terminal
+
+#define RPNG_IMPLEMENTATION
+#include "external/rpng.h"                  // PNG chunks management
 
 #include <stdlib.h>                         // Required for: malloc(), free()
 #include <string.h>                         // Required for: strcmp()
@@ -211,6 +235,7 @@ static Image GenImageStyleControlsTable(const char *styleName); // Draw controls
 // Auxiliar functions
 static int StyleChangesCounter(void);                       // Count changed properties in current style
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
+
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -509,14 +534,14 @@ int main(int argc, char *argv[])
         if (IsKeyPressed(KEY_ESCAPE))
         {
             if (windowAboutState.windowActive) windowAboutState.windowActive = false;
-        #if !defined(PLATFORM_WEB)
+#if !defined(PLATFORM_WEB)
             else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
             else exitWindow = true;
-        #else
+#else
             else if (showLoadFileDialog) showLoadFileDialog = false;
             else if (showSaveFileDialog) showSaveFileDialog = false;
             else if (showExportFileDialog) showExportFileDialog = false;
-        #endif
+#endif
         }
 
         // Reset to default light style
@@ -857,7 +882,7 @@ int main(int argc, char *argv[])
 #if defined(CUSTOM_MODAL_DIALOGS)
                 int result = GuiFileDialog(DIALOG_MESSAGE, "Load raygui style file ...", inFileName, "Ok", "Just drag and drop your .rgs style file!");
 #else
-                int result = GuiFileDialog(DIALOG_OPEN, "Load raygui style file", inFileName, "*.rgs", "raygui Style Files (*.rgs)");
+                int result = GuiFileDialog(DIALOG_OPEN_FILE, "Load raygui style file", inFileName, "*.rgs", "raygui Style Files (*.rgs)");
 #endif
                 if (result == 1)
                 {
@@ -885,7 +910,7 @@ int main(int argc, char *argv[])
 #if defined(CUSTOM_MODAL_DIALOGS)
                 int result = GuiFileDialog(DIALOG_MESSAGE, "Load font file ...", inFileName, "Ok", "Just drag and drop your .ttf/.otf font file!");
 #else
-                int result = GuiFileDialog(DIALOG_OPEN, "Load font file", inFileName, "*.ttf;*.otf", "Font Files (*.ttf, *.otf)");
+                int result = GuiFileDialog(DIALOG_OPEN_FILE, "Load font file", inFileName, "*.ttf;*.otf", "Font Files (*.ttf, *.otf)");
 #endif
                 if (result == 1)
                 {
@@ -916,7 +941,7 @@ int main(int argc, char *argv[])
 #if defined(CUSTOM_MODAL_DIALOGS)
                 int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
 #else
-                int result = GuiFileDialog(DIALOG_SAVE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
+                int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
 #endif
                 if (result == 1)
                 {
@@ -958,7 +983,7 @@ int main(int argc, char *argv[])
 #if defined(CUSTOM_MODAL_DIALOGS)
                 int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
 #else
-                int result = GuiFileDialog(DIALOG_SAVE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
+                int result = GuiFileDialog(DIALOG_SAVE_FILE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
 #endif
                 if (result == 1)
                 {
@@ -1174,7 +1199,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
 //--------------------------------------------------------------------------------------------
-
+// Save current style to memory data array
 static unsigned char *SaveStyleToMemory(int *size)
 {
     unsigned char *buffer = (unsigned char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
@@ -1507,7 +1532,7 @@ static bool SaveStyle(const char *fileName, int format)
 
         if (rgsFile != NULL)
         {
-            #define RGS_FILE_VERSION_TEXT  "3.5"
+            #define RGS_FILE_VERSION_TEXT  "4.0"
 
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
