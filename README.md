@@ -51,10 +51,12 @@ Once the desired style has been created, press the `Export Style` button to save
 
 ## rGuiStyler License
 
-`rGuiStyler` online tool can be used completely for free.
+`rGuiStyler` source code is distributed as **open source**, licensed under an unmodified [zlib/libpng license](LICENSE). 
+
+`rGuiStyler` binaries are completely free for anyone willing to compile it directly from source.
 
 `rGuiStyler Standalone` desktop tool is distributed as freeware. 
 
 In any case, consider some donation to help the author keep working on software for games development.
 
-*Copyright (c) 2015-2022 raylib technologies ([@raylibtech](https://twitter.com/raylibtech))*
+*Copyright (c) 2017-2022 raylib technologies ([@raylibtech](https://twitter.com/raylibtech))* / Ramon Santamaria (([@raysan5](https://twitter.com/raysan5))*)
