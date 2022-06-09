@@ -1,11 +1,8 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v4.0 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v4.0-dev - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
-*
-*   #define VERSION_ONE
-*       Enable command-line usage and PRO features for the tool
 *
 *   #define CUSTOM_MODAL_DIALOGS
 *       Use custom raygui generated modal dialogs instead of native OS ones
@@ -17,8 +14,8 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       4.0 (June-2022) Updated to raylib 4.2 and raygui 3.2
-*                       REDESIGNED: Main toolbar, for consistency with other tools
+*       4.0-dev (June-2022) Updated to raylib 4.2 and raygui 3.2
+*                       TODO: REDESIGNED: Main toolbar, for consistency with other tools
 *       3.5 (29-Dec-2021) Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
@@ -28,7 +25,7 @@
 *       tinyfiledialogs 3.8.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   COMPILATION (Windows - MinGW):
-*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99
+*       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99 -DPLATFORM_DESKTOP
 *           -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32
 *
 *   COMPILATION (Linux - GCC):
@@ -65,7 +62,7 @@
 
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
-#define TOOL_VERSION            "4.0"
+#define TOOL_VERSION            "4.0-dev"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
 #define TOOL_RELEASE_DATE       "Jun.2022"
 #define TOOL_LOGO_COLOR         0x62bde3ff
@@ -221,7 +218,7 @@ static bool fontFileProvided = false;   // Font loaded from a file provided (req
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
-#if defined(VERSION_ONE)
+#if defined(PLATFORM_DESKTOP)
 static void ShowCommandLineInfo(void);                      // Show command line usage info
 static void ProcessCommandLine(int argc, char *argv[]);     // Process command line input
 #endif
@@ -248,7 +245,7 @@ int main(int argc, char *argv[])
 #if !defined(_DEBUG)
     SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
 #endif
-#if defined(VERSION_ONE)
+#if defined(PLATFORM_DESKTOP)
     // Command-line usage mode
     //--------------------------------------------------------------------------------------
     if (argc > 1)
@@ -268,7 +265,7 @@ int main(int argc, char *argv[])
             return 0;
         }
     }
-#endif  // VERSION_ONE
+#endif  // PLATFORM_DESKTOP
 #if (!defined(_DEBUG) && (defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)))
     // WARNING (Windows): If program is compiled as Window application (instead of console),
     // no console is available to show output info... solution is compiling a console application
@@ -1063,7 +1060,7 @@ int main(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 // Module functions definition
 //--------------------------------------------------------------------------------------------
-#if defined(VERSION_ONE)
+#if defined(PLATFORM_DESKTOP)
 // Show command line usage info
 static void ShowCommandLineInfo(void)
 {
@@ -1194,7 +1191,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 
     if (showUsageInfo) ShowCommandLineInfo();
 }
-#endif      // VERSION_ONE
+#endif      // PLATFORM_DESKTOP
 
 //--------------------------------------------------------------------------------------------
 // Load/Save/Export data functions
