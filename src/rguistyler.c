@@ -416,18 +416,17 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         if (IsFileDropped())
         {
-            int dropFileCount = 0;
-            char **droppedFiles = LoadDroppedFiles(&dropFileCount);
+            FilePathList droppedFiles = LoadDroppedFiles();
 
             // Supports loading .rgs style files (text or binary) and .png style palette images
-            if (IsFileExtension(droppedFiles[0], ".rgs"))
+            if (IsFileExtension(droppedFiles.paths[0], ".rgs"))
             {
-                GuiLoadStyleDefault();          // Reset to base default style
-                GuiLoadStyle(droppedFiles[0]);  // Load new style properties
+                GuiLoadStyleDefault();                  // Reset to base default style
+                GuiLoadStyle(droppedFiles.paths[0]);    // Load new style properties
 
-                strcpy(inFileName, droppedFiles[0]);
+                strcpy(inFileName, droppedFiles.paths[0]);
                 SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
-                strcpy(styleNameText, GetFileNameWithoutExt(droppedFiles[0]));
+                strcpy(styleNameText, GetFileNameWithoutExt(droppedFiles.paths[0]));
 
                 genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
@@ -442,17 +441,17 @@ int main(int argc, char *argv[])
                 //changedPropCounter = 0;
                 //saveChangesRequired = false;
             }
-            else if (IsFileExtension(droppedFiles[0], ".ttf") || IsFileExtension(droppedFiles[0], ".otf"))
+            else if (IsFileExtension(droppedFiles.paths[0], ".ttf") || IsFileExtension(droppedFiles.paths[0], ".otf"))
             {
                 UnloadFont(customFont);
 
                 // NOTE: Font generation size depends on spinner size selection
-                customFont = LoadFontEx(droppedFiles[0], genFontSizeValue, NULL, 0);
+                customFont = LoadFontEx(droppedFiles.paths[0], genFontSizeValue, NULL, 0);
 
                 if (customFont.texture.id > 0)
                 {
                     GuiSetFont(customFont);
-                    strcpy(fontFilePath, droppedFiles[0]);
+                    strcpy(fontFilePath, droppedFiles.paths[0]);
                     fontFileProvided = true;
                     customFontLoaded = true;
                 }
@@ -460,7 +459,7 @@ int main(int argc, char *argv[])
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
 
-            UnloadDroppedFiles();
+            UnloadDroppedFiles(droppedFiles);   // Unload filepaths from memory
 
             currentSelectedControl = -1;    // Reset selected control
         }
