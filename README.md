@@ -53,7 +53,7 @@ Once the desired style has been created, press the `Export Style` button to save
 
 `rGuiStyler` source code is distributed as **open source**, licensed under an unmodified [zlib/libpng license](LICENSE). 
 
-`rGuiStyler` binaries are completely free for anyone willing to compile it directly from source.
+`rGuiStyler` binaries are completely free for anyone willing to compile them directly from source.
 
 `rGuiStyler Standalone` desktop tool is distributed as freeware. 
 
