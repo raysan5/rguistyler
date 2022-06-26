@@ -14,8 +14,10 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       4.0-dev (June-2022) Updated to raylib 4.2 and raygui 3.2
-*                       TODO: REDESIGNED: Main toolbar, for consistency with other tools
+*       4.0-dev (Jun-2022) 
+*           - Source code relicensed to open-source
+*           - Updated to raylib 4.2 and raygui 3.2
+*           - TODO: REDESIGNED: Main toolbar, for consistency with other tools
 *       3.5 (29-Dec-2021) Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
