@@ -128,7 +128,7 @@ static const char *lblUsedLibsText = "Powered by:";
 static const char *linkraylibText = "www.raylib.com";
 static const char *linkGitraylibText = "github.com/raysan5/raylib";
 static const char *linkGitrayguiText = "github.com/raysan5/raygui";
-static const char *lblCopyrightText = "Copyright (c) 2021 raylib technologies.";
+static const char *lblCopyrightText = "Copyright (c) 2022 raylib technologies.";
 static const char *linkraylibtechText = "[@raylibtech]";
 static const char *lblMoreInfoText = "More info:";
 static const char *linkMailText = "ray@raylibtech.com";
@@ -176,7 +176,7 @@ GuiWindowAboutState InitGuiWindowAbout(void)
     state.windowActive = false;
 
     // Custom variables initialization
-    state.windowWidth = 340;
+    state.windowWidth = 360;
     state.windowHeight = 340;
     state.position = (Vector2){ GetScreenWidth()/2 - state.windowWidth/2, GetScreenHeight()/2 - state.windowHeight/2 };
 
