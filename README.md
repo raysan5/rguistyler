@@ -10,19 +10,20 @@ rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtec
 
 <br>
 
-_NOTE: This tool is itended to be used with [**raygui 3.1**](https://github.com/raysan5/raygui)_
+_NOTE: This tool is itended to be used with [**raygui 3.2**](https://github.com/raysan5/raygui)_
 
 ## rGuiStyler Features
 
  - **Global and control specific styles edition**
  - **Style preview** in real time with individual test controls
+ - **Style templates** available to start customizing new styles
  - Selectable controls state: **NORMAL, FOCUSED, PRESSED, DISABLED**
- - Save and load as binary style file `.rgs` (font included!)
- - Export style as an embeddable **code file** (`.h`) (font included!)
+ - Save and load as binary style file `.rgs` (font embedded!)
+ - Export style as an embeddable **code file** (`.h`) (font embedded!)
  - Export style as a `.png` **controls table image** for showcase
  - Import, configure and preview **style fonts** (`.ttf`/`.otf`)
  - Color palette for quick color save/selection
- - **8 custom style examples** included
+ - **12 custom style examples** included
  
 ### rGuiStyler Standalone Additional Features
 
