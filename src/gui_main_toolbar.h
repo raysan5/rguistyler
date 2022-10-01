@@ -173,12 +173,12 @@ void GuiMainToolbar(GuiMainToolbarState *state)
 
     // Toolbar panels
     state->anchorRight.x = screenWidth - 104;       // Update right-anchor panel
-    state->anchorVisuals.x = state->anchorRight.x - 165 + 1;    // Update right-anchor panel
+    state->anchorVisuals.x = state->anchorRight.x - 188 + 1;    // Update right-anchor panel
 
     GuiPanel((Rectangle){ state->anchorFile.x, state->anchorFile.y, 152, 40 }, NULL);
     GuiPanel((Rectangle){ state->anchorEdit.x, state->anchorEdit.y, 188, 40 }, NULL);
     GuiPanel((Rectangle){ state->anchorTools.x, state->anchorTools.y, state->anchorVisuals.x - state->anchorTools.x + 1, 40 }, NULL);
-    GuiPanel((Rectangle){ state->anchorVisuals.x, state->anchorVisuals.y, 165, 40 }, NULL);
+    GuiPanel((Rectangle){ state->anchorVisuals.x, state->anchorVisuals.y, 188, 40 }, NULL);
     GuiPanel((Rectangle){ state->anchorRight.x, state->anchorRight.y, 104, 40 }, NULL);
 
     // Project/File options
@@ -188,7 +188,7 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     state->btnExportFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12 + 72 + 12, state->anchorFile.y + 8, 24, 24 }, "#7#");
 
     // Edit options
-    GuiLabel((Rectangle){ state->anchorEdit.x + 12, 8, 35, 24 }, "State:");
+    GuiLabel((Rectangle){ state->anchorEdit.x + 10, 8, 35, 24 }, "State:");
     if (GuiDropdownBox((Rectangle){ state->anchorEdit.x + 12 + 40, 8, 124, 24 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &state->propsStateActive, state->propsStateEditMode)) state->propsStateEditMode = !state->propsStateEditMode;
 
     // Tool options
@@ -196,8 +196,10 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     state->viewFontActive = GuiToggle((Rectangle){ state->anchorTools.x + 12 + 24 + 4, 8, 24, 24 }, "#31#", state->viewFontActive);
 
     // Visuals options
-    GuiLabel((Rectangle){ state->anchorVisuals.x + 8, state->anchorVisuals.y + 8, 60, 24 }, "Style:");
-    state->visualStyleActive = GuiComboBox((Rectangle){ state->anchorVisuals.x + 8 + 40, state->anchorVisuals.y + 8, 104, 24 }, "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete", state->visualStyleActive);
+    GuiLabel((Rectangle){ state->anchorVisuals.x + 10, state->anchorVisuals.y + 8, 60, 24 }, "Style:");
+    GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 40);
+    state->visualStyleActive = GuiComboBox((Rectangle){ state->anchorVisuals.x + 8 + 48, state->anchorVisuals.y + 8, 120, 24 }, "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete", state->visualStyleActive);
+    GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 32);
 
     // Info options
     state->btnHelpPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 72 - 8, state->anchorRight.y + 8, 24, 24 }, "#193#"); 
