@@ -350,6 +350,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\gui_file_dialogs.h" />
+    <ClInclude Include="..\..\..\src\gui_main_toolbar.h" />
     <ClInclude Include="..\..\..\src\gui_window_about.h" />
   </ItemGroup>
   <ItemGroup>
