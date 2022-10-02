@@ -68,6 +68,9 @@ jobs:
         cp ${{ env.PROJECT_NAME }}/styles/cyber.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
         cp ${{ env.PROJECT_NAME }}/styles/lavanda.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
         cp ${{ env.PROJECT_NAME }}/styles/terminal.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
+        cp ${{ env.PROJECT_NAME }}/styles/dark.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
+        cp ${{ env.PROJECT_NAME }}/styles/sunny.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
+        cp ${{ env.PROJECT_NAME }}/styles/enefete.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
         ls ${{ env.PROJECT_RELEASE_PATH }}
         7z a ./${{ env.PROJECT_RELEASE_PATH }}.zip ./${{ env.PROJECT_RELEASE_PATH }}
 
