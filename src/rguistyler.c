@@ -575,7 +575,7 @@ int main(int argc, char *argv[])
         if (IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
 #endif
         // New style file, previous in/out files registeres are reseted
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N))
+        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
         {
             memset(inFileName, 0, 512);
             memset(outFileName, 0, 512);
@@ -672,8 +672,7 @@ int main(int argc, char *argv[])
         // Main toolbar logic
         //----------------------------------------------------------------------------------
         // File options logic
-        if (mainToolbarState.btnNewFilePressed) mainToolbarState.visualStyleActive = 0;
-        else if (mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
+        if (mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
         else if (mainToolbarState.btnSaveFilePressed) showSaveFileDialog = true;
         else if (mainToolbarState.btnExportFilePressed) exportWindowActive = true;
         else if (mainToolbarState.btnRandomStylePressed)
