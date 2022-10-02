@@ -733,8 +733,6 @@ int main(int argc, char *argv[])
         mousePos = GetMousePosition();      // Get mouse position each frame
 
         // Check for changed properties
-        int check = memcmp(currentStyle, guiStyle, 384*sizeof(int));
-
         changedPropCounter = StyleChangesCounter(currentStyle);
         if (changedPropCounter > 0) saveChangesRequired = true;
 
