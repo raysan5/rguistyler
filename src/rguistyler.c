@@ -218,7 +218,7 @@ static const char *guiPropsDefaultText[14] = {
     "LINE_COLOR"                 // DEFAULT extended property
 };
 
-#define HELP_LINES_COUNT    16
+#define HELP_LINES_COUNT    18
 
 // Tool help info
 static const char *helpLines[HELP_LINES_COUNT] = {
@@ -227,11 +227,13 @@ static const char *helpLines[HELP_LINES_COUNT] = {
     "F3 - Show User window",
     "F4 - Show Style table",
     "F5 - Show Font atlas",
-    "LCTRL + N - Reset current style",
+    "-File Controls",
+    "LCTRL + N - New style file (.rgs)",
     "LCTRL + O - Open style file (.rgs)",
     "LCTRL + S - Save style file (.rgs)",
     "LCTRL + E - Export style file",
     "-Tool Controls",
+    "Z,X,C,V - Force controls state",
     "LCTRL + R - Reload style template",
     "-Tool Visuals",
     "LEFT | RIGHT - Select style template",
@@ -572,6 +574,18 @@ int main(int argc, char *argv[])
         // Toggle screen size (x2) mode
         if (IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
 #endif
+        // New style file, previous in/out files registeres are reseted
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N))
+        {
+            memset(inFileName, 0, 512);
+            memset(outFileName, 0, 512);
+            inputFileLoaded = false;
+            outputFileCreated = false;
+
+            // Force current style template reset
+            mainToolbarState.btnReloadStylePressed = true;
+        }
+
         // Show dialog: load input file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) showLoadFileDialog = true;
 
@@ -635,6 +649,12 @@ int main(int argc, char *argv[])
         #endif
         }
 
+        // Select desired state for visualization
+        if (IsKeyPressed(KEY_Z)) mainToolbarState.propsStateActive = 0;
+        else if (IsKeyPressed(KEY_X)) mainToolbarState.propsStateActive = 1;
+        else if (IsKeyPressed(KEY_C)) mainToolbarState.propsStateActive = 2;
+        else if (IsKeyPressed(KEY_V)) mainToolbarState.propsStateActive = 3;
+
         // Reset to current style template
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R)) || mainToolbarState.btnReloadStylePressed)
         {
@@ -661,9 +681,10 @@ int main(int argc, char *argv[])
             // TODO: Generate random style (only colors)
         }
 
-        // When a new template style is selected, everything is reseted
+        // Visual options logic
         if (mainToolbarState.visualStyleActive != mainToolbarState.prevVisualStyleActive)
         {
+            // When a new template style is selected, everything is reseted
             currentSelectedControl = -1;
             currentSelectedProperty = -1;
 
