@@ -232,12 +232,28 @@ static const char *helpLines[HELP_LINES_COUNT] = {
     "LCTRL + S - Save style file (.rgs)",
     "LCTRL + E - Export style file",
     "-Tool Controls",
-    "LCTRL + R - Reset current style",
+    "LCTRL + R - Reload style template",
     "-Tool Visuals",
     "LEFT | RIGHT - Select style template",
     "F - Toggle double screen size",
     NULL,
     "ESCAPE - Close Window/Exit"
+};
+
+// Style template names
+static const char *styleNames[12] = {
+    "Light",
+    "Jungle",
+    "Candy",
+    "Lavanda",
+    "Cyber",
+    "Terminal",
+    "Ashes",
+    "Bluish",
+    "Dark",
+    "Cherry",
+    "Sunny",
+    "Enefete"
 };
 
 // Default style backup to check changed properties
@@ -247,10 +263,11 @@ static unsigned int defaultStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
 
 // Custom font variables
-static Font customFont = { 0 };         // Custom font
-static bool customFontLoaded = false;   // Custom font loaded flag
-static char fontFilePath[512] = { 0 };  // Font file path (register font path for reloading and regen atlas)
-static bool fontFileProvided = false;   // Font loaded from a file provided (required for reloading)
+// NOTE: They have to be global to be used bys tyle export functions
+static Font customFont = { 0 };             // Custom font
+static bool customFontLoaded = false;       // Custom font loaded flag (from font file or style file)
+
+static char inFontFileName[512] = { 0 };    // Input font file name (required for font reloading on atlas regeneration)
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -262,7 +279,7 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 
 // Load/Save/Export data functions
 static unsigned char *SaveStyleToMemory(int *size);         // Save style to memory buffer
-static bool SaveStyle(const char *fileName, int format);    // Save style file text or binary (.rgs/.rgsb)
+static bool SaveStyle(const char *fileName, int format);    // Save style binary file binary (.rgs)
 static void ExportStyleAsCode(const char *fileName, const char *styleName);        // Export gui style as color palette code
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
@@ -279,6 +296,10 @@ int main(int argc, char *argv[])
 {
     char inFileName[512] = { 0 };       // Input file name (required in case of drag & drop over executable)
     char outFileName[512] = { 0 };      // Output file name (required for file save/export)
+
+    bool inputFileLoaded = false;       // Flag to detect an input file has been loaded (required for fast save)
+    bool inputFontFileLoaded = false;   // Flag to detect an input font file has been loaded (required for font atlas regen)
+    bool outputFileCreated = false;     // Flag to detect if an output file has been created (required for fast save)
 
 #if !defined(_DEBUG)
     SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
@@ -313,7 +334,7 @@ int main(int argc, char *argv[])
 
     // GUI usage mode - Initialization
     //--------------------------------------------------------------------------------------
-    const int screenWidth = 740;
+    const int screenWidth = 748;
     const int screenHeight = 610;
 
     InitWindow(screenWidth, screenHeight, TextFormat("%s v%s | %s", toolName, toolVersion, toolDescription));
@@ -332,6 +353,7 @@ int main(int argc, char *argv[])
     {
         GuiLoadStyle(inFileName);
         SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+        inputFileLoaded = true;
     }
     else
     {
@@ -363,9 +385,9 @@ int main(int argc, char *argv[])
     // GUI: Main Layout
     //-----------------------------------------------------------------------------------
     Vector2 anchorMain = { 0, 0 };
-    Vector2 anchorWindow = { 345, 52 };
-    Vector2 anchorPropEditor = { 355, 92 };
-    Vector2 anchorFontOptions = { 355, 465 };
+    Vector2 anchorWindow = { 353, 52 };
+    Vector2 anchorPropEditor = { 363, 92 };
+    Vector2 anchorFontOptions = { 363, 465 };
 
     int currentSelectedControl = -1;
     int currentSelectedProperty = -1;
@@ -384,7 +406,6 @@ int main(int argc, char *argv[])
     int fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
     bool fontSampleEditMode = false;
     char fontSampleText[128] = "sample text";
-    int exportFormatActive = 0;
 
     bool screenSizeActive = false;
     bool helpWindowActive = false;      // Show window: help info 
@@ -405,10 +426,12 @@ int main(int argc, char *argv[])
     // GUI: Export Window
     //-----------------------------------------------------------------------------------
     bool exportWindowActive = false;
-
-    int fileTypeActive = 0;             // ComboBox file type selection
+       
+    int exportFormatActive = 0;         // ComboBox file type selection
+    char styleNameText[128] = "Unnamed"; // Style name text box
+    bool styleNameEditMode = false;     // Style name text box edit mode
     bool embedFontChecked = true;       // Select to embed font into style file
-    bool styleChunkChecked = false;     // Select to embed style as a PNG chunk (rGSt)
+    bool styleChunkChecked = false;     // Select to embed style as a PNG chunk (rGSf)
     //-----------------------------------------------------------------------------------
 
     // GUI: Exit Window
@@ -469,14 +492,15 @@ int main(int argc, char *argv[])
 
                 strcpy(inFileName, droppedFiles.paths[0]);
                 SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+                inputFileLoaded = true;
 
                 fontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
                 // Load .rgs custom font in font
                 customFont = GuiGetFont();
-                memset(fontFilePath, 0, 512);
-                fontFileProvided = false;
+                memset(inFontFileName, 0, 512);
+                inputFontFileLoaded = false;
                 customFontLoaded = true;
 
                 // Reset style backup for changes
@@ -488,7 +512,7 @@ int main(int argc, char *argv[])
             {
                 // Unload previous font if it was file provided but
                 // avoid unloading a font comming from some style tempalte
-                if (fontFileProvided) UnloadFont(customFont);
+                if (inputFontFileLoaded) UnloadFont(customFont);
 
                 // NOTE: Font generation size depends on spinner size selection
                 customFont = LoadFontEx(droppedFiles.paths[0], fontSizeValue, NULL, 0);
@@ -496,8 +520,8 @@ int main(int argc, char *argv[])
                 if (customFont.texture.id > 0)
                 {
                     GuiSetFont(customFont);
-                    strcpy(fontFilePath, droppedFiles.paths[0]);
-                    fontFileProvided = true;
+                    strcpy(inFontFileName, droppedFiles.paths[0]);
+                    inputFontFileLoaded = true;
                     customFontLoaded = true;
                 }
             }
@@ -544,7 +568,7 @@ int main(int argc, char *argv[])
         }
 #endif
 
-#if !defined(PLATFORM_WEB)
+#if defined(PLATFORM_DESKTOP)
         // Toggle screen size (x2) mode
         if (IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
 #endif
@@ -554,18 +578,30 @@ int main(int argc, char *argv[])
         // Show dialog: save style file (.rgs)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S))
         {
-            if (inFileName[0] == '\0')
+#if defined(PLATFORM_DESKTOP)
+            // NOTE: Fast-save only works for already loaded/saved .rgs styles
+            if (inputFileLoaded || outputFileCreated)
             {
-                exportFormatActive = STYLE_BINARY;
-                showSaveFileDialog = true;
+                // Priority to output file saving
+                if (outputFileCreated)
+                {
+                    SaveStyle(outFileName, STYLE_BINARY);
+                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(outFileName)));
+                }
+                else
+                {
+                    SaveStyle(inFileName, STYLE_BINARY);
+                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+                }
+
+                saveChangesRequired = false;
             }
             else
+#endif
             {
-                // TODO: Use same style type as loaded or previously saved
-                // ISSUE: Style is loaded by raygui, GuiLoadStyle() checks for format internally!
-                SaveStyle(inFileName, STYLE_BINARY);
-                SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
-                saveChangesRequired = false;
+                // If no input/output file already loaded/saved, show save file dialog
+                exportFormatActive = STYLE_BINARY;
+                showSaveFileDialog = true;
             }
         }
 
@@ -589,7 +625,7 @@ int main(int argc, char *argv[])
             else if (exportWindowActive) exportWindowActive = false;
             else if (mainToolbarState.viewFontActive) mainToolbarState.viewFontActive = false;
             else if (mainToolbarState.viewStyleTableActive) mainToolbarState.viewStyleTableActive = false;
-        #if !defined(PLATFORM_WEB)
+        #if defined(PLATFORM_DESKTOP)
             else if (changedPropCounter > 0) exitWindowActive = !exitWindowActive;
             else closeWindow = true;
         #else
@@ -600,18 +636,17 @@ int main(int argc, char *argv[])
         }
 
         // Reset to current style template
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R))
+        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R)) || mainToolbarState.btnReloadStylePressed)
         {
-            currentSelectedControl = -1;
-            currentSelectedProperty = -1;
-
-            // TODO: Reset to current selected style template
-
-            fontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
-            fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
-
-            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
+            if (mainToolbarState.visualStyleActive == 0) mainToolbarState.prevVisualStyleActive = 1;
+            else mainToolbarState.prevVisualStyleActive = 0;
         }
+
+        // Change current style template
+        if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
+        else if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
+        if (mainToolbarState.visualStyleActive >= 12) mainToolbarState.visualStyleActive = 0;
+        else if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = 11;
         //----------------------------------------------------------------------------------
 
         // Main toolbar logic
@@ -621,6 +656,10 @@ int main(int argc, char *argv[])
         else if (mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
         else if (mainToolbarState.btnSaveFilePressed) showSaveFileDialog = true;
         else if (mainToolbarState.btnExportFilePressed) exportWindowActive = true;
+        else if (mainToolbarState.btnRandomStylePressed)
+        {
+            // TODO: Generate random style (only colors)
+        }
 
         // When a new template style is selected, everything is reseted
         if (mainToolbarState.visualStyleActive != mainToolbarState.prevVisualStyleActive)
@@ -654,6 +693,8 @@ int main(int argc, char *argv[])
             fontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
+            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
+
             changedPropCounter = 0;
             saveChangesRequired = false;
 
@@ -678,12 +719,12 @@ int main(int argc, char *argv[])
         if (changedPropCounter > 0) saveChangesRequired = true;
 
         // Reload font and generate new atlas at new size when required
-        if (fontFileProvided && (fontFilePath[0] != '\0') &&     // Check an external font file is provided (not internal custom one) 
-            !genFontSizeEditMode &&                              // Check the spinner text editing has finished
-            (prevFontSizeValue != fontSizeValue))                // Check selected size actually changed
+        if (inputFontFileLoaded && (inFontFileName[0] != '\0') &&   // Check an external font file is provided (not internal custom one) 
+            !genFontSizeEditMode &&                                 // Check the spinner text editing has finished
+            (prevFontSizeValue != fontSizeValue))                   // Check selected size actually changed
         {
             UnloadFont(customFont);
-            customFont = LoadFontEx(fontFilePath, fontSizeValue, NULL, 0);
+            customFont = LoadFontEx(inFontFileName, fontSizeValue, NULL, 0);
             GuiSetFont(customFont);
             customFontLoaded = true;
             saveChangesRequired = true;
@@ -775,7 +816,7 @@ int main(int argc, char *argv[])
         {
             UnloadTexture(texStyleTable);
 
-            Image imStyleTable = GenImageStyleControlsTable("unnamed");
+            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
             texStyleTable = LoadTextureFromImage(imStyleTable);
             UnloadImage(imStyleTable);
         }
@@ -854,9 +895,9 @@ int main(int argc, char *argv[])
             if (mainToolbarState.propsStateActive != STATE_NORMAL) currentSelectedProperty = -1;
 
             // List views
-            currentSelectedControl = GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 140, 520 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, currentSelectedControl);
-            if (currentSelectedControl != DEFAULT) currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 52, 180, 520 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, NULL, currentSelectedProperty);
-            else currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 155, anchorMain.y + 52, 180, 520 }, guiPropsDefaultText, 14, NULL, NULL, currentSelectedProperty);
+            currentSelectedControl = GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 148, 520 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, currentSelectedControl);
+            if (currentSelectedControl != DEFAULT) currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, NULL, currentSelectedProperty);
+            else currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsDefaultText, 14, NULL, NULL, currentSelectedProperty);
 
             // Controls window
             if (controlsWindowActive)
@@ -875,9 +916,9 @@ int main(int argc, char *argv[])
                 colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, colorPickerValue);
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, TextFormat("R:   %03i", colorPickerValue.r));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 20, 20 }, TextFormat("G:   %03i", colorPickerValue.g));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 95, 20, 20 }, TextFormat("B:   %03i", colorPickerValue.b));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, TextFormat("R:  %03i", colorPickerValue.r));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 20, 20 }, TextFormat("G:  %03i", colorPickerValue.g));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 95, 20, 20 }, TextFormat("B:  %03i", colorPickerValue.b));
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 125, 60, 55 }, "HSV");
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 130, 20, 20 }, TextFormat("H:  %.0f", colorHSV.x));
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 20, 20 }, TextFormat("S:  %.0f%%", colorHSV.y*100));
@@ -907,7 +948,7 @@ int main(int argc, char *argv[])
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 16, 80, 24 }, "Size:", &fontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 16, 80, 24 }, "Spacing:", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
-                if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 52, 345, 24 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
+                if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 52, 345, 28 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
             }
             else
             {
@@ -920,11 +961,11 @@ int main(int argc, char *argv[])
 
             // GUI: Status bar
             //----------------------------------------------------------------------------------------
-            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 151, 24 }, NULL);
-            GuiStatusBar((Rectangle){150, GetScreenHeight() - 24, 186, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
+            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 160, 24 }, TextFormat("Name: %s", (changedPropCounter > 0)? styleNameText : styleNames[mainToolbarState.visualStyleActive]));
+            GuiStatusBar((Rectangle){159, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
 
-            if (fontFileProvided) GuiStatusBar((Rectangle){ 335, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(fontFilePath), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
-            else GuiStatusBar((Rectangle){ 335, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
+            if (inputFontFileLoaded) GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(inFontFileName), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
+            else GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             //----------------------------------------------------------------------------------------
             
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
@@ -976,15 +1017,20 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (exportWindowActive)
             {
-                Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 172 };
+                Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 196 };
                 int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
 
-                GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 24 + 12, 106, 24 }, "Style Format:");
-                exportFormatActive = GuiComboBox((Rectangle) { messageBox.x + 12 + 92, messageBox.y + 24 + 12, 132, 24 }, "Binary (.rgs);Code (.h);Image (.png)", exportFormatActive);
+                GuiLabel((Rectangle) { messageBox.x + 12, messageBox.y + 24 + 12, 106, 24 }, "Style Name:");
+                if (GuiTextBox((Rectangle) { messageBox.x + 12 + 92, messageBox.y + 24 + 12, 132, 24 }, styleNameText, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
-                embedFontChecked = GuiCheckBox((Rectangle) { messageBox.x + 20, messageBox.y + 48 + 28, 16, 16 }, "Embed font atlas into style", embedFontChecked);
+                GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 12 + 48 + 8, 106, 24 }, "Style Format:");
+                exportFormatActive = GuiComboBox((Rectangle) { messageBox.x + 12 + 92, messageBox.y + 12 + 48 + 8, 132, 24 }, "Binary (.rgs);Code (.h);Image (.png)", exportFormatActive);
+
+                GuiDisable();   // Font embedded by default!
+                embedFontChecked = GuiCheckBox((Rectangle) { messageBox.x + 20, messageBox.y + 48 + 56, 16, 16 }, "Embed font atlas into style", embedFontChecked);
+                GuiEnable();
                 if (exportFormatActive != 2) GuiDisable();
-                styleChunkChecked = GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32, 16, 16 }, "Embed style as rGSt chunk", styleChunkChecked);
+                styleChunkChecked = GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24, 16, 16 }, "Embed style as rGSf chunk", styleChunkChecked);
                 GuiEnable();
 
                 if (result == 1)    // Export button pressed
@@ -1020,15 +1066,16 @@ int main(int argc, char *argv[])
                 {
                     // Load style
                     GuiLoadStyle(inFileName);
-
                     SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
-                    saveChangesRequired = false;
-
+                    inputFileLoaded = true;
+                    
                     // Load .rgs custom font in font
                     customFont = GuiGetFont();
-                    memset(fontFilePath, 0, 512);
-                    fontFileProvided = false;
+                    memset(inFontFileName, 0, 512);
+                    inputFontFileLoaded = false;
                     customFontLoaded = true;
+
+                    saveChangesRequired = false;
                 }
 
                 if (result >= 0) showLoadFileDialog = false;
@@ -1040,23 +1087,22 @@ int main(int argc, char *argv[])
             if (showLoadFontFileDialog)
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
-                int result = GuiFileDialog(DIALOG_MESSAGE, "Load font file ...", inFileName, "Ok", "Just drag and drop your .ttf/.otf font file!");
+                int result = GuiFileDialog(DIALOG_MESSAGE, "Load font file ...", inFontFileName, "Ok", "Just drag and drop your .ttf/.otf font file!");
 #else
-                int result = GuiFileDialog(DIALOG_OPEN_FILE, "Load font file", inFileName, "*.ttf;*.otf", "Font Files (*.ttf, *.otf)");
+                int result = GuiFileDialog(DIALOG_OPEN_FILE, "Load font file", inFontFileName, "*.ttf;*.otf", "Font Files (*.ttf, *.otf)");
 #endif
                 if (result == 1)
                 {
                     // Load font file
-                    Font tempFont = LoadFontEx(inFileName, fontSizeValue, NULL, 0);
+                    Font tempFont = LoadFontEx(inFontFileName, fontSizeValue, NULL, 0);
 
                     if (tempFont.texture.id > 0)
                     {
-                        if (fontFileProvided) UnloadFont(customFont);   // Unload previously loaded font
+                        if (inputFontFileLoaded) UnloadFont(customFont);   // Unload previously loaded font
                         customFont = tempFont;
 
                         GuiSetFont(customFont);
-                        strcpy(fontFilePath, inFileName);
-                        fontFileProvided = true;
+                        inputFontFileLoaded = true;
                         customFontLoaded = true;
                     }
                 }
@@ -1069,7 +1115,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showSaveFileDialog)
             {
-                strcpy(outFileName, "unnamed.rgs");
+                strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
 #if defined(CUSTOM_MODAL_DIALOGS)
                 int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
 #else
@@ -1083,6 +1129,10 @@ int main(int argc, char *argv[])
 
                     // Save style file (text or binary)
                     SaveStyle(outFileName, STYLE_BINARY);
+                    outputFileCreated = true;
+
+                    // Set window title for future savings
+                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(outFileName)));
 
                 #if defined(PLATFORM_WEB)
                     // Download file from MEMFS (emscripten memory filesystem)
@@ -1101,7 +1151,7 @@ int main(int argc, char *argv[])
             {
                 // Consider different supported file types
                 char filters[64] = { 0 };
-                strcpy(outFileName, "unnamed");
+                strcpy(outFileName, TextToLower(styleNameText));
 
                 switch (exportFormatActive)
                 {
@@ -1135,31 +1185,37 @@ int main(int argc, char *argv[])
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
                             SaveStyle(outFileName, STYLE_BINARY);
+                            outputFileCreated = true;
+
                         } break;
                         case STYLE_AS_CODE:
                         {
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".h")) strcat(outFileName, ".h\0");
-                            ExportStyleAsCode(outFileName, GetFileNameWithoutExt(outFileName));
+                            ExportStyleAsCode(outFileName, styleNameText);
                         } break;
                         case STYLE_TABLE_IMAGE:
                         {
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
-                            Image imStyleTable = GenImageStyleControlsTable("unnamed");
+                            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                             ExportImage(imStyleTable, outFileName);
                             UnloadImage(imStyleTable);
                             
                             // Write a custom chunk - rGSf (rGuiStyler file)
-                            rpng_chunk chunk = { 0 };
-                            memcpy(chunk.type, "rGSf", 4);  // Chunk type FOURCC
-                            chunk.data = SaveStyleToMemory(&chunk.length);
-                            rpng_chunk_write(outFileName, chunk);
-                            RPNG_FREE(chunk.data);
+                            if (styleChunkChecked)
+                            {
+                                rpng_chunk chunk = { 0 };
+                                memcpy(chunk.type, "rGSf", 4);  // Chunk type FOURCC
+                                chunk.data = SaveStyleToMemory(&chunk.length);
+                                rpng_chunk_write(outFileName, chunk);
+                                RPNG_FREE(chunk.data);
+                            }
                             
                         } break;
                         default: break;
                     }
+
                 #if defined(PLATFORM_WEB)
                     // Download file from MEMFS (emscripten memory filesystem)
                     // NOTE: Second argument must be a simple filename (we can't use directories)
@@ -1241,8 +1297,8 @@ static void ProcessCommandLine(int argc, char *argv[])
     // CLI required variables
     bool showUsageInfo = false;         // Toggle command line usage info
 
-    char inFileName[256] = { 0 };       // Input file name
-    char outFileName[256] = { 0 };      // Output file name
+    char inFileName[512] = { 0 };       // Input file name
+    char outFileName[512] = { 0 };      // Output file name
     int outputFormat = STYLE_BINARY;    // Formats: STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
 
     // Process command line arguments
@@ -1473,8 +1529,9 @@ static unsigned char *SaveStyleToMemory(int *size)
     return buffer;
 }
 
-// Save raygui style file (.rgs)
-// NOTE: By default style is saved as binary file
+// Save raygui style binary file (.rgs)
+// NOTE: By default style is saved as binary file but
+// a text style mode is also available for debug (no font embedding)
 static bool SaveStyle(const char *fileName, int format)
 {
     int success = false;
@@ -1674,7 +1731,7 @@ static bool SaveStyle(const char *fileName, int format)
             if (customFontLoaded)
             {
                 fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n");
-                fprintf(rgsFile, "f %i %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetFileName(fontFilePath));
+                fprintf(rgsFile, "f %i %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetFileName(inFontFileName));
             }
 
             // Save DEFAULT properties that changed
@@ -1777,7 +1834,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         if (customFontLoaded)
         {
             fprintf(txtFile, "// WARNING: This style uses a custom font: %s (size: %i, spacing: %i)\n\n",
-                    GetFileName(fontFilePath), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
+                    GetFileName(inFontFileName), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
         }
 
         Image imFont = { 0 };
