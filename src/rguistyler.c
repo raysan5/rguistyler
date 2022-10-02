@@ -904,7 +904,7 @@ int main(int argc, char *argv[])
         BeginTextureMode(screenTarget);
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
-            // Main screen controls
+            // GUI: Main screen controls
             //---------------------------------------------------------------------------------------------------------
             // Set custom gui state if selected
             GuiSetState(mainToolbarState.propsStateActive);
@@ -1023,7 +1023,7 @@ int main(int argc, char *argv[])
             // GUI: About Window
             //----------------------------------------------------------------------------------------
             GuiWindowAbout(&windowAboutState);
-            //--------------------------------------------------------------------------------
+            //----------------------------------------------------------------------------------------
 
             // GUI: Help Window
             //----------------------------------------------------------------------------------------
