@@ -21,6 +21,7 @@ _NOTE: This tool is itended to be used with [**raygui 3.2**](https://github.com/
  - Save and load as binary style file `.rgs` (font embedded!)
  - Export style as an embeddable **code file** (`.h`) (font embedded!)
  - Export style as a `.png` **controls table image** for showcase
+ - Embed style as custom `rGSf` png chunk (rgs file data)
  - Import, configure and preview **style fonts** (`.ttf`/`.otf`)
  - Color palette for quick color save/selection
  - **12 custom style examples** included
@@ -33,7 +34,7 @@ _NOTE: This tool is itended to be used with [**raygui 3.2**](https://github.com/
 
 ## rGuiStyler Screenshot
 
-![rGuiStyler](screenshots/rguistyler_v350_light_shot01.png)
+![rGuiStyler](screenshots/rguistyler_v400_cyber_shot01.png)
  
 ## rGuiStyler Usage
 
