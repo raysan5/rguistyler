@@ -678,6 +678,25 @@ int main(int argc, char *argv[])
         else if (mainToolbarState.btnRandomStylePressed)
         {
             // TODO: Generate random style (only colors)
+            for (int c = 0; c < RAYGUI_MAX_CONTROLS; c++) {
+                for (int p = 0; p < RAYGUI_MAX_PROPS_BASE; p++) {
+                    char *substring = strstr(guiPropsText[p], "COLOR");
+                    if (substring != NULL || (c == DEFAULT && (p == 12 || p == 13))) {
+                        int currentProp = p;
+                        if (c == DEFAULT) {
+                            switch (p) {
+                                case 12:
+                                    currentProp = BACKGROUND_COLOR;
+                                    break;
+                                case 13:
+                                    currentProp = LINE_COLOR;
+                                    break;
+                            }
+                        }
+                        GuiSetStyle(c, currentProp, ColorToInt((Color){GetRandomValue(0, 255),  GetRandomValue(0, 255), GetRandomValue(0, 255), 255}));
+                    }
+                }
+            }
         }
 
         // Visual options logic
