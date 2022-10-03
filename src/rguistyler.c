@@ -14,14 +14,13 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       4.0 (02-Oct-2022) 
-*           - Source code re-licensed to open-source
-*           - Updated to raylib 4.2 and raygui 3.2
-*           - ADDED: Main toolbar, for consistency with other tools
-*           - ADDED: Multiple new styles as templates
-*           - ADDED: Export style window with new options
-*           - REVIEWED: Layout metrics
-*       3.5 (29-Dec-2021) Updated to raylib 4.0 and raygui 3.1
+*       4.0  (02-Oct-2022)  Source code re-licensed to open-source
+*                           Updated to raylib 4.2 and raygui 3.2
+*                           ADDED: Main toolbar, for consistency with other tools
+*                           ADDED: Multiple new styles as templates
+*                           ADDED: Export style window with new options
+*                           REVIEWED: Layout metrics
+*       3.5  (29-Dec-2021)  Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
 *       raylib 4.2              - Windowing/input management and drawing
@@ -83,6 +82,9 @@
     #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
 #endif
 
+#define RPNG_IMPLEMENTATION
+#include "external/rpng.h"                  // PNG chunks management
+
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"                         // Required for: IMGUI controls
 
@@ -110,9 +112,6 @@
 #include "styles/style_cherry.h"            // raygui style: cherry
 #include "styles/style_sunny.h"             // raygui style: sunny
 #include "styles/style_enefete.h"           // raygui style: enefete
-
-#define RPNG_IMPLEMENTATION
-#include "external/rpng.h"                  // PNG chunks management
 
 #include <stdlib.h>                         // Required for: malloc(), free()
 #include <string.h>                         // Required for: strcmp(), memcpy()
@@ -1064,7 +1063,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (exitWindowActive)
             {
-                int result = GuiMessageBox((Rectangle) { (float)screenWidth/2 - 125, (float)screenHeight/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
+                int result = GuiMessageBox((Rectangle){ (float)screenWidth/2 - 125, (float)screenHeight/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
 
                 if ((result == 0) || (result == 2)) exitWindowActive = false;
                 else if (result == 1) closeWindow = true;
