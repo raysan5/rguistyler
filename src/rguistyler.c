@@ -614,6 +614,7 @@ int main(int argc, char *argv[])
             {
                 // If no input/output file already loaded/saved, show save file dialog
                 exportFormatActive = STYLE_BINARY;
+                strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
                 showSaveFileDialog = true;
             }
         }
@@ -672,7 +673,11 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         // File options logic
         if (mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
-        else if (mainToolbarState.btnSaveFilePressed) showSaveFileDialog = true;
+        else if (mainToolbarState.btnSaveFilePressed) 
+        {
+            strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
+            showSaveFileDialog = true;
+        }
         else if (mainToolbarState.btnExportFilePressed) exportWindowActive = true;
         else if (mainToolbarState.btnRandomStylePressed)
         {
@@ -1132,9 +1137,9 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showSaveFileDialog)
             {
-                strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
 #if defined(CUSTOM_MODAL_DIALOGS)
-                int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
+                //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
+                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 30, 280, 112 }, "#2#Save raygui style file...", NULL, "#2#Save", outFileName, 512, NULL);
 #else
                 int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
 #endif
@@ -1166,6 +1171,10 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showExportFileDialog)
             {
+#if defined(CUSTOM_MODAL_DIALOGS)
+                //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
+                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 60, 280, 112 }, "#7#Export raygui style file...", NULL, "#7#Export", outFileName, 512, NULL);
+#else
                 // Consider different supported file types
                 char filters[64] = { 0 };
                 strcpy(outFileName, TextToLower(styleNameText));
@@ -1178,10 +1187,7 @@ int main(int argc, char *argv[])
                     case STYLE_TABLE_IMAGE: strcpy(filters, "*.png"); strcat(outFileName, ".png");break;
                     default: break;
                 }
-
-#if defined(CUSTOM_MODAL_DIALOGS)
-                int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
-#else
+                
                 int result = GuiFileDialog(DIALOG_SAVE_FILE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
 #endif
                 if (result == 1)
