@@ -236,7 +236,7 @@ static const char *helpLines[HELP_LINES_COUNT] = {
     "LCTRL + R - Reload style template",
     "-Tool Visuals",
     "LEFT | RIGHT - Select style template",
-    "F - Toggle double screen size",
+    "LCTRL + F - Toggle double screen size",
     NULL,
     "ESCAPE - Close Window/Exit"
 };
@@ -571,7 +571,7 @@ int main(int argc, char *argv[])
 
 #if defined(PLATFORM_DESKTOP)
         // Toggle screen size (x2) mode
-        if (IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
 #endif
         // New style file, previous in/out files registeres are reseted
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
