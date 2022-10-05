@@ -7,7 +7,7 @@
 *   #define CUSTOM_MODAL_DIALOGS
 *       Use custom raygui generated modal dialogs instead of native OS ones
 *       NOTE: Avoids including tinyfiledialogs depencency library
-* 
+*
 *   #define SUPPORT_COMPRESSED_FONT_ATLAS
 *       Export font atlas image data compressed using raylib CompressData() DEFLATE algorythm,
 *       NOTE: It requires to be decompressed with raylib DecompressData(),
@@ -409,7 +409,7 @@ int main(int argc, char *argv[])
     char fontSampleText[128] = "sample text";
 
     bool screenSizeActive = false;
-    bool helpWindowActive = false;      // Show window: help info 
+    bool helpWindowActive = false;      // Show window: help info
     bool userWindowActive = false;      // Show window: user registration
     bool controlsWindowActive = true;   // Show window: controls
     //-----------------------------------------------------------------------------------
@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
     // GUI: Export Window
     //-----------------------------------------------------------------------------------
     bool exportWindowActive = false;
-       
+
     int exportFormatActive = 0;         // ComboBox file type selection
     char styleNameText[128] = "Unnamed"; // Style name text box
     bool styleNameEditMode = false;     // Style name text box edit mode
@@ -475,7 +475,7 @@ int main(int argc, char *argv[])
     // Main game loop
     while (!closeWindow)    // Detect window close button
     {
-        // WARNING: ASINCIFY requires this line, 
+        // WARNING: ASINCIFY requires this line,
         // it contains the call to emscripten_sleep() for PLATFORM_WEB
         if (WindowShouldClose()) exitWindowActive = true;
 
@@ -673,7 +673,7 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         // File options logic
         if (mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
-        else if (mainToolbarState.btnSaveFilePressed) 
+        else if (mainToolbarState.btnSaveFilePressed)
         {
             strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
             showSaveFileDialog = true;
@@ -741,7 +741,7 @@ int main(int argc, char *argv[])
         if (changedPropCounter > 0) saveChangesRequired = true;
 
         // Reload font and generate new atlas at new size when required
-        if (inputFontFileLoaded && (inFontFileName[0] != '\0') &&   // Check an external font file is provided (not internal custom one) 
+        if (inputFontFileLoaded && (inFontFileName[0] != '\0') &&   // Check an external font file is provided (not internal custom one)
             !genFontSizeEditMode &&                                 // Check the spinner text editing has finished
             (prevFontSizeValue != fontSizeValue))                   // Check selected size actually changed
         {
@@ -887,18 +887,18 @@ int main(int argc, char *argv[])
             }
         }
         //----------------------------------------------------------------------------------
-        
+
         // WARNING: Some windows should lock the main screen controls when shown
-        if (windowAboutState.windowActive || 
+        if (windowAboutState.windowActive ||
             helpWindowActive ||
             userWindowActive ||
-            exitWindowActive || 
+            exitWindowActive ||
             exportWindowActive ||
             mainToolbarState.viewStyleTableActive ||
             mainToolbarState.viewFontActive ||
             mainToolbarState.propsStateEditMode ||
-            showLoadFileDialog || 
-            showSaveFileDialog || 
+            showLoadFileDialog ||
+            showSaveFileDialog ||
             showExportFileDialog) GuiLock();
         //----------------------------------------------------------------------------------
 
@@ -989,13 +989,13 @@ int main(int argc, char *argv[])
             if (inputFontFileLoaded) GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(inFontFileName), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             else GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             //----------------------------------------------------------------------------------------
-            
+
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
             if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
-            
+
             // WARNING: Before drawing the windows, we unlock them
             GuiUnlock();
-            
+
             // Set default NORMAL state for all controls not in main screen
             GuiSetState(STATE_NORMAL);
 
@@ -1003,7 +1003,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------
             GuiMainToolbar(&mainToolbarState);
             //----------------------------------------------------------------------------------
-            
+
             // GUI: Show font texture
             //----------------------------------------------------------------------------------------
             if (mainToolbarState.viewFontActive)
@@ -1090,7 +1090,7 @@ int main(int argc, char *argv[])
                     GuiLoadStyle(inFileName);
                     SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                     inputFileLoaded = true;
-                    
+
                     // Load .rgs custom font in font
                     customFont = GuiGetFont();
                     memset(inFontFileName, 0, 512);
@@ -1187,7 +1187,7 @@ int main(int argc, char *argv[])
                     case STYLE_TABLE_IMAGE: strcpy(filters, "*.png"); strcat(outFileName, ".png");break;
                     default: break;
                 }
-                
+
                 int result = GuiFileDialog(DIALOG_SAVE_FILE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
 #endif
                 if (result == 1)
@@ -1224,7 +1224,7 @@ int main(int argc, char *argv[])
                             Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                             ExportImage(imStyleTable, outFileName);
                             UnloadImage(imStyleTable);
-                            
+
                             // Write a custom chunk - rGSf (rGuiStyler file)
                             if (styleChunkChecked)
                             {
@@ -1234,7 +1234,7 @@ int main(int argc, char *argv[])
                                 rpng_chunk_write(outFileName, chunk);
                                 RPNG_FREE(chunk.data);
                             }
-                            
+
                         } break;
                         default: break;
                     }
@@ -1251,7 +1251,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
 
         EndTextureMode();
-            
+
         BeginDrawing();
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
@@ -1416,7 +1416,7 @@ static unsigned char *SaveStyleToMemory(int *size)
 {
     unsigned char *buffer = (unsigned char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
     int dataSize = 0;
-    
+
     char signature[5] = "rGS ";
     short version = 200;
     short reserved = 0;
@@ -1526,7 +1526,7 @@ static unsigned char *SaveStyleToMemory(int *size)
         UnloadImage(imFont);
 
         // Write font recs data
-        for (int i = 0; i < customFont.glyphCount; i++) 
+        for (int i = 0; i < customFont.glyphCount; i++)
         {
             memcpy(buffer + dataSize, &customFont.recs[i], sizeof(Rectangle));
             dataSize += sizeof(Rectangle);
@@ -1542,12 +1542,12 @@ static unsigned char *SaveStyleToMemory(int *size)
             dataSize += 16;
         }
     }
-    else 
+    else
     {
         memcpy(buffer + dataSize, &fontSize, sizeof(int));
         dataSize += 4;
     }
-    
+
     *size = dataSize;
     return buffer;
 }
@@ -1876,7 +1876,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // NOTE: If data is compressed using raylib CompressData() DEFLATE,
             // it requires to be decompressed with raylib DecompressData(), that requires
             // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
-            
+
             // Image data is usually GRAYSCALE + ALPHA and can be reduced to GRAYSCALE
             //ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
 
