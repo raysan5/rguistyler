@@ -32,8 +32,6 @@
 
 #include "raylib.h"
 
-#include <stdint.h>
-
 // WARNING: raygui implementation is expected to be defined before including this header
 
 #ifndef GUI_MAIN_TOOLBAR_H
