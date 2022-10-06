@@ -14,12 +14,14 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       4.0  (02-Oct-2022)  Source code re-licensed to open-source
-*                           Updated to raylib 4.2 and raygui 3.2
-*                           ADDED: Main toolbar, for consistency with other tools
+*       4.1  (06-Oct-2022)  ADDED: Sponsor window for tools support
+*                           Updated to raygui 3.5-dev
+*       4.0  (02-Oct-2022)  ADDED: Main toolbar, for consistency with other tools
 *                           ADDED: Multiple new styles as templates
 *                           ADDED: Export style window with new options
 *                           REVIEWED: Layout metrics
+*                           Updated to raylib 4.2 and raygui 3.2
+*                           Source code re-licensed to open-source
 *       3.5  (29-Dec-2021)  Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
@@ -82,9 +84,6 @@
     #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
 #endif
 
-#define RPNG_IMPLEMENTATION
-#include "external/rpng.h"                  // PNG chunks management
-
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"                         // Required for: IMGUI controls
 
@@ -92,6 +91,9 @@
 
 #define GUI_WINDOW_ABOUT_IMPLEMENTATION
 #include "gui_window_about.h"               // GUI: About Window
+
+#define GUI_WINDOW_SPONSOR_IMPLEMENTATION
+#include "gui_window_sponsor.h"             // GUI: Sponsor Window
 
 #define GUI_FILE_DIALOGS_IMPLEMENTATION
 #include "gui_file_dialogs.h"               // GUI: File Dialogs
@@ -113,6 +115,9 @@
 #include "styles/style_sunny.h"             // raygui style: sunny
 #include "styles/style_enefete.h"           // raygui style: enefete
 
+#define RPNG_IMPLEMENTATION
+#include "external/rpng.h"                  // PNG chunks management
+
 #include <stdlib.h>                         // Required for: malloc(), free()
 #include <string.h>                         // Required for: strcmp(), memcpy()
 #include <stdio.h>                          // Required for: fopen(), fclose(), fread()...
@@ -127,10 +132,10 @@ bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib
 // Simple log system to avoid printf() calls if required
 // NOTE: Avoiding those calls, also avoids const strings memory usage
 #define SUPPORT_LOG_INFO
-#if defined(SUPPORT_LOG_INFO)
-  #define LOG(...) printf(__VA_ARGS__)
+#if defined(SUPPORT_LOG_INFO) && defined(_DEBUG)
+    #define LOG(...) printf(__VA_ARGS__)
 #else
-  #define LOG(...)
+    #define LOG(...)
 #endif
 
 //----------------------------------------------------------------------------------
@@ -223,7 +228,7 @@ static const char *guiPropsDefaultText[14] = {
 static const char *helpLines[HELP_LINES_COUNT] = {
     "F1 - Show Help window",
     "F2 - Show About window",
-    "F3 - Show User window",
+    "F3 - Show Sponsor window",
     "F4 - Show Style table",
     "F5 - Show Font atlas",
     "-File Controls",
@@ -410,13 +415,17 @@ int main(int argc, char *argv[])
 
     bool screenSizeActive = false;
     bool helpWindowActive = false;      // Show window: help info
-    bool userWindowActive = false;      // Show window: user registration
     bool controlsWindowActive = true;   // Show window: controls
     //-----------------------------------------------------------------------------------
 
     // GUI: About Window
     //-----------------------------------------------------------------------------------
     GuiWindowAboutState windowAboutState = InitGuiWindowAbout();
+    //-----------------------------------------------------------------------------------
+    
+    // GUI: Sponsor Window
+    //-----------------------------------------------------------------------------------
+    GuiWindowSponsorState windowSponsorState = InitGuiWindowSponsor();
     //-----------------------------------------------------------------------------------
 
     // GUI: Main toolbar panel (file and visualization)
@@ -622,19 +631,20 @@ int main(int argc, char *argv[])
         // Show dialog: export style file (.rgs, .png, .h)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) showExportFileDialog = true;
 
-        // Toggle window help
+        // Toggle window: help
         if (IsKeyPressed(KEY_F1)) helpWindowActive = !helpWindowActive;
 
-        // Toggle window about
+        // Toggle window: about
         if (IsKeyPressed(KEY_F2)) windowAboutState.windowActive = !windowAboutState.windowActive;
 
-        // Toggle window registered user
-        //if (IsKeyPressed(KEY_F3)) userWindowActive = !userWindowActive;
+        // Toggle window: sponsor
+        if (IsKeyPressed(KEY_F3)) windowSponsorState.windowActive = !windowSponsorState.windowActive;
 
         // Show closing window on ESC
         if (IsKeyPressed(KEY_ESCAPE))
         {
             if (windowAboutState.windowActive) windowAboutState.windowActive = false;
+            else if (windowSponsorState.windowActive) windowSponsorState.windowActive = false;
             else if (helpWindowActive) helpWindowActive = false;
             else if (exportWindowActive) exportWindowActive = false;
             else if (mainToolbarState.viewFontActive) mainToolbarState.viewFontActive = false;
@@ -726,9 +736,10 @@ int main(int argc, char *argv[])
         }
 
         // Help options logic
-        if (mainToolbarState.btnHelpPressed) helpWindowActive = true;               // Help button logic
-        if (mainToolbarState.btnAboutPressed) windowAboutState.windowActive = true; // About window button logic
-        if (mainToolbarState.btnUserPressed) userWindowActive = true;               // User button logic
+        if (mainToolbarState.btnHelpPressed) helpWindowActive = true;                   // Help button logic
+        if (mainToolbarState.btnAboutPressed) windowAboutState.windowActive = true;     // About window button logic
+        if (mainToolbarState.btnSponsorPressed) windowSponsorState.windowActive = true; // User sponsor logic
+        //if (mainToolbarState.btnUserPressed) userWindowActive = true;                 // User button logic
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -890,8 +901,8 @@ int main(int argc, char *argv[])
 
         // WARNING: Some windows should lock the main screen controls when shown
         if (windowAboutState.windowActive ||
+            windowSponsorState.windowActive ||
             helpWindowActive ||
-            userWindowActive ||
             exitWindowActive ||
             exportWindowActive ||
             mainToolbarState.viewStyleTableActive ||
@@ -1027,6 +1038,12 @@ int main(int argc, char *argv[])
             // GUI: About Window
             //----------------------------------------------------------------------------------------
             GuiWindowAbout(&windowAboutState);
+            //----------------------------------------------------------------------------------------
+            
+            // GUI: Sponsor Window
+            //----------------------------------------------------------------------------------------
+            windowSponsorState.position = (Vector2){ (float)screenWidth/2 - windowSponsorState.windowWidth/2, (float)screenHeight/2 - windowSponsorState.windowHeight/2 - 20 };
+            GuiWindowSponsor(&windowSponsorState);
             //----------------------------------------------------------------------------------------
 
             // GUI: Help Window
@@ -2217,7 +2234,7 @@ static int GuiHelpWindow(Rectangle bounds, const char *title, const char **helpL
     {
         if (helpLines[i] == NULL) GuiLine((Rectangle) { bounds.x, bounds.y + nextLineY, 330, 12 }, helpLines[i]);
         else if (helpLines[i][0] == '-') GuiLine((Rectangle) { bounds.x, bounds.y + nextLineY, 330, 24 }, helpLines[i] + 1);
-        else GuiLabel((Rectangle) { bounds.x + 12, bounds.y + nextLineY, 0, 24 }, helpLines[i]);
+        else GuiLabel((Rectangle) { bounds.x + 12, bounds.y + nextLineY, bounds.width, 24 }, helpLines[i]);
 
         if (helpLines[i] == NULL) nextLineY += 12;
         else nextLineY += 24;

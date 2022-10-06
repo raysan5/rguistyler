@@ -71,6 +71,7 @@ typedef struct {
     // Help options
     bool btnHelpPressed;
     bool btnAboutPressed;
+    bool btnSponsorPressed;
     bool btnUserPressed;
     bool btnQuitPressed;
 
@@ -159,6 +160,7 @@ GuiMainToolbarState InitGuiMainToolbar(void)
     // Info options
     state.btnHelpPressed = false;
     state.btnAboutPressed = false;
+    state.btnSponsorPressed = false;
     state.btnUserPressed = false;
     state.btnQuitPressed = false;
 
@@ -209,9 +211,7 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     // Info options
     state->btnHelpPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 72 - 8, state->anchorRight.y + 8, 24, 24 }, "#193#"); 
     state->btnAboutPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 48 - 4, state->anchorRight.y + 8, 24, 24 }, "#191#");
-    GuiDisable();
-    state->btnUserPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 24, state->anchorRight.y + 8, 24, 24 }, "#149#");
-    GuiEnable();
+    state->btnSponsorPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 24, state->anchorRight.y + 8, 24, 24 }, "#186#");
 }
 
 #endif // GUI_MAIN_TOOLBAR_IMPLEMENTATION
