@@ -677,26 +677,85 @@ int main(int argc, char *argv[])
         else if (mainToolbarState.btnExportFilePressed) exportWindowActive = true;
         else if (mainToolbarState.btnRandomStylePressed)
         {
-            // TODO: Generate random style (only colors)
-            for (int c = 0; c < RAYGUI_MAX_CONTROLS; c++) {
-                for (int p = 0; p < RAYGUI_MAX_PROPS_BASE; p++) {
-                    char *substring = strstr(guiPropsText[p], "COLOR");
-                    if (substring != NULL || (c == DEFAULT && (p == 12 || p == 13))) {
-                        int currentProp = p;
-                        if (c == DEFAULT) {
-                            switch (p) {
-                                case 12:
-                                    currentProp = BACKGROUND_COLOR;
-                                    break;
-                                case 13:
-                                    currentProp = LINE_COLOR;
-                                    break;
-                            }
-                        }
-                        GuiSetStyle(c, currentProp, ColorToInt((Color){GetRandomValue(0, 255),  GetRandomValue(0, 255), GetRandomValue(0, 255), 255}));
-                    }
-                }
+            float hueNormal = GetRandomValue(0, 360);
+            float value = GetRandomValue(0, 100) / 100.0f;
+
+            float hueFocused = hueNormal;
+            float huePressed = hueNormal;
+            float hueDisabled = hueNormal;
+
+            switch (GetRandomValue(0, 3)) {
+                case 0:
+                    // focused is complementary
+                    hueFocused = hueNormal - 180;
+                    break;
+                case 1:
+                    // pressed is complementary
+                    huePressed = hueNormal - 180;
+                    break;
+                case 2:
+                    // focused and pressed are split complementary
+                    int offset = GetRandomValue(60, 160);
+                    int direction = GetRandomValue(0, 1);
+                    if (direction == 0) direction = -1;
+                    hueFocused = hueNormal + offset * direction;
+                    huePressed = hueNormal + (offset * direction * -1);
+                    break;;
             }
+
+            if (hueFocused < 0) {
+                hueFocused = 360 + hueFocused;
+            }
+
+            if (huePressed < 0) {
+                huePressed = 360 + huePressed;
+            }
+
+
+            Vector3 hsvNormal = {
+                hueNormal,
+                0.8f,
+                value
+            };
+
+            Vector3 hsvFocused = {
+                hueFocused,
+                1.0f,
+                1 - hsvNormal.z
+            };
+
+            Vector3 hsvPressed = {
+                huePressed,
+                0.5f,
+                hsvFocused.z
+            };
+
+            Vector3 hsvDisabled = {
+                hueDisabled,
+                0.2,
+                value
+            };
+
+            GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7) / 10.0f, fabsf(0.5 - hsvNormal.z) < 0.2 ? 1.0 + ((GetRandomValue(3,5) / 10.0f) * fabsf(0.5 - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
+            GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
+
+            GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, hsvFocused.y, hsvFocused.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, GetRandomValue(4, 7) / 10.0f, 1 - hsvFocused.z)));
+            GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, hsvFocused.y, hsvFocused.z)));
+
+            GuiSetStyle(DEFAULT, BORDER_COLOR_PRESSED, ColorToInt(ColorFromHSV(hsvPressed.x, hsvPressed.y, hsvPressed.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_PRESSED, ColorToInt(ColorFromHSV(hsvPressed.x, GetRandomValue(4, 7) / 10.0f, 1 - hsvPressed.z)));
+            GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, ColorToInt(ColorFromHSV(hsvPressed.x, hsvPressed.y, hsvPressed.z)));
+
+            GuiSetStyle(DEFAULT, BORDER_COLOR_DISABLED, ColorToInt(ColorFromHSV(hsvDisabled.x, hsvDisabled.y, hsvDisabled.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_DISABLED, ColorToInt(ColorFromHSV(hsvDisabled.x, hsvDisabled.y, 1 - hsvDisabled.z)));
+            GuiSetStyle(DEFAULT, TEXT_COLOR_DISABLED, ColorToInt(ColorFromHSV(hsvDisabled.x, hsvDisabled.y, hsvDisabled.z)));
+
+            GuiSetStyle(DEFAULT, BACKGROUND_COLOR, GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL));
+            GuiSetStyle(DEFAULT, LINE_COLOR, GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL));
+
+            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
         }
 
         // Visual options logic
