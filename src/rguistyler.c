@@ -719,10 +719,14 @@ int main(int argc, char *argv[])
 
             if (hueFocused < 0) {
                 hueFocused = 360 + hueFocused;
+            } else if (hueFocused > 360) {
+                hueFocused -= 360;
             }
 
             if (huePressed < 0) {
                 huePressed = 360 + huePressed;
+            } else if (huePressed > 360) {
+                huePressed -= 360;
             }
 
 
