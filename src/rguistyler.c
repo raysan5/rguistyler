@@ -1,31 +1,32 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v4.0 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v4.1 - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
 *
 *   #define CUSTOM_MODAL_DIALOGS
 *       Use custom raygui generated modal dialogs instead of native OS ones
 *       NOTE: Avoids including tinyfiledialogs depencency library
-* 
+*
 *   #define SUPPORT_COMPRESSED_FONT_ATLAS
 *       Export font atlas image data compressed using raylib CompressData() DEFLATE algorythm,
 *       NOTE: It requires to be decompressed with raylib DecompressData(),
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       4.0 (02-Oct-2022) 
-*           - Source code re-licensed to open-source
-*           - Updated to raylib 4.2 and raygui 3.2
-*           - ADDED: Main toolbar, for consistency with other tools
-*           - ADDED: Multiple new styles as templates
-*           - ADDED: Export style window with new options
-*           - REVIEWED: Layout metrics
-*       3.5 (29-Dec-2021) Updated to raylib 4.0 and raygui 3.1
+*       4.1  (06-Oct-2022)  ADDED: Sponsor window for tools support
+*                           Updated to raygui 3.5-dev
+*       4.0  (02-Oct-2022)  ADDED: Main toolbar, for consistency with other tools
+*                           ADDED: Multiple new styles as templates
+*                           ADDED: Export style window with new options
+*                           REVIEWED: Layout metrics
+*                           Updated to raylib 4.2 and raygui 3.2
+*                           Source code re-licensed to open-source
+*       3.5  (29-Dec-2021)  Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
 *       raylib 4.2              - Windowing/input management and drawing
-*       raygui 3.2              - Immediate-mode GUI controls with custom styling and icons
+*       raygui 3.5-dev          - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.0                - PNG chunks management
 *       tinyfiledialogs 3.8.8   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
@@ -91,6 +92,9 @@
 #define GUI_WINDOW_ABOUT_IMPLEMENTATION
 #include "gui_window_about.h"               // GUI: About Window
 
+#define GUI_WINDOW_SPONSOR_IMPLEMENTATION
+#include "gui_window_sponsor.h"             // GUI: Sponsor Window
+
 #define GUI_FILE_DIALOGS_IMPLEMENTATION
 #include "gui_file_dialogs.h"               // GUI: File Dialogs
 
@@ -128,10 +132,10 @@ bool __stdcall FreeConsole(void);       // Close console from code (kernel32.lib
 // Simple log system to avoid printf() calls if required
 // NOTE: Avoiding those calls, also avoids const strings memory usage
 #define SUPPORT_LOG_INFO
-#if defined(SUPPORT_LOG_INFO)
-  #define LOG(...) printf(__VA_ARGS__)
+#if defined(SUPPORT_LOG_INFO) && defined(_DEBUG)
+    #define LOG(...) printf(__VA_ARGS__)
 #else
-  #define LOG(...)
+    #define LOG(...)
 #endif
 
 //----------------------------------------------------------------------------------
@@ -224,7 +228,7 @@ static const char *guiPropsDefaultText[14] = {
 static const char *helpLines[HELP_LINES_COUNT] = {
     "F1 - Show Help window",
     "F2 - Show About window",
-    "F3 - Show User window",
+    "F3 - Show Sponsor window",
     "F4 - Show Style table",
     "F5 - Show Font atlas",
     "-File Controls",
@@ -237,7 +241,7 @@ static const char *helpLines[HELP_LINES_COUNT] = {
     "LCTRL + R - Reload style template",
     "-Tool Visuals",
     "LEFT | RIGHT - Select style template",
-    "F - Toggle double screen size",
+    "LCTRL + F - Toggle double screen size",
     NULL,
     "ESCAPE - Close Window/Exit"
 };
@@ -410,14 +414,18 @@ int main(int argc, char *argv[])
     char fontSampleText[128] = "sample text";
 
     bool screenSizeActive = false;
-    bool helpWindowActive = false;      // Show window: help info 
-    bool userWindowActive = false;      // Show window: user registration
+    bool helpWindowActive = false;      // Show window: help info
     bool controlsWindowActive = true;   // Show window: controls
     //-----------------------------------------------------------------------------------
 
     // GUI: About Window
     //-----------------------------------------------------------------------------------
     GuiWindowAboutState windowAboutState = InitGuiWindowAbout();
+    //-----------------------------------------------------------------------------------
+    
+    // GUI: Sponsor Window
+    //-----------------------------------------------------------------------------------
+    GuiWindowSponsorState windowSponsorState = InitGuiWindowSponsor();
     //-----------------------------------------------------------------------------------
 
     // GUI: Main toolbar panel (file and visualization)
@@ -428,7 +436,7 @@ int main(int argc, char *argv[])
     // GUI: Export Window
     //-----------------------------------------------------------------------------------
     bool exportWindowActive = false;
-       
+
     int exportFormatActive = 0;         // ComboBox file type selection
     char styleNameText[128] = "Unnamed"; // Style name text box
     bool styleNameEditMode = false;     // Style name text box edit mode
@@ -476,7 +484,7 @@ int main(int argc, char *argv[])
     // Main game loop
     while (!closeWindow)    // Detect window close button
     {
-        // WARNING: ASINCIFY requires this line, 
+        // WARNING: ASINCIFY requires this line,
         // it contains the call to emscripten_sleep() for PLATFORM_WEB
         if (WindowShouldClose()) exitWindowActive = true;
 
@@ -572,7 +580,7 @@ int main(int argc, char *argv[])
 
 #if defined(PLATFORM_DESKTOP)
         // Toggle screen size (x2) mode
-        if (IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
 #endif
         // New style file, previous in/out files registeres are reseted
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
@@ -615,6 +623,7 @@ int main(int argc, char *argv[])
             {
                 // If no input/output file already loaded/saved, show save file dialog
                 exportFormatActive = STYLE_BINARY;
+                strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
                 showSaveFileDialog = true;
             }
         }
@@ -622,19 +631,20 @@ int main(int argc, char *argv[])
         // Show dialog: export style file (.rgs, .png, .h)
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) showExportFileDialog = true;
 
-        // Toggle window help
+        // Toggle window: help
         if (IsKeyPressed(KEY_F1)) helpWindowActive = !helpWindowActive;
 
-        // Toggle window about
+        // Toggle window: about
         if (IsKeyPressed(KEY_F2)) windowAboutState.windowActive = !windowAboutState.windowActive;
 
-        // Toggle window registered user
-        //if (IsKeyPressed(KEY_F3)) userWindowActive = !userWindowActive;
+        // Toggle window: sponsor
+        if (IsKeyPressed(KEY_F3)) windowSponsorState.windowActive = !windowSponsorState.windowActive;
 
         // Show closing window on ESC
         if (IsKeyPressed(KEY_ESCAPE))
         {
             if (windowAboutState.windowActive) windowAboutState.windowActive = false;
+            else if (windowSponsorState.windowActive) windowSponsorState.windowActive = false;
             else if (helpWindowActive) helpWindowActive = false;
             else if (exportWindowActive) exportWindowActive = false;
             else if (mainToolbarState.viewFontActive) mainToolbarState.viewFontActive = false;
@@ -673,7 +683,11 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         // File options logic
         if (mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
-        else if (mainToolbarState.btnSaveFilePressed) showSaveFileDialog = true;
+        else if (mainToolbarState.btnSaveFilePressed)
+        {
+            strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
+            showSaveFileDialog = true;
+        }
         else if (mainToolbarState.btnExportFilePressed) exportWindowActive = true;
         else if (mainToolbarState.btnRandomStylePressed)
         {
@@ -800,9 +814,10 @@ int main(int argc, char *argv[])
         }
 
         // Help options logic
-        if (mainToolbarState.btnHelpPressed) helpWindowActive = true;               // Help button logic
-        if (mainToolbarState.btnAboutPressed) windowAboutState.windowActive = true; // About window button logic
-        if (mainToolbarState.btnUserPressed) userWindowActive = true;               // User button logic
+        if (mainToolbarState.btnHelpPressed) helpWindowActive = true;                   // Help button logic
+        if (mainToolbarState.btnAboutPressed) windowAboutState.windowActive = true;     // About window button logic
+        if (mainToolbarState.btnSponsorPressed) windowSponsorState.windowActive = true; // User sponsor logic
+        //if (mainToolbarState.btnUserPressed) userWindowActive = true;                 // User button logic
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -815,7 +830,7 @@ int main(int argc, char *argv[])
         if (changedPropCounter > 0) saveChangesRequired = true;
 
         // Reload font and generate new atlas at new size when required
-        if (inputFontFileLoaded && (inFontFileName[0] != '\0') &&   // Check an external font file is provided (not internal custom one) 
+        if (inputFontFileLoaded && (inFontFileName[0] != '\0') &&   // Check an external font file is provided (not internal custom one)
             !genFontSizeEditMode &&                                 // Check the spinner text editing has finished
             (prevFontSizeValue != fontSizeValue))                   // Check selected size actually changed
         {
@@ -961,18 +976,18 @@ int main(int argc, char *argv[])
             }
         }
         //----------------------------------------------------------------------------------
-        
+
         // WARNING: Some windows should lock the main screen controls when shown
-        if (windowAboutState.windowActive || 
+        if (windowAboutState.windowActive ||
+            windowSponsorState.windowActive ||
             helpWindowActive ||
-            userWindowActive ||
-            exitWindowActive || 
+            exitWindowActive ||
             exportWindowActive ||
             mainToolbarState.viewStyleTableActive ||
             mainToolbarState.viewFontActive ||
             mainToolbarState.propsStateEditMode ||
-            showLoadFileDialog || 
-            showSaveFileDialog || 
+            showLoadFileDialog ||
+            showSaveFileDialog ||
             showExportFileDialog) GuiLock();
         //----------------------------------------------------------------------------------
 
@@ -1063,13 +1078,13 @@ int main(int argc, char *argv[])
             if (inputFontFileLoaded) GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(inFontFileName), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             else GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
             //----------------------------------------------------------------------------------------
-            
+
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
             if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
-            
+
             // WARNING: Before drawing the windows, we unlock them
             GuiUnlock();
-            
+
             // Set default NORMAL state for all controls not in main screen
             GuiSetState(STATE_NORMAL);
 
@@ -1077,7 +1092,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------
             GuiMainToolbar(&mainToolbarState);
             //----------------------------------------------------------------------------------
-            
+
             // GUI: Show font texture
             //----------------------------------------------------------------------------------------
             if (mainToolbarState.viewFontActive)
@@ -1101,6 +1116,12 @@ int main(int argc, char *argv[])
             // GUI: About Window
             //----------------------------------------------------------------------------------------
             GuiWindowAbout(&windowAboutState);
+            //----------------------------------------------------------------------------------------
+            
+            // GUI: Sponsor Window
+            //----------------------------------------------------------------------------------------
+            windowSponsorState.position = (Vector2){ (float)screenWidth/2 - windowSponsorState.windowWidth/2, (float)screenHeight/2 - windowSponsorState.windowHeight/2 - 20 };
+            GuiWindowSponsor(&windowSponsorState);
             //----------------------------------------------------------------------------------------
 
             // GUI: Help Window
@@ -1142,7 +1163,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (exitWindowActive)
             {
-                int result = GuiMessageBox((Rectangle) { (float)screenWidth/2 - 125, (float)screenHeight/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
+                int result = GuiMessageBox((Rectangle){ (float)screenWidth/2 - 125, (float)screenHeight/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
 
                 if ((result == 0) || (result == 2)) exitWindowActive = false;
                 else if (result == 1) closeWindow = true;
@@ -1164,7 +1185,7 @@ int main(int argc, char *argv[])
                     GuiLoadStyle(inFileName);
                     SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                     inputFileLoaded = true;
-                    
+
                     // Load .rgs custom font in font
                     customFont = GuiGetFont();
                     memset(inFontFileName, 0, 512);
@@ -1211,9 +1232,9 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showSaveFileDialog)
             {
-                strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
 #if defined(CUSTOM_MODAL_DIALOGS)
-                int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
+                //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
+                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 30, 280, 112 }, "#2#Save raygui style file...", NULL, "#2#Save", outFileName, 512, NULL);
 #else
                 int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
 #endif
@@ -1245,6 +1266,10 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showExportFileDialog)
             {
+#if defined(CUSTOM_MODAL_DIALOGS)
+                //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
+                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 60, 280, 112 }, "#7#Export raygui style file...", NULL, "#7#Export", outFileName, 512, NULL);
+#else
                 // Consider different supported file types
                 char filters[64] = { 0 };
                 strcpy(outFileName, TextToLower(styleNameText));
@@ -1258,9 +1283,6 @@ int main(int argc, char *argv[])
                     default: break;
                 }
 
-#if defined(CUSTOM_MODAL_DIALOGS)
-                int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
-#else
                 int result = GuiFileDialog(DIALOG_SAVE_FILE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
 #endif
                 if (result == 1)
@@ -1297,7 +1319,7 @@ int main(int argc, char *argv[])
                             Image imStyleTable = GenImageStyleControlsTable(styleNameText);
                             ExportImage(imStyleTable, outFileName);
                             UnloadImage(imStyleTable);
-                            
+
                             // Write a custom chunk - rGSf (rGuiStyler file)
                             if (styleChunkChecked)
                             {
@@ -1307,7 +1329,7 @@ int main(int argc, char *argv[])
                                 rpng_chunk_write(outFileName, chunk);
                                 RPNG_FREE(chunk.data);
                             }
-                            
+
                         } break;
                         default: break;
                     }
@@ -1324,7 +1346,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
 
         EndTextureMode();
-            
+
         BeginDrawing();
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
@@ -1489,7 +1511,7 @@ static unsigned char *SaveStyleToMemory(int *size)
 {
     unsigned char *buffer = (unsigned char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
     int dataSize = 0;
-    
+
     char signature[5] = "rGS ";
     short version = 200;
     short reserved = 0;
@@ -1599,7 +1621,7 @@ static unsigned char *SaveStyleToMemory(int *size)
         UnloadImage(imFont);
 
         // Write font recs data
-        for (int i = 0; i < customFont.glyphCount; i++) 
+        for (int i = 0; i < customFont.glyphCount; i++)
         {
             memcpy(buffer + dataSize, &customFont.recs[i], sizeof(Rectangle));
             dataSize += sizeof(Rectangle);
@@ -1615,12 +1637,12 @@ static unsigned char *SaveStyleToMemory(int *size)
             dataSize += 16;
         }
     }
-    else 
+    else
     {
         memcpy(buffer + dataSize, &fontSize, sizeof(int));
         dataSize += 4;
     }
-    
+
     *size = dataSize;
     return buffer;
 }
@@ -1949,7 +1971,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // NOTE: If data is compressed using raylib CompressData() DEFLATE,
             // it requires to be decompressed with raylib DecompressData(), that requires
             // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
-            
+
             // Image data is usually GRAYSCALE + ALPHA and can be reduced to GRAYSCALE
             //ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
 
@@ -2290,7 +2312,7 @@ static int GuiHelpWindow(Rectangle bounds, const char *title, const char **helpL
     {
         if (helpLines[i] == NULL) GuiLine((Rectangle) { bounds.x, bounds.y + nextLineY, 330, 12 }, helpLines[i]);
         else if (helpLines[i][0] == '-') GuiLine((Rectangle) { bounds.x, bounds.y + nextLineY, 330, 24 }, helpLines[i] + 1);
-        else GuiLabel((Rectangle) { bounds.x + 12, bounds.y + nextLineY, 0, 24 }, helpLines[i]);
+        else GuiLabel((Rectangle) { bounds.x + 12, bounds.y + nextLineY, bounds.width, 24 }, helpLines[i]);
 
         if (helpLines[i] == NULL) nextLineY += 12;
         else nextLineY += 24;
