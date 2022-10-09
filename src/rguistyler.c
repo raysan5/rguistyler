@@ -102,7 +102,8 @@
 #include "gui_main_toolbar.h"               // GUI: Main toolbar
 
 // raygui embedded styles (used as templates)
-// NOTE: Inclusion order follows combobox order
+// NOTE: Included in the same order as selector
+#define MAX_GUI_STYLES_AVAILABLE   12       // NOTE: Included light style
 #include "styles/style_jungle.h"            // raygui style: jungle
 #include "styles/style_candy.h"             // raygui style: candy
 #include "styles/style_lavanda.h"           // raygui style: lavanda
@@ -672,11 +673,11 @@ int main(int argc, char *argv[])
             else mainToolbarState.prevVisualStyleActive = 0;
         }
 
-        // Change current style template
-        if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
-        else if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
-        if (mainToolbarState.visualStyleActive >= 12) mainToolbarState.visualStyleActive = 0;
-        else if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = 11;
+        // Select visual style
+        if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
+        else if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
+        if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = MAX_GUI_STYLES_AVAILABLE - 1;
+        else if (mainToolbarState.visualStyleActive > (MAX_GUI_STYLES_AVAILABLE - 1)) mainToolbarState.visualStyleActive = 0;
         //----------------------------------------------------------------------------------
 
         // Main toolbar logic
