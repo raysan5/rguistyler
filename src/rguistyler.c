@@ -14,8 +14,9 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       4.1  (06-Oct-2022)  ADDED: Sponsor window for tools support
-*                           Updated to raygui 3.5-dev
+*       4.1  (10-Oct-2022)  ADDED: Sponsor window for tools support
+*                           ADDED: Random style generator button (experimental)
+*                           Updated to raylib 4.5-dev and raygui 3.5-dev
 *       4.0  (02-Oct-2022)  ADDED: Main toolbar, for consistency with other tools
 *                           ADDED: Multiple new styles as templates
 *                           ADDED: Export style window with new options
@@ -70,7 +71,7 @@
 
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
-#define TOOL_VERSION            "4.0"
+#define TOOL_VERSION            "4.1"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
 #define TOOL_RELEASE_DATE       "Oct.2022"
 #define TOOL_LOGO_COLOR         0x62bde3ff
