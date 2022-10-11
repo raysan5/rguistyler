@@ -699,14 +699,9 @@ int main(int argc, char *argv[])
             float hueDisabled = hueNormal;
 
             switch (GetRandomValue(0, 3)) {
-                // Focused items are complementary color
-                case 0: hueFocused = hueNormal - 180; break;
-
-                // Pressed items are complementary color
-                case 1: huePressed = hueNormal - 180; break;
-
-                // focused and pressed are split complementary
-                case 2:
+                case 0: hueFocused = hueNormal - 180; break;                        // Focused items are complementary color
+                case 1: huePressed = hueNormal - 180; break;                        // Pressed items are complementary color
+                case 2:                                                             // focused and pressed are split complementary
                 {
                     int offset = GetRandomValue(60, 160);
                     int direction = GetRandomValue(0, 1);
@@ -727,7 +722,6 @@ int main(int argc, char *argv[])
             } else if (huePressed > 360) {
                 huePressed -= 360;
             }
-
 
             Vector3 hsvNormal = {
                 hueNormal,
