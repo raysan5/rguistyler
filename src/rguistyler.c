@@ -758,6 +758,8 @@ int main(int argc, char *argv[])
             currentSelectedControl = -1;
             currentSelectedProperty = -1;
 
+            // Reset to default internal style
+            // NOTE: Required to unload any previously loaded font texture
             GuiLoadStyleDefault();
 
             switch (mainToolbarState.visualStyleActive)
