@@ -189,9 +189,7 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     state->btnLoadFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12 + 24 + 4, state->anchorFile.y + 8, 24, 24 }, "#5#");
     state->btnSaveFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12 + 48 + 8, state->anchorFile.y + 8, 24, 24 }, "#6#");
     state->btnExportFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12 + 72 + 12, state->anchorFile.y + 8, 24, 24 }, "#7#");
-    GuiDisable();
     state->btnRandomStylePressed = GuiButton((Rectangle) { state->anchorFile.x + 12 + 72 + 12 + 28, state->anchorFile.y + 8, 24, 24 }, "#78#");
-    GuiEnable();
 
     // Edit options
     GuiLabel((Rectangle){ state->anchorEdit.x + 10, 8, 35, 24 }, "State:");
