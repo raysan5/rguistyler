@@ -699,22 +699,21 @@ int main(int argc, char *argv[])
             float hueDisabled = hueNormal;
 
             switch (GetRandomValue(0, 3)) {
-                case 0:
-                    // focused is complementary
-                    hueFocused = hueNormal - 180;
-                    break;
-                case 1:
-                    // pressed is complementary
-                    huePressed = hueNormal - 180;
-                    break;
+                // Focused items are complementary color
+                case 0: hueFocused = hueNormal - 180; break;
+
+                // Pressed items are complementary color
+                case 1: huePressed = hueNormal - 180; break;
+
+                // focused and pressed are split complementary
                 case 2:
-                    // focused and pressed are split complementary
+                {
                     int offset = GetRandomValue(60, 160);
                     int direction = GetRandomValue(0, 1);
                     if (direction == 0) direction = -1;
                     hueFocused = hueNormal + offset * direction;
                     huePressed = hueNormal + (offset * direction * -1);
-                    break;;
+                } break;
             }
 
             if (hueFocused < 0) {
@@ -755,7 +754,7 @@ int main(int argc, char *argv[])
             };
 
             GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
-            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7) / 10.0f, fabsf(0.5 - hsvNormal.z) < 0.2 ? 1.0 + ((GetRandomValue(3,5) / 10.0f) * fabsf(0.5 - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7) / 10.0f, (fabsf(0.5 - hsvNormal.z) < 0.2)? 1.0 + ((GetRandomValue(3,5) / 10.0f) * fabsf(0.5 - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
             GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
 
             GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, hsvFocused.y, hsvFocused.z)));
