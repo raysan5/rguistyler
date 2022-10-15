@@ -10,7 +10,7 @@ rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtec
 
 <br>
 
-_NOTE: This tool is itended to be used with [**raygui 3.2**](https://github.com/raysan5/raygui)_
+_NOTE: This tool is itended to be used with [**raygui 3.5-dev**](https://github.com/raysan5/raygui)_
 
 ## rGuiStyler Features
 
