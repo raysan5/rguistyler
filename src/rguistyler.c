@@ -43,9 +43,9 @@
 *
 *   DEVELOPERS:
 *       Ramon Santamaria (@raysan5):    Supervision, review, redesign, update and maintenance.
-*       Adria Arranz (@Adri102):        Developer and designer, implemented v2.0 (2018)
-*       Jordi Jorba (@KoroBli):         Developer and designer, implemented v2.0 (2018)
-*       Sergio Martinez (@anidealgift): Development and testing v1.0 (2015..2017)
+*       Adria Arranz (@Adri102):        Developer and designer (v2.0 - May.2018)
+*       Jordi Jorba (@KoroBli):         Developer and designer (v2.0 - May.2018)
+*       Sergio Martinez (@anidealgift): Developer and tester (v1.0 - 2015..2017)
 *
 *
 *   LICENSE: zlib/libpng
