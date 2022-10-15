@@ -90,6 +90,9 @@
 
 #undef RAYGUI_IMPLEMENTATION                // Avoid including raygui implementation again
 
+#define GUI_MAIN_TOOLBAR_IMPLEMENTATION
+#include "gui_main_toolbar.h"               // GUI: Main toolbar
+
 #define GUI_WINDOW_ABOUT_IMPLEMENTATION
 #include "gui_window_about.h"               // GUI: About Window
 
@@ -98,9 +101,6 @@
 
 #define GUI_FILE_DIALOGS_IMPLEMENTATION
 #include "gui_file_dialogs.h"               // GUI: File Dialogs
-
-#define GUI_MAIN_TOOLBAR_IMPLEMENTATION
-#include "gui_main_toolbar.h"               // GUI: Main toolbar
 
 // raygui embedded styles (used as templates)
 // NOTE: Included in the same order as selector
@@ -120,6 +120,7 @@
 #define RPNG_IMPLEMENTATION
 #include "external/rpng.h"                  // PNG chunks management
 
+// Standard C libraries
 #include <stdlib.h>                         // Required for: malloc(), free()
 #include <string.h>                         // Required for: strcmp(), memcpy()
 #include <stdio.h>                          // Required for: fopen(), fclose(), fread()...
@@ -416,9 +417,15 @@ int main(int argc, char *argv[])
     char fontSampleText[128] = "sample text";
 
     bool screenSizeActive = false;
-    bool helpWindowActive = false;      // Show window: help info
+    bool windowHelpActive = false;      // Show window: help info
     bool controlsWindowActive = true;   // Show window: controls
     //-----------------------------------------------------------------------------------
+
+    // GUI: Main toolbar panel (file and visualization)
+    //-----------------------------------------------------------------------------------
+    GuiMainToolbarState mainToolbarState = InitGuiMainToolbar();
+    //-----------------------------------------------------------------------------------
+
 
     // GUI: About Window
     //-----------------------------------------------------------------------------------
@@ -430,14 +437,9 @@ int main(int argc, char *argv[])
     GuiWindowSponsorState windowSponsorState = InitGuiWindowSponsor();
     //-----------------------------------------------------------------------------------
 
-    // GUI: Main toolbar panel (file and visualization)
-    //-----------------------------------------------------------------------------------
-    GuiMainToolbarState mainToolbarState = InitGuiMainToolbar();
-    //-----------------------------------------------------------------------------------
-
     // GUI: Export Window
     //-----------------------------------------------------------------------------------
-    bool exportWindowActive = false;
+    bool windowExportActive = false;
 
     int exportFormatActive = 0;         // ComboBox file type selection
     char styleNameText[128] = "Unnamed"; // Style name text box
@@ -449,7 +451,7 @@ int main(int argc, char *argv[])
     // GUI: Exit Window
     //-----------------------------------------------------------------------------------
     bool closeWindow = false;
-    bool exitWindowActive = false;
+    bool windowExitActive = false;
     //-----------------------------------------------------------------------------------
 
     // GUI: Custom file dialogs
@@ -480,7 +482,7 @@ int main(int argc, char *argv[])
     RenderTexture2D screenTarget = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
     SetTextureFilter(screenTarget.texture, TEXTURE_FILTER_POINT);
 
-    SetTargetFPS(60);       // Set our game to run at 60 frames-per-second
+    SetTargetFPS(60);       // Set our game desired framerate
     //--------------------------------------------------------------------------------------
 
     // Main game loop
@@ -488,7 +490,7 @@ int main(int argc, char *argv[])
     {
         // WARNING: ASINCIFY requires this line,
         // it contains the call to emscripten_sleep() for PLATFORM_WEB
-        if (WindowShouldClose()) exitWindowActive = true;
+        if (WindowShouldClose()) windowExitActive = true;
 
         // Dropped files logic
         //----------------------------------------------------------------------------------
@@ -597,10 +599,10 @@ int main(int argc, char *argv[])
         }
 
         // Show dialog: load input file (.rgs)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) showLoadFileDialog = true;
+        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) || mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
 
         // Show dialog: save style file (.rgs)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S))
+        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) || mainToolbarState.btnSaveFilePressed)
         {
 #if defined(PLATFORM_DESKTOP)
             // NOTE: Fast-save only works for already loaded/saved .rgs styles
@@ -631,10 +633,10 @@ int main(int argc, char *argv[])
         }
 
         // Show dialog: export style file (.rgs, .png, .h)
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) showExportFileDialog = true;
+        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) || mainToolbarState.btnExportFilePressed) windowExportActive = true;
 
         // Toggle window: help
-        if (IsKeyPressed(KEY_F1)) helpWindowActive = !helpWindowActive;
+        if (IsKeyPressed(KEY_F1)) windowHelpActive = !windowHelpActive;
 
         // Toggle window: about
         if (IsKeyPressed(KEY_F2)) windowAboutState.windowActive = !windowAboutState.windowActive;
@@ -647,12 +649,12 @@ int main(int argc, char *argv[])
         {
             if (windowAboutState.windowActive) windowAboutState.windowActive = false;
             else if (windowSponsorState.windowActive) windowSponsorState.windowActive = false;
-            else if (helpWindowActive) helpWindowActive = false;
-            else if (exportWindowActive) exportWindowActive = false;
+            else if (windowHelpActive) windowHelpActive = false;
+            else if (windowExportActive) windowExportActive = false;
             else if (mainToolbarState.viewFontActive) mainToolbarState.viewFontActive = false;
             else if (mainToolbarState.viewStyleTableActive) mainToolbarState.viewStyleTableActive = false;
         #if defined(PLATFORM_DESKTOP)
-            else if (changedPropCounter > 0) exitWindowActive = !exitWindowActive;
+            else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
             else closeWindow = true;
         #else
             else if (showLoadFileDialog) showLoadFileDialog = false;
@@ -684,14 +686,7 @@ int main(int argc, char *argv[])
         // Main toolbar logic
         //----------------------------------------------------------------------------------
         // File options logic
-        if (mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
-        else if (mainToolbarState.btnSaveFilePressed)
-        {
-            strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
-            showSaveFileDialog = true;
-        }
-        else if (mainToolbarState.btnExportFilePressed) exportWindowActive = true;
-        else if (mainToolbarState.btnRandomStylePressed)
+        if (mainToolbarState.btnRandomStylePressed)
         {
             // Generate random style
             float hueNormal = GetRandomValue(0, 360);
@@ -795,10 +790,9 @@ int main(int argc, char *argv[])
         }
 
         // Help options logic
-        if (mainToolbarState.btnHelpPressed) helpWindowActive = true;                   // Help button logic
+        if (mainToolbarState.btnHelpPressed) windowHelpActive = true;                   // Help button logic
         if (mainToolbarState.btnAboutPressed) windowAboutState.windowActive = true;     // About window button logic
         if (mainToolbarState.btnSponsorPressed) windowSponsorState.windowActive = true; // User sponsor logic
-        //if (mainToolbarState.btnUserPressed) userWindowActive = true;                 // User button logic
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -961,12 +955,12 @@ int main(int argc, char *argv[])
         // WARNING: Some windows should lock the main screen controls when shown
         if (windowAboutState.windowActive ||
             windowSponsorState.windowActive ||
-            helpWindowActive ||
-            exitWindowActive ||
-            exportWindowActive ||
             mainToolbarState.viewStyleTableActive ||
             mainToolbarState.viewFontActive ||
             mainToolbarState.propsStateEditMode ||
+            windowHelpActive ||
+            windowExitActive ||
+            windowExportActive ||
             showLoadFileDialog ||
             showSaveFileDialog ||
             showExportFileDialog) GuiLock();
@@ -1108,12 +1102,12 @@ int main(int argc, char *argv[])
             // GUI: Help Window
             //----------------------------------------------------------------------------------------
             Rectangle helpWindowBounds = { (float)screenWidth/2 - 330/2, (float)screenHeight/2 - 400.0f/2, 330, 0 };
-            if (helpWindowActive) helpWindowActive = GuiHelpWindow(helpWindowBounds, GuiIconText(ICON_HELP, TextFormat("%s Shortcuts", TOOL_NAME)), helpLines, HELP_LINES_COUNT);
+            if (windowHelpActive) windowHelpActive = GuiHelpWindow(helpWindowBounds, GuiIconText(ICON_HELP, TextFormat("%s Shortcuts", TOOL_NAME)), helpLines, HELP_LINES_COUNT);
             //----------------------------------------------------------------------------------------
 
             // GUI: Export Window
             //----------------------------------------------------------------------------------------
-            if (exportWindowActive)
+            if (windowExportActive)
             {
                 Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 196 };
                 int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
@@ -1133,20 +1127,20 @@ int main(int argc, char *argv[])
 
                 if (result == 1)    // Export button pressed
                 {
-                    exportWindowActive = false;
+                    windowExportActive = false;
                     showExportFileDialog = true;
                 }
-                else if (result == 0) exportWindowActive = false;
+                else if (result == 0) windowExportActive = false;
             }
             //----------------------------------------------------------------------------------
 
             // GUI: Exit Window
             //----------------------------------------------------------------------------------------
-            if (exitWindowActive)
+            if (windowExitActive)
             {
                 int result = GuiMessageBox((Rectangle){ (float)screenWidth/2 - 125, (float)screenHeight/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
 
-                if ((result == 0) || (result == 2)) exitWindowActive = false;
+                if ((result == 0) || (result == 2)) windowExitActive = false;
                 else if (result == 1) closeWindow = true;
             }
             //----------------------------------------------------------------------------------------
@@ -2286,7 +2280,7 @@ static int GuiHelpWindow(Rectangle bounds, const char *title, const char **helpL
     // Calculate window height if not externally provided a desired height
     if (bounds.height == 0) bounds.height = (float)(helpLinesCount*24 + 24);
 
-    int helpWindowActive = !GuiWindowBox(bounds, title);
+    int windowHelpActive = !GuiWindowBox(bounds, title);
     nextLineY += (24 + 2);
 
     for (int i = 0; i < helpLinesCount; i++)
@@ -2299,5 +2293,5 @@ static int GuiHelpWindow(Rectangle bounds, const char *title, const char **helpL
         else nextLineY += 24;
     }
 
-    return helpWindowActive;
+    return windowHelpActive;
 }
