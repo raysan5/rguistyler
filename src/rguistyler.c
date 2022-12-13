@@ -14,6 +14,9 @@
 *       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
+*       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
+*                           REDESIGNED: Main toolbar to add tooltips
+*                           REVIEWED: Help window implementation
 *       4.1  (10-Oct-2022)  ADDED: Sponsor window for tools support
 *                           ADDED: Random style generator button (experimental)
 *                           Updated to raylib 4.5-dev and raygui 3.5-dev
@@ -624,6 +627,12 @@ int main(int argc, char *argv[])
         // Toggle window: sponsor
         if (IsKeyPressed(KEY_F3)) windowSponsorState.windowActive = !windowSponsorState.windowActive;
 
+        // Show window: style table image
+        if (IsKeyPressed(KEY_F5)) mainToolbarState.viewStyleTableActive = true;
+
+        // Show window: font atlas
+        if (IsKeyPressed(KEY_F6)) mainToolbarState.viewFontActive = true;
+
         // Show closing window on ESC
         if (IsKeyPressed(KEY_ESCAPE))
         {
@@ -644,10 +653,10 @@ int main(int argc, char *argv[])
         }
 
         // Select desired state for visualization
-        if (IsKeyPressed(KEY_Z)) mainToolbarState.propsStateActive = 0;
-        else if (IsKeyPressed(KEY_X)) mainToolbarState.propsStateActive = 1;
-        else if (IsKeyPressed(KEY_C)) mainToolbarState.propsStateActive = 2;
-        else if (IsKeyPressed(KEY_V)) mainToolbarState.propsStateActive = 3;
+        if (IsKeyPressed(KEY_ONE)) mainToolbarState.propsStateActive = 0;
+        else if (IsKeyPressed(KEY_TWO)) mainToolbarState.propsStateActive = 1;
+        else if (IsKeyPressed(KEY_THREE)) mainToolbarState.propsStateActive = 2;
+        else if (IsKeyPressed(KEY_FOUR)) mainToolbarState.propsStateActive = 3;
 
         // Reset to current style template
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R)) || mainToolbarState.btnReloadStylePressed)
