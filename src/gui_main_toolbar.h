@@ -11,7 +11,7 @@
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2019-2022 raylib technologies (@raylibtech).
+*   Copyright (c) 2019-2022 raylib technologies (@raylibtech) / Ramon Santamaria (@raysan5)
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -68,12 +68,11 @@ typedef struct {
     int btnReloadStylePressed;
     int languageActive;
 
-    // Help options
+    // Info options
     bool btnHelpPressed;
     bool btnAboutPressed;
     bool btnSponsorPressed;
     bool btnUserPressed;
-    bool btnQuitPressed;
 
     // Custom variables
     // TODO.
@@ -162,10 +161,12 @@ GuiMainToolbarState InitGuiMainToolbar(void)
     state.btnAboutPressed = false;
     state.btnSponsorPressed = false;
     state.btnUserPressed = false;
-    state.btnQuitPressed = false;
-
+	
     // Custom variables
     // TODO.
+
+    // Enable tooltips by default
+    GuiEnableTooltip();
 
     return state;
 }
@@ -185,10 +186,15 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     GuiPanel((Rectangle){ state->anchorRight.x, state->anchorRight.y, 104, 40 }, NULL);
 
     // Project/File options
+    GuiSetTooltip("Create new style (LCTRL+N)");
     state->btnNewFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12, state->anchorFile.y + 8, 24, 24 }, "#8#");
+    GuiSetTooltip("Load .rgs style file (LCTRL+O)");
     state->btnLoadFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12 + 24 + 4, state->anchorFile.y + 8, 24, 24 }, "#5#");
+    GuiSetTooltip("Save .rgs style file (LCTRL+S)");
     state->btnSaveFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12 + 48 + 8, state->anchorFile.y + 8, 24, 24 }, "#6#");
+    GuiSetTooltip("Export style file (LCTRL+E)");
     state->btnExportFilePressed = GuiButton((Rectangle){ state->anchorFile.x + 12 + 72 + 12, state->anchorFile.y + 8, 24, 24 }, "#7#");
+    GuiSetTooltip("Generate random style");
     state->btnRandomStylePressed = GuiButton((Rectangle) { state->anchorFile.x + 12 + 72 + 12 + 28, state->anchorFile.y + 8, 24, 24 }, "#78#");
 
     // Edit options
@@ -196,20 +202,29 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     if (GuiDropdownBox((Rectangle){ state->anchorEdit.x + 12 + 40, 8, 124, 24 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &state->propsStateActive, state->propsStateEditMode)) state->propsStateEditMode = !state->propsStateEditMode;
 
     // Tool options
+    GuiSetTooltip("Show style table image (F5)");
     state->viewStyleTableActive = GuiToggle((Rectangle){ state->anchorTools.x + 14, 8, 24, 24 }, "#101#", state->viewStyleTableActive);
+    GuiSetTooltip("Show current font atlas (F6)");
     state->viewFontActive = GuiToggle((Rectangle){ state->anchorTools.x + 14 + 24 + 4, 8, 24, 24 }, "#31#", state->viewFontActive);
 
     // Visuals options
     GuiLabel((Rectangle){ state->anchorVisuals.x + 10, state->anchorVisuals.y + 8, 60, 24 }, "Style:");
     GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 40);
+    GuiSetTooltip("Select base style template");
     state->visualStyleActive = GuiComboBox((Rectangle){ state->anchorVisuals.x + 8 + 48, state->anchorVisuals.y + 8, 120, 24 }, "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete", state->visualStyleActive);
     GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 32);
+    GuiSetTooltip("Reload current style template (LCTRL+R)");
     state->btnReloadStylePressed = GuiButton((Rectangle){ state->anchorVisuals.x + 8 + 48 + 120 + 8, state->anchorVisuals.y + 8, 24, 24 }, "#76#");
 
     // Info options
+    GuiSetTooltip("Show help window (F1)");
     state->btnHelpPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 72 - 8, state->anchorRight.y + 8, 24, 24 }, "#193#"); 
+    GuiSetTooltip("Show info window (F2)");
     state->btnAboutPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 48 - 4, state->anchorRight.y + 8, 24, 24 }, "#191#");
+    GuiSetTooltip("Show sponsors window (F3)");
     state->btnSponsorPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 24, state->anchorRight.y + 8, 24, 24 }, "#186#");
+
+    GuiSetTooltip(NULL);
 }
 
 #endif // GUI_MAIN_TOOLBAR_IMPLEMENTATION
