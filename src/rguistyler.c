@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v4.1 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v4.2 - A simple and easy-to-use raygui styles editor
 *
 *   CONFIGURATION:
 *
