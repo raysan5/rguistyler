@@ -1685,12 +1685,12 @@ static bool SaveStyle(const char *fileName, int format)
             short reserved = 0;
 
             fwrite(signature, 1, 4, rgsFile);
-            fwrite(&version, 1, sizeof(short), rgsFile);
-            fwrite(&reserved, 1, sizeof(short), rgsFile);
+            fwrite(&version, sizeof(short), 1, rgsFile);
+            fwrite(&reserved, sizeof(short), 1, rgsFile);
 
             int changedPropCounter = StyleChangesCounter(defaultStyle);
 
-            fwrite(&changedPropCounter, 1, sizeof(int), rgsFile);
+            fwrite(&changedPropCounter, sizeof(int), 1, rgsFile);
 
             short controlId = 0;
             short propertyId = 0;
@@ -1704,9 +1704,9 @@ static bool SaveStyle(const char *fileName, int format)
                     propertyId = (short)i;
                     propertyValue = GuiGetStyle(0, i);
 
-                    fwrite(&controlId, 1, sizeof(short), rgsFile);
-                    fwrite(&propertyId, 1, sizeof(short), rgsFile);
-                    fwrite(&propertyValue, 1, sizeof(int), rgsFile);
+                    fwrite(&controlId, sizeof(short), 1, rgsFile);
+                    fwrite(&propertyId, sizeof(short), 1, rgsFile);
+                    fwrite(&propertyValue, sizeof(int), 1, rgsFile);
                 }
             }
 
@@ -1721,9 +1721,9 @@ static bool SaveStyle(const char *fileName, int format)
                         propertyId = (short)j;
                         propertyValue = GuiGetStyle(i, j);
 
-                        fwrite(&controlId, 1, sizeof(short), rgsFile);
-                        fwrite(&propertyId, 1, sizeof(short), rgsFile);
-                        fwrite(&propertyValue, 1, sizeof(int), rgsFile);
+                        fwrite(&controlId, sizeof(short), 1, rgsFile);
+                        fwrite(&propertyId, sizeof(short), 1, rgsFile);
+                        fwrite(&propertyValue, sizeof(int), 1, rgsFile);
                     }
                 }
             }
@@ -1761,21 +1761,21 @@ static bool SaveStyle(const char *fileName, int format)
                 // NOTE: Actually, fontDataSize is only used to check that there is font data included in the file
                 fontDataSize = fontParamsSize + fontImageCompSize + fontGlyphDataSize;
 #endif
-                fwrite(&fontDataSize, 1, sizeof(int), rgsFile);
-                fwrite(&customFont.baseSize, 1, sizeof(int), rgsFile);
-                fwrite(&customFont.glyphCount, 1, sizeof(int), rgsFile);
-                fwrite(&fontType, 1, sizeof(int), rgsFile);
+                fwrite(&fontDataSize, sizeof(int), 1, rgsFile);
+                fwrite(&customFont.baseSize, sizeof(int), 1, rgsFile);
+                fwrite(&customFont.glyphCount, sizeof(int), 1, rgsFile);
+                fwrite(&fontType, sizeof(int), 1, rgsFile);
 
                 // TODO: Define font white rectangle
                 Rectangle rec = { 0 };
-                fwrite(&rec, 1, sizeof(Rectangle), rgsFile);
+                fwrite(&rec, sizeof(Rectangle), 1, rgsFile);
 
                 // Write font image parameters
-                fwrite(&fontImageUncompSize, 1, sizeof(int), rgsFile);
-                fwrite(&fontImageCompSize, 1, sizeof(int), rgsFile);
-                fwrite(&imFont.width, 1, sizeof(int), rgsFile);
-                fwrite(&imFont.height, 1, sizeof(int), rgsFile);
-                fwrite(&imFont.format, 1, sizeof(int), rgsFile);
+                fwrite(&fontImageUncompSize, sizeof(int), 1, rgsFile);
+                fwrite(&fontImageCompSize, sizeof(int), 1, rgsFile);
+                fwrite(&imFont.width, sizeof(int), 1, rgsFile);
+                fwrite(&imFont.height, sizeof(int), 1, rgsFile);
+                fwrite(&imFont.format, sizeof(int), 1, rgsFile);
 #if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
                 fwrite(compData, 1, fontImageCompSize, rgsFile);
                 MemFree(compData);
@@ -1785,18 +1785,18 @@ static bool SaveStyle(const char *fileName, int format)
                 UnloadImage(imFont);
 
                 // Write font recs data
-                for (int i = 0; i < customFont.glyphCount; i++) fwrite(&customFont.recs[i], 1, sizeof(Rectangle), rgsFile);
+                for (int i = 0; i < customFont.glyphCount; i++) fwrite(&customFont.recs[i], sizeof(Rectangle), 1, rgsFile);
 
                 // Write font chars info data
                 for (int i = 0; i < customFont.glyphCount; i++)
                 {
-                    fwrite(&customFont.glyphs[i].value, 1, sizeof(int), rgsFile);
-                    fwrite(&customFont.glyphs[i].offsetX, 1, sizeof(int), rgsFile);
-                    fwrite(&customFont.glyphs[i].offsetY, 1, sizeof(int), rgsFile);
-                    fwrite(&customFont.glyphs[i].advanceX, 1, sizeof(int), rgsFile);
+                    fwrite(&customFont.glyphs[i].value, sizeof(int), 1, rgsFile);
+                    fwrite(&customFont.glyphs[i].offsetX, sizeof(int), 1, rgsFile);
+                    fwrite(&customFont.glyphs[i].offsetY, sizeof(int), 1, rgsFile);
+                    fwrite(&customFont.glyphs[i].advanceX, sizeof(int), 1, rgsFile);
                 }
             }
-            else fwrite(&fontSize, 1, sizeof(int), rgsFile);
+            else fwrite(&fontSize, sizeof(int), 1, rgsFile);
 
             fclose(rgsFile);
             success = true;
