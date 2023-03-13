@@ -414,7 +414,7 @@ int main(int argc, char *argv[])
     //-----------------------------------------------------------------------------------
     GuiWindowAboutState windowAboutState = InitGuiWindowAbout();
     //-----------------------------------------------------------------------------------
-    
+
     // GUI: Sponsor Window
     //-----------------------------------------------------------------------------------
     GuiWindowSponsorState windowSponsorState = InitGuiWindowSponsor();
@@ -1076,7 +1076,7 @@ int main(int argc, char *argv[])
                 styleTablePositionX = GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, styleTablePositionX, 0, texStyleTable.width - screenWidth);
             }
             //----------------------------------------------------------------------------------------
-            
+
             // GUI: Help Window
             //----------------------------------------------------------------------------------------
             windowHelpState.windowBounds.x = (float)screenWidth/2 - windowHelpState.windowBounds.width/2;
@@ -1090,7 +1090,7 @@ int main(int argc, char *argv[])
             windowAboutState.windowBounds.y = (float)screenHeight/2 - windowAboutState.windowBounds.height/2;
             GuiWindowAbout(&windowAboutState);
             //----------------------------------------------------------------------------------------
-            
+
             // GUI: Sponsor Window
             //----------------------------------------------------------------------------------------
             windowSponsorState.windowBounds.x = (float)screenWidth/2 - windowSponsorState.windowBounds.width/2;
