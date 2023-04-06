@@ -618,58 +618,62 @@ int main(int argc, char *argv[])
         // Show dialog: export style file (.rgs, .png, .h)
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) || mainToolbarState.btnExportFilePressed) windowExportActive = true;
 
-        // Toggle window: help
-        if (IsKeyPressed(KEY_F1)) windowHelpState.windowActive = !windowHelpState.windowActive;
-
-        // Toggle window: about
-        if (IsKeyPressed(KEY_F2)) windowAboutState.windowActive = !windowAboutState.windowActive;
-
-        // Toggle window: sponsor
-        if (IsKeyPressed(KEY_F3)) windowSponsorState.windowActive = !windowSponsorState.windowActive;
-
-        // Show window: style table image
-        if (IsKeyPressed(KEY_F5)) mainToolbarState.viewStyleTableActive = true;
-
-        // Show window: font atlas
-        if (IsKeyPressed(KEY_F6)) mainToolbarState.viewFontActive = true;
-
-        // Show closing window on ESC
-        if (IsKeyPressed(KEY_ESCAPE))
+        // Make sure shortcuts do not interfere with text-editing boxes
+        if (!textHexColorEditMode && !genFontSizeEditMode && !fontSpacingEditMode && !fontSampleEditMode && !styleNameEditMode)
         {
-            if (windowHelpState.windowActive) windowHelpState.windowActive = false;
-            else if (windowAboutState.windowActive) windowAboutState.windowActive = false;
-            else if (windowSponsorState.windowActive) windowSponsorState.windowActive = false;
-            else if (windowExportActive) windowExportActive = false;
-            else if (mainToolbarState.viewFontActive) mainToolbarState.viewFontActive = false;
-            else if (mainToolbarState.viewStyleTableActive) mainToolbarState.viewStyleTableActive = false;
-        #if defined(PLATFORM_DESKTOP)
-            else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
-            else closeWindow = true;
-        #else
-            else if (showLoadFileDialog) showLoadFileDialog = false;
-            else if (showSaveFileDialog) showSaveFileDialog = false;
-            else if (showExportFileDialog) showExportFileDialog = false;
-        #endif
+            // Toggle window: help
+            if (IsKeyPressed(KEY_F1)) windowHelpState.windowActive = !windowHelpState.windowActive;
+
+            // Toggle window: about
+            if (IsKeyPressed(KEY_F2)) windowAboutState.windowActive = !windowAboutState.windowActive;
+
+            // Toggle window: sponsor
+            if (IsKeyPressed(KEY_F3)) windowSponsorState.windowActive = !windowSponsorState.windowActive;
+
+            // Show window: style table image
+            if (IsKeyPressed(KEY_F5)) mainToolbarState.viewStyleTableActive = true;
+
+            // Show window: font atlas
+            if (IsKeyPressed(KEY_F6)) mainToolbarState.viewFontActive = true;
+
+            // Show closing window on ESC
+            if (IsKeyPressed(KEY_ESCAPE))
+            {
+                if (windowHelpState.windowActive) windowHelpState.windowActive = false;
+                else if (windowAboutState.windowActive) windowAboutState.windowActive = false;
+                else if (windowSponsorState.windowActive) windowSponsorState.windowActive = false;
+                else if (windowExportActive) windowExportActive = false;
+                else if (mainToolbarState.viewFontActive) mainToolbarState.viewFontActive = false;
+                else if (mainToolbarState.viewStyleTableActive) mainToolbarState.viewStyleTableActive = false;
+            #if defined(PLATFORM_DESKTOP)
+                else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
+                else closeWindow = true;
+            #else
+                else if (showLoadFileDialog) showLoadFileDialog = false;
+                else if (showSaveFileDialog) showSaveFileDialog = false;
+                else if (showExportFileDialog) showExportFileDialog = false;
+            #endif
+            }
+        
+            // Select desired state for visualization
+            if (IsKeyPressed(KEY_ONE)) mainToolbarState.propsStateActive = 0;
+            else if (IsKeyPressed(KEY_TWO)) mainToolbarState.propsStateActive = 1;
+            else if (IsKeyPressed(KEY_THREE)) mainToolbarState.propsStateActive = 2;
+            else if (IsKeyPressed(KEY_FOUR)) mainToolbarState.propsStateActive = 3;
+
+            // Reset to current style template
+            if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R)) || mainToolbarState.btnReloadStylePressed)
+            {
+                if (mainToolbarState.visualStyleActive == 0) mainToolbarState.prevVisualStyleActive = 1;
+                else mainToolbarState.prevVisualStyleActive = 0;
+            }
+
+            // Select visual style
+            if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
+            else if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
+            if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = MAX_GUI_STYLES_AVAILABLE - 1;
+            else if (mainToolbarState.visualStyleActive >(MAX_GUI_STYLES_AVAILABLE - 1)) mainToolbarState.visualStyleActive = 0;
         }
-
-        // Select desired state for visualization
-        if (IsKeyPressed(KEY_ONE)) mainToolbarState.propsStateActive = 0;
-        else if (IsKeyPressed(KEY_TWO)) mainToolbarState.propsStateActive = 1;
-        else if (IsKeyPressed(KEY_THREE)) mainToolbarState.propsStateActive = 2;
-        else if (IsKeyPressed(KEY_FOUR)) mainToolbarState.propsStateActive = 3;
-
-        // Reset to current style template
-        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R)) || mainToolbarState.btnReloadStylePressed)
-        {
-            if (mainToolbarState.visualStyleActive == 0) mainToolbarState.prevVisualStyleActive = 1;
-            else mainToolbarState.prevVisualStyleActive = 0;
-        }
-
-        // Select visual style
-        if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
-        else if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
-        if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = MAX_GUI_STYLES_AVAILABLE - 1;
-        else if (mainToolbarState.visualStyleActive > (MAX_GUI_STYLES_AVAILABLE - 1)) mainToolbarState.visualStyleActive = 0;
         //----------------------------------------------------------------------------------
 
         // Main toolbar logic
