@@ -2,16 +2,35 @@
 *
 *   rGuiStyler v4.2 - A simple and easy-to-use raygui styles editor
 *
+*   FEATURES:
+*       - Global and control specific styles edition
+*       - Style preview in real time with individual test controls
+*       - Style templates available to start customizing new styles
+*       - Selectable controls state: NORMAL, FOCUSED, PRESSED, DISABLED
+*       - Save and load as binary style file .rgs (font embedded!)
+*       - Export style as an embeddable code file (.h) (font embedded!)
+*       - Export style as a .png controls table image for showcase
+*       - Embed style as custom rGSf png chunk (rgs file data)
+*       - Import, configure and preview style fonts (.ttf/.otf)
+*       - Color palette for quick color save/selection
+*       - 12 custom style examples included
+*
+*   POSSIBLE IMPROVEMENTS:
+*       - Support .rgs loading from memory
+*
+*   LIMITATIONS:
+*       - Limitation 01
+*       - Limitation 02
+*
 *   CONFIGURATION:
-*
-*   #define CUSTOM_MODAL_DIALOGS
-*       Use custom raygui generated modal dialogs instead of native OS ones
-*       NOTE: Avoids including tinyfiledialogs depencency library
-*
-*   #define SUPPORT_COMPRESSED_FONT_ATLAS
-*       Export font atlas image data compressed using raylib CompressData() DEFLATE algorythm,
-*       NOTE: It requires to be decompressed with raylib DecompressData(),
-*       that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
+*       #define CUSTOM_MODAL_DIALOGS
+*           Use custom raygui generated modal dialogs instead of native OS ones
+*           NOTE: Avoids including tinyfiledialogs depencency library
+*   
+*       #define SUPPORT_COMPRESSED_FONT_ATLAS
+*           Export font atlas image data compressed using raylib CompressData() DEFLATE algorythm,
+*           NOTE: It requires to be decompressed with raylib DecompressData(),
+*           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
@@ -34,15 +53,17 @@
 *       rpng 1.0                - PNG chunks management
 *       tinyfiledialogs 3.9.0   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
-*   COMPILATION (Windows - MinGW):
+*   BUILDING: 
+*     - Windows (MinGW-w64):
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99 -DPLATFORM_DESKTOP
 *           -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32
 *
-*   COMPILATION (Linux - GCC):
+*     - Linux (GCC):
 *       gcc -o rguistyler rguistyler.c external/tinyfiledialogs.c -s -no-pie -D_DEFAULT_SOURCE /
 *           -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 *
-*   NOTE: On PLATFORM_ANDROID and PLATFORM_WEB file dialogs are not available
+*   ADDITIONAL NOTES: 
+*       On PLATFORM_ANDROID and PLATFORM_WEB file dialogs are not available
 *
 *   DEVELOPERS:
 *       Ramon Santamaria (@raysan5):    Supervision, review, redesign, update and maintenance.
