@@ -26,7 +26,7 @@
 *       #define CUSTOM_MODAL_DIALOGS
 *           Use custom raygui generated modal dialogs instead of native OS ones
 *           NOTE: Avoids including tinyfiledialogs depencency library
-*   
+*
 *       #define SUPPORT_COMPRESSED_FONT_ATLAS
 *           Export font atlas image data compressed using raylib CompressData() DEFLATE algorythm,
 *           NOTE: It requires to be decompressed with raylib DecompressData(),
@@ -53,7 +53,7 @@
 *       rpng 1.0                - PNG chunks management
 *       tinyfiledialogs 3.9.0   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
-*   BUILDING: 
+*   BUILDING:
 *     - Windows (MinGW-w64):
 *       gcc -o rguistyler.exe rguistyler.c external/tinyfiledialogs.c -s -O2 -std=c99 -DPLATFORM_DESKTOP
 *           -lraylib -lopengl32 -lgdi32 -lcomdlg32 -lole32
@@ -62,7 +62,7 @@
 *       gcc -o rguistyler rguistyler.c external/tinyfiledialogs.c -s -no-pie -D_DEFAULT_SOURCE /
 *           -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 *
-*   ADDITIONAL NOTES: 
+*   ADDITIONAL NOTES:
 *       On PLATFORM_ANDROID and PLATFORM_WEB file dialogs are not available
 *
 *   DEVELOPERS:
@@ -675,7 +675,7 @@ int main(int argc, char *argv[])
                 else if (showExportFileDialog) showExportFileDialog = false;
             #endif
             }
-        
+
             // Select desired state for visualization
             if (IsKeyPressed(KEY_ONE)) mainToolbarState.propsStateActive = 0;
             else if (IsKeyPressed(KEY_TWO)) mainToolbarState.propsStateActive = 1;
