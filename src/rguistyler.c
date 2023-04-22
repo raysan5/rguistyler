@@ -2114,7 +2114,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         "SPINNER"       // VALUEBOX + BUTTON
     };
 
-    // TODO: Calculate controls grid widths depending on font size and spacing
+    // Controls grid width
     int controlWidth[TABLE_CONTROLS_COUNT] = {
         100,    // LABEL
         100,    // BUTTON
