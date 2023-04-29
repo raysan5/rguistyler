@@ -97,6 +97,7 @@
 #define TOOL_SHORT_NAME         "rGS"
 #define TOOL_VERSION            "4.1"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
+#define TOOL_DESCRIPTION_BREAK  "A simple and easy-to-use raygui\nstyles editor"
 #define TOOL_RELEASE_DATE       "Oct.2022"
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
