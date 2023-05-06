@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v4.2 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v4.3 - A simple and easy-to-use raygui styles editor
 *
 *   FEATURES:
 *       - Global and control specific styles edition
@@ -33,6 +33,8 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
+*       4.3  (05-May-2023)  ADDED: Support for custom font codepoints (Unicode)
+*                           Updated to raylib 4.5 and raygui 3.6
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
 *                           REVIEWED: Help window implementation
@@ -48,10 +50,10 @@
 *       3.5  (29-Dec-2021)  Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
-*       raylib 4.2              - Windowing/input management and drawing
-*       raygui 3.5              - Immediate-mode GUI controls with custom styling and icons
+*       raylib 4.5              - Windowing/input management and drawing
+*       raygui 3.6              - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.0                - PNG chunks management
-*       tinyfiledialogs 3.9.0   - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
+*       tinyfiledialogs 3.12.0  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   BUILDING:
 *     - Windows (MinGW-w64):
@@ -95,10 +97,10 @@
 
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
-#define TOOL_VERSION            "4.1"
+#define TOOL_VERSION            "4.3"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
 #define TOOL_DESCRIPTION_BREAK  "A simple and easy-to-use raygui\nstyles editor"
-#define TOOL_RELEASE_DATE       "Oct.2022"
+#define TOOL_RELEASE_DATE       "May.2023"
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
 #define SUPPORT_COMPRESSED_FONT_ATLAS
@@ -269,6 +271,10 @@ static const char *styleNames[12] = {
     "Enefete"
 };
 
+// Deault charset used on fonts loading (codepoints)
+// NOTE: When providing an external codepoint list, this charset should probably be included
+static const char *defaultCharset = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
 // Default style backup to check changed properties
 static unsigned int defaultStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
 
@@ -279,6 +285,8 @@ static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 // NOTE: They have to be global to be used bys tyle export functions
 static Font customFont = { 0 };             // Custom font
 static bool customFontLoaded = false;       // Custom font loaded flag (from font file or style file)
+static int codepointListCount = 0;          // Custom codepoint list count
+static int *codepointList = NULL;           // Custom codepoint list
 
 static char inFontFileName[512] = { 0 };    // Input font file name (required for font reloading on atlas regeneration)
 
@@ -534,7 +542,7 @@ int main(int argc, char *argv[])
                 if (inputFontFileLoaded) UnloadFont(customFont);
 
                 // NOTE: Font generation size depends on spinner size selection
-                customFont = LoadFontEx(droppedFiles.paths[0], fontSizeValue, NULL, 0);
+                customFont = LoadFontEx(droppedFiles.paths[0], fontSizeValue, codepointList, codepointListCount);
 
                 if (customFont.texture.id > 0)
                 {
@@ -542,6 +550,58 @@ int main(int argc, char *argv[])
                     strcpy(inFontFileName, droppedFiles.paths[0]);
                     inputFontFileLoaded = true;
                     customFontLoaded = true;
+                }
+            }
+            else if (IsFileDropped(droppedFiles.paths[0], ".txt"))
+            {
+                // Load codepoints to generate the font
+                // NOTE: A UTF8 text file should be provided, it will be processed to get codepoints
+                char *text = LoadFileText(droppedFiles.paths[0]);
+                if (text != NULL)
+                {
+                    int codepointsCount = 0;
+                    int *codepoints = LoadCodepoints(text, &codepointsCount);
+                    UnloadFileText(text);
+
+                    if (codepointsCount > 0)
+                    {
+                        // Clear current custom codepoints list
+                        if (codepointList != NULL)
+                        {
+                            RL_FREE(codepointList);
+                            codepointListCount = 0;
+                        }
+                        
+                        codepointList = (int *)RL_CALLOC(codepointsCount, sizeof(int));
+
+                        // Create an array to store codepoints without duplicates
+                        int codepointsClearCount = codepointsCount;
+                        int *codepointsClear = (int *)RL_CALLOC(codepointsCount, sizeof(int));
+                        memcpy(codepointsClear, codepoints, codepointsCount*sizeof(int));
+
+                        // Remove duplicates
+                        for (int i = 0; i < codepointsClearCount; i++)
+                        {
+                            for (int j = i + 1; j < codepointsClearCount; j++)
+                            {
+                                if (codepointsClear[i] == codepointsClear[j])
+                                {
+                                    for (int k = j; k < codepointsClearCount; k++) codepointsClear[k] = codepointsClear[k + 1];
+
+                                    j--;
+                                    codepointsClearCount--;
+                                }
+                            }
+                        }
+
+                        // Copy codepoints into our custom charset
+                        for (int i = 0; (i < codepointsClearCount); i++) codepointList[i] = codepointsClear[i];
+                        codepointListCount = codepointsClearCount;
+
+                        RL_FREE(codepointsClear);
+                    }
+
+                    UnloadCodepoints(codepoints);
                 }
             }
 
@@ -825,7 +885,7 @@ int main(int argc, char *argv[])
             (prevFontSizeValue != fontSizeValue))                   // Check selected size actually changed
         {
             UnloadFont(customFont);
-            customFont = LoadFontEx(inFontFileName, fontSizeValue, NULL, 0);
+            customFont = LoadFontEx(inFontFileName, fontSizeValue, codepointList, codepointListCount);
             GuiSetFont(customFont);
             customFontLoaded = true;
             saveChangesRequired = true;
@@ -1065,8 +1125,7 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 160, 24 }, TextFormat("Name: %s", (changedPropCounter > 0)? styleNameText : styleNames[mainToolbarState.visualStyleActive]));
             GuiStatusBar((Rectangle){159, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
 
-            if (inputFontFileLoaded) GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", GetFileName(inFontFileName), customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
-            else GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 405, 24 }, TextFormat("FONT: %s (%i x %i) - %i bytes", (customFontLoaded)? "style custom font" : "raylib default", customFont.texture.width, customFont.texture.height, GetPixelDataSize(customFont.texture.width, customFont.texture.height, customFont.texture.format)));
+            GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", (codepointList == NULL)? 95 : codepointListCount, customFont.texture.width, customFont.texture.height));
             //----------------------------------------------------------------------------------------
 
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
@@ -1205,7 +1264,7 @@ int main(int argc, char *argv[])
                 if (result == 1)
                 {
                     // Load font file
-                    Font tempFont = LoadFontEx(inFontFileName, fontSizeValue, NULL, 0);
+                    Font tempFont = LoadFontEx(inFontFileName, fontSizeValue, codepointList, codepointListCount);
 
                     if (tempFont.texture.id > 0)
                     {
