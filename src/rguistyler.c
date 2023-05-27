@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v4.3 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v5.0 - A simple and easy-to-use raygui styles editor
 *
 *   FEATURES:
 *       - Global and control specific styles edition
@@ -33,7 +33,11 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       4.3  (05-May-2023)  ADDED: Support for custom font codepoints (Unicode)
+*       5.0  (xx-May-2023)  ADDED: Support macOS builds (x86_64 + arm64)
+*                           ADDED: Support for custom font codepoints (Unicode)
+*                           REDESIGNED: Using raygui 4.0-dev
+*                           REVIEWED: Regenerated tool imagery
+*
 *                           Updated to raylib 4.5 and raygui 3.6
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
@@ -50,10 +54,10 @@
 *       3.5  (29-Dec-2021)  Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
-*       raylib 4.5              - Windowing/input management and drawing
-*       raygui 3.6              - Immediate-mode GUI controls with custom styling and icons
+*       raylib 4.6-dev          - Windowing/input management and drawing
+*       raygui 4.0-dev          - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.0                - PNG chunks management
-*       tinyfiledialogs 3.12.0  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
+*       tinyfiledialogs 3.13.1  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   BUILDING:
 *     - Windows (MinGW-w64):
@@ -97,7 +101,7 @@
 
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
-#define TOOL_VERSION            "4.3"
+#define TOOL_VERSION            "5.0"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
 #define TOOL_DESCRIPTION_BREAK  "A simple and easy-to-use raygui\nstyles editor"
 #define TOOL_RELEASE_DATE       "May.2023"
@@ -1056,9 +1060,9 @@ int main(int argc, char *argv[])
             if (mainToolbarState.propsStateActive != STATE_NORMAL) currentSelectedProperty = -1;
 
             // List views
-            currentSelectedControl = GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 148, 520 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, currentSelectedControl);
-            if (currentSelectedControl != DEFAULT) currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, NULL, currentSelectedProperty);
-            else currentSelectedProperty = GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsDefaultText, 14, NULL, NULL, currentSelectedProperty);
+            GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 148, 520 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, &currentSelectedControl);
+            if (currentSelectedControl != DEFAULT) GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, &currentSelectedProperty, NULL);
+            else GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsDefaultText, 14, NULL, &currentSelectedProperty, NULL);
 
             // Controls window
             if (controlsWindowActive)
@@ -1069,12 +1073,12 @@ int main(int argc, char *argv[])
 
                 if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
                 if (currentSelectedControl == DEFAULT) GuiDisable();
-                propertyValue = GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, propertyValue, 0, 20);
+                GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propertyValue, 0, 20);
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
-                colorPickerValue = GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, colorPickerValue);
+                GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, &colorPickerValue);
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, TextFormat("R:  %03i", colorPickerValue.r));
@@ -1099,7 +1103,7 @@ int main(int argc, char *argv[])
 
                 if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 24 }, "Text Alignment:");
-                textAlignmentActive = GuiToggleGroup((Rectangle){ anchorPropEditor.x + 110, anchorPropEditor.y + 320, 80, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", textAlignmentActive);
+                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 110, anchorPropEditor.y + 320, 80, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &textAlignmentActive);
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
                 // Font options
@@ -1158,7 +1162,7 @@ int main(int argc, char *argv[])
             {
                 DrawTexture(texStyleTable, -styleTablePositionX, screenHeight/2 - texStyleTable.height/2, WHITE);
                 DrawRectangleLines(-styleTablePositionX, screenHeight/2 - texStyleTable.height/2, texStyleTable.width, texStyleTable.height, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
-                styleTablePositionX = GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, styleTablePositionX, 0, texStyleTable.width - screenWidth);
+                GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, &styleTablePositionX, 0, texStyleTable.width - screenWidth);
             }
             //----------------------------------------------------------------------------------------
 
