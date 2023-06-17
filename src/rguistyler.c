@@ -575,7 +575,7 @@ int main(int argc, char *argv[])
                             RL_FREE(codepointList);
                             codepointListCount = 0;
                         }
-                        
+
                         codepointList = (int *)RL_CALLOC(codepointsCount, sizeof(int));
 
                         // Create an array to store codepoints without duplicates
