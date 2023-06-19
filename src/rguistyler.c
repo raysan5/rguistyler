@@ -15,12 +15,12 @@
 *       - Color palette for quick color save/selection
 *       - 12 custom style examples included
 *
-*   POSSIBLE IMPROVEMENTS:
-*       - Support .rgs loading from memory
-*
 *   LIMITATIONS:
 *       - Limitation 01
 *       - Limitation 02
+*
+*   POSSIBLE IMPROVEMENTS:
+*       - Improvement 01
 *
 *   CONFIGURATION:
 *       #define CUSTOM_MODAL_DIALOGS
