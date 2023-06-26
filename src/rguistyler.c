@@ -124,6 +124,9 @@
 #define GUI_MAIN_TOOLBAR_IMPLEMENTATION
 #include "gui_main_toolbar.h"               // GUI: Main toolbar
 
+#define GUI_WINDOW_FONT_ATLAS_IMPLEMENTATION
+#include "gui_window_font_atlas.h"          // GUI: Window font atlas
+
 #define GUI_WINDOW_HELP_IMPLEMENTATION
 #include "gui_window_help.h"                // GUI: Help Window
 
@@ -395,10 +398,9 @@ int main(int argc, char *argv[])
 
     // Style table variables
     Texture texStyleTable = { 0 };
-    int styleTablePositionX = 0;
+    float styleTablePositionX = 0.0f;
 
     // Font atlas view variables
-    float fontScale = 1.0f;
     int fontSizeValue = 10;
     int prevFontSizeValue = fontSizeValue;
 
@@ -439,6 +441,11 @@ int main(int argc, char *argv[])
     GuiMainToolbarState mainToolbarState = InitGuiMainToolbar();
     //-----------------------------------------------------------------------------------
 
+    // GUI: Font Atlas Window
+    //-----------------------------------------------------------------------------------
+    GuiWindowFontAtlasState windowFontAtlasState = InitGuiWindowFontAtlas();
+    //-----------------------------------------------------------------------------------
+
     // GUI: Help Window
     //-----------------------------------------------------------------------------------
     GuiWindowHelpState windowHelpState = InitGuiWindowHelp();
@@ -473,10 +480,13 @@ int main(int argc, char *argv[])
 
     // GUI: Custom file dialogs
     //-----------------------------------------------------------------------------------
-    bool showLoadFileDialog = false;
-    bool showLoadFontFileDialog = false;
-    bool showSaveFileDialog = false;
-    bool showExportFileDialog = false;
+    bool showLoadStyleDialog = false;
+    bool showSaveStyleDialog = false;
+    bool showExportStyleDialog = false;
+    
+    bool showLoadFontDialog = false;
+    bool showFontAtlasWindow = false;
+    bool showExportFontAtlasDialog = false;
     //-----------------------------------------------------------------------------------
 
 //#define STYLES_SPINNING_DEMO
@@ -668,7 +678,7 @@ int main(int argc, char *argv[])
         }
 
         // Show dialog: load input file (.rgs)
-        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) || mainToolbarState.btnLoadFilePressed) showLoadFileDialog = true;
+        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_O)) || mainToolbarState.btnLoadFilePressed) showLoadStyleDialog = true;
 
         // Show dialog: save style file (.rgs)
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) || mainToolbarState.btnSaveFilePressed)
@@ -697,7 +707,7 @@ int main(int argc, char *argv[])
                 // If no input/output file already loaded/saved, show save file dialog
                 exportFormatActive = STYLE_BINARY;
                 strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
-                showSaveFileDialog = true;
+                showSaveStyleDialog = true;
             }
         }
 
@@ -717,10 +727,10 @@ int main(int argc, char *argv[])
             if (IsKeyPressed(KEY_F3)) windowSponsorState.windowActive = !windowSponsorState.windowActive;
 
             // Show window: style table image
-            if (IsKeyPressed(KEY_F5)) mainToolbarState.viewStyleTableActive = true;
+            if (IsKeyPressed(KEY_F5)) mainToolbarState.viewStyleTableActive = !mainToolbarState.viewStyleTableActive;
 
             // Show window: font atlas
-            if (IsKeyPressed(KEY_F6)) mainToolbarState.viewFontActive = true;
+            if (IsKeyPressed(KEY_F6) || mainToolbarState.btnFontAtlasPressed) windowFontAtlasState.windowActive = !windowFontAtlasState.windowActive;
 
             // Show closing window on ESC
             if (IsKeyPressed(KEY_ESCAPE))
@@ -728,9 +738,9 @@ int main(int argc, char *argv[])
                 if (windowHelpState.windowActive) windowHelpState.windowActive = false;
                 else if (windowAboutState.windowActive) windowAboutState.windowActive = false;
                 else if (windowSponsorState.windowActive) windowSponsorState.windowActive = false;
-                else if (windowExportActive) windowExportActive = false;
-                else if (mainToolbarState.viewFontActive) mainToolbarState.viewFontActive = false;
+                else if (windowFontAtlasState.windowActive) windowFontAtlasState.windowActive = false;
                 else if (mainToolbarState.viewStyleTableActive) mainToolbarState.viewStyleTableActive = false;
+                else if (windowExportActive) windowExportActive = false;
             #if defined(PLATFORM_DESKTOP)
                 else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
                 else closeWindow = true;
@@ -934,7 +944,6 @@ int main(int argc, char *argv[])
                 if (currentSelectedProperty <= TEXT_COLOR_DISABLED) GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
                 else if (currentSelectedProperty == 13) GuiSetStyle(currentSelectedControl, LINE_COLOR, ColorToInt(colorPickerValue));
                 else if (currentSelectedProperty == 12) GuiSetStyle(currentSelectedControl, BACKGROUND_COLOR, ColorToInt(colorPickerValue));
-
             }
             else
             {
@@ -964,7 +973,7 @@ int main(int argc, char *argv[])
             ShowCursor();
         }
 
-        if (selectingColor)
+        if (!windowFontAtlasState.windowActive && !mainToolbarState.viewStyleTableActive && selectingColor)
         {
             HideCursor();
             if (mousePos.x < colorPickerRec.x) SetMousePosition(colorPickerRec.x, mousePos.y);
@@ -1001,12 +1010,7 @@ int main(int argc, char *argv[])
 
         // Font image scale logic
         //----------------------------------------------------------------------------------
-        if (mainToolbarState.viewFontActive)
-        {
-            fontScale += GetMouseWheelMove();
-            if (fontScale < 1.0f) fontScale = 1.0f;
-            if (customFont.texture.width*fontScale > screenWidth) fontScale = screenWidth/customFont.texture.width;
-        }
+        if (windowFontAtlasState.windowActive) windowFontAtlasState.texFont = customFont.texture;
         //----------------------------------------------------------------------------------
 
         // Screen scale logic (x2)
@@ -1035,14 +1039,14 @@ int main(int argc, char *argv[])
         if (windowHelpState.windowActive ||
             windowAboutState.windowActive ||
             windowSponsorState.windowActive ||
+            windowFontAtlasState.windowActive ||
             mainToolbarState.viewStyleTableActive ||
-            mainToolbarState.viewFontActive ||
             mainToolbarState.propsStateEditMode ||
             windowExitActive ||
             windowExportActive ||
-            showLoadFileDialog ||
-            showSaveFileDialog ||
-            showExportFileDialog) GuiLock();
+            showLoadStyleDialog ||
+            showSaveStyleDialog ||
+            showExportStyleDialog) GuiLock();
         //----------------------------------------------------------------------------------
 
         // Draw
@@ -1107,11 +1111,11 @@ int main(int argc, char *argv[])
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
                 // Font options
-                GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 90 }, "Font Options");
-                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 85, 24 }, "#30#Load")) showLoadFontFileDialog = true;
+                GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 90 }, "Text Drawing Options");
+                //if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 85, 24 }, "#30#Load")) showLoadFontFileDialog = true;
 
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 135, anchorFontOptions.y + 16, 80, 24 }, "Size:", &fontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 275, anchorFontOptions.y + 16, 80, 24 }, "Spacing:", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 90, anchorFontOptions.y + 16, 92, 24 }, "Draw Size: ", &fontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 262, anchorFontOptions.y + 16, 92, 24 }, "Spacing: ", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 52, 345, 28 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
             }
@@ -1132,6 +1136,11 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", (codepointList == NULL)? 95 : codepointListCount, customFont.texture.width, customFont.texture.height));
             //----------------------------------------------------------------------------------------
 
+            // GUI: Main toolbar panel
+            //----------------------------------------------------------------------------------
+            GuiMainToolbar(&mainToolbarState);
+            //----------------------------------------------------------------------------------
+
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
             if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
 
@@ -1141,19 +1150,9 @@ int main(int argc, char *argv[])
             // Set default NORMAL state for all controls not in main screen
             GuiSetState(STATE_NORMAL);
 
-            // GUI: Main toolbar panel
-            //----------------------------------------------------------------------------------
-            GuiMainToolbar(&mainToolbarState);
-            //----------------------------------------------------------------------------------
-
-            // GUI: Show font texture
+            // GUI: Font Atlas Window
             //----------------------------------------------------------------------------------------
-            if (mainToolbarState.viewFontActive)
-            {
-                DrawRectangle(screenWidth/2 - customFont.texture.width*fontScale/2, screenHeight/2 - customFont.texture.height*fontScale/2, customFont.texture.width*fontScale, customFont.texture.height*fontScale, BLACK);
-                DrawRectangleLines(screenWidth/2 - customFont.texture.width*fontScale/2, screenHeight/2 - customFont.texture.height*fontScale/2, customFont.texture.width*fontScale, customFont.texture.height*fontScale, RED);
-                DrawTextureEx(customFont.texture, (Vector2){ screenWidth/2 - customFont.texture.width*fontScale/2, screenHeight/2 - customFont.texture.height*fontScale/2 }, 0.0f, fontScale, WHITE);
-            }
+            GuiWindowFontAtlas(&windowFontAtlasState);
             //----------------------------------------------------------------------------------------
 
             // GUI: Show style table image (if active and reloaded)
@@ -1162,7 +1161,7 @@ int main(int argc, char *argv[])
             {
                 DrawTexture(texStyleTable, -styleTablePositionX, screenHeight/2 - texStyleTable.height/2, WHITE);
                 DrawRectangleLines(-styleTablePositionX, screenHeight/2 - texStyleTable.height/2, texStyleTable.width, texStyleTable.height, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
-                GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, &styleTablePositionX, 0, texStyleTable.width - screenWidth);
+                GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, &styleTablePositionX, 0.0f, (float)texStyleTable.width - screenWidth);
             }
             //----------------------------------------------------------------------------------------
 
@@ -1198,19 +1197,19 @@ int main(int argc, char *argv[])
                 if (GuiTextBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 24 + 12, 132, 24 }, styleNameText, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 12 + 48 + 8, 106, 24 }, "Style Format:");
-                exportFormatActive = GuiComboBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 12 + 48 + 8, 132, 24 }, "Binary (.rgs);Code (.h);Image (.png)", exportFormatActive);
+                GuiComboBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 12 + 48 + 8, 132, 24 }, "Binary (.rgs);Code (.h);Image (.png)", &exportFormatActive);
 
                 GuiDisable();   // Font embedded by default!
-                embedFontChecked = GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 48 + 56, 16, 16 }, "Embed font atlas into style", embedFontChecked);
+                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 48 + 56, 16, 16 }, "Embed font atlas into style", &embedFontChecked);
                 GuiEnable();
                 if (exportFormatActive != 2) GuiDisable();
-                styleChunkChecked = GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24, 16, 16 }, "Embed style as rGSf chunk", styleChunkChecked);
+                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24, 16, 16 }, "Embed style as rGSf chunk", &styleChunkChecked);
                 GuiEnable();
 
                 if (result == 1)    // Export button pressed
                 {
                     windowExportActive = false;
-                    showExportFileDialog = true;
+                    showExportStyleDialog = true;
                 }
                 else if (result == 0) windowExportActive = false;
             }
@@ -1229,7 +1228,7 @@ int main(int argc, char *argv[])
 
             // GUI: Load File Dialog (and loading logic)
             //----------------------------------------------------------------------------------------
-            if (showLoadFileDialog)
+            if (showLoadStyleDialog)
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
                 int result = GuiFileDialog(DIALOG_MESSAGE, "Load raygui style file ...", inFileName, "Ok", "Just drag and drop your .rgs style file!");
@@ -1252,13 +1251,13 @@ int main(int argc, char *argv[])
                     saveChangesRequired = false;
                 }
 
-                if (result >= 0) showLoadFileDialog = false;
+                if (result >= 0) showLoadStyleDialog = false;
             }
             //----------------------------------------------------------------------------------------
 
             // GUI: Load Font File Dialog (and loading logic)
             //----------------------------------------------------------------------------------------
-            if (showLoadFontFileDialog)
+            if (showLoadFontDialog)
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
                 int result = GuiFileDialog(DIALOG_MESSAGE, "Load font file ...", inFontFileName, "Ok", "Just drag and drop your .ttf/.otf font file!");
@@ -1281,13 +1280,13 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                if (result >= 0) showLoadFontFileDialog = false;
+                if (result >= 0) showLoadFontDialog = false;
             }
             //----------------------------------------------------------------------------------------
 
             // GUI: Save File Dialog (and saving logic)
             //----------------------------------------------------------------------------------------
-            if (showSaveFileDialog)
+            if (showSaveStyleDialog)
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
@@ -1316,13 +1315,13 @@ int main(int argc, char *argv[])
                 #endif
                 }
 
-                if (result >= 0) showSaveFileDialog = false;
+                if (result >= 0) showSaveStyleDialog = false;
             }
             //----------------------------------------------------------------------------------------
 
             // GUI: Export File Dialog (and saving logic)
             //----------------------------------------------------------------------------------------
-            if (showExportFileDialog)
+            if (showExportStyleDialog)
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
@@ -1400,7 +1399,7 @@ int main(int argc, char *argv[])
                 #endif
                 }
 
-                if (result >= 0) showExportFileDialog = false;
+                if (result >= 0) showExportStyleDialog = false;
             }
             //----------------------------------------------------------------------------------------
 
@@ -1953,7 +1952,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         "TEXT_SPACING",
         "LINE_COLOR",
         "BACKGROUND_COLOR",
-        "EXTENDED01",
+        "TEXT_LINE_SPACING",
         "EXTENDED02",
         "EXTENDED03",
         "EXTENDED04",
@@ -2105,16 +2104,27 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n");
 #if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
             fprintf(txtFile, "    UnloadImage(imFont);  // Uncompressed data can be unloaded from memory\n\n");
+#else
+            fprintf(txtFile, "    // WARNING: Uncompressed global image data can not be freed\n\n");
 #endif
-
+            /*
+            fprintf(txtFile, "    // Assign char recs data to global fontRecs\n");
+            fprintf(txtFile, "    // WARNING: Font char rec data can not be freed\n");
+            fprintf(txtFile, "    font.recs = %sFontRecs;\n\n", styleName);
+            */
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
-            fprintf(txtFile, "    font.recs = (Rectangle *)malloc(font.glyphCount*sizeof(Rectangle));\n");
+            fprintf(txtFile, "    font.recs = (Rectangle *)RAYGUI_MALLOC(font.glyphCount*sizeof(Rectangle));\n");
             fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.glyphCount*sizeof(Rectangle));\n\n", styleName);
-
+            
+            /*
+            fprintf(txtFile, "    // Assign font char info data to global fontChars\n");
+            fprintf(txtFile, "    // WARNING: Font char info data can not be freed\n");
+            fprintf(txtFile, "    font.glyphs = %sFontChars;\n\n", styleName);
+            */
             fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
-            fprintf(txtFile, "    font.glyphs = (GlyphInfo *)malloc(font.glyphCount*sizeof(GlyphInfo));\n");
+            fprintf(txtFile, "    font.glyphs = (GlyphInfo *)RAYGUI_MALLOC(font.glyphCount*sizeof(GlyphInfo));\n");
             fprintf(txtFile, "    memcpy(font.glyphs, %sFontChars, font.glyphCount*sizeof(GlyphInfo));\n\n", styleName);
 
             fprintf(txtFile, "    GuiSetFont(font);\n\n");
@@ -2255,6 +2265,9 @@ static Image GenImageStyleControlsTable(const char *styleName)
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
 
+            bool tempBool = false;
+            float tempFloat = 40.0f;
+
             // Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
             for (int j = 0; j < 4; j++)
             {
@@ -2267,16 +2280,17 @@ static Image GenImageStyleControlsTable(const char *styleName)
                     {
                         case TYPE_LABEL: GuiLabelButton((Rectangle){ rec.x, rec.y, controlWidth[i], 40 }, "Label"); break;
                         case TYPE_BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "Button"); break;
-                        case TYPE_TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "Toggle", false); break;
+                        case TYPE_TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "Toggle", &tempBool); break;
                         case TYPE_CHECKBOX:
                         {
-                            GuiCheckBox((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "NoCheck", false);
+                            GuiCheckBox((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "NoCheck", &tempBool);
                             DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
-                            GuiCheckBox((Rectangle){ rec.x + rec.width/2 + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "Checked", true);
+                            tempBool = true;
+                            GuiCheckBox((Rectangle){ rec.x + rec.width/2 + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "Checked", &tempBool);
                         } break;
-                        case TYPE_SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, 40, 0, 100); break;
-                        case TYPE_SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, 40, 0, 100); break;
-                        case TYPE_PROGRESSBAR: GuiProgressBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, 60, 0, 100); break;
+                        case TYPE_SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, &tempFloat, 0, 100); break;
+                        case TYPE_SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, &tempFloat, 0, 100); break;
+                        case TYPE_PROGRESSBAR: tempFloat = 60; GuiProgressBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, &tempFloat, 0, 100); break;
                         case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "ComboBox;ComboBox", 0); break;
                         case TYPE_DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "DropdownBox;DropdownBox", &dropdownActive, false); break;
                         case TYPE_TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "text box", 32, false); break;
