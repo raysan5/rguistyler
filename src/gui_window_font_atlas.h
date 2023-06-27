@@ -38,8 +38,7 @@ typedef struct {
     bool fontGenSizeEditMode;
     int fontGenSizeValue;
 
-    bool btnExportFontAtlasPressed;
-    bool btnCropAtlasPressed;
+    bool btnSaveFontAtlasPressed;
 
     bool selectWhiteRecActive;
     bool compressImageDataActive;
@@ -144,8 +143,8 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
     state.btnLoadCharsetPressed = false;
     state.fontGenSizeEditMode = false;
     state.fontGenSizeValue = 10;
-    state.btnExportFontAtlasPressed = false;
-    state.btnCropAtlasPressed = false;
+    state.btnSaveFontAtlasPressed = false;
+
     state.selectWhiteRecActive = false;
 
     state.compressImageDataActive = true;
@@ -365,12 +364,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         GuiEnable();
 
         GuiSetTooltip("Save font atlas image");
-        if (GuiButton((Rectangle){ state->anchor.x + 210 + 80 + 4, state->anchor.y + 32, 24, 24 }, "#12#"))
-        {
-            Image image = LoadImageFromTexture(state->texFont);
-            ExportImage(image, "font_file.png");
-            UnloadImage(image);
-        }
+        state->btnSaveFontAtlasPressed = GuiButton((Rectangle){ state->anchor.x + 210 + 80 + 4, state->anchor.y + 32, 24, 24 }, "#12#");
 
         DrawLine(state->anchor.x + 294 + 24 + 12, state->anchor.y + 24, state->anchor.x + 294 + 24 + 12, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
 
