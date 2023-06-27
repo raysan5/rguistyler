@@ -33,8 +33,10 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       5.0  (xx-May-2023)  ADDED: Support macOS builds (x86_64 + arm64)
+*       5.0  (xx-May-2023)  ADDED: New font atlas generation window
+*                           ADDED: Shapes white rectangle definition visually
 *                           ADDED: Support for custom font codepoints (Unicode)
+*                           ADDED: Support macOS builds (x86_64 + arm64)
 *                           REDESIGNED: Using raygui 4.0-dev
 *                           REVIEWED: Regenerated tool imagery
 *
@@ -42,15 +44,18 @@
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
 *                           REVIEWED: Help window implementation
+* 
 *       4.1  (10-Oct-2022)  ADDED: Sponsor window for tools support
 *                           ADDED: Random style generator button (experimental)
 *                           Updated to raylib 4.5-dev and raygui 3.5-dev
+* 
 *       4.0  (02-Oct-2022)  ADDED: Main toolbar, for consistency with other tools
 *                           ADDED: Multiple new styles as templates
 *                           ADDED: Export style window with new options
 *                           REVIEWED: Layout metrics
 *                           Updated to raylib 4.2 and raygui 3.2
 *                           Source code re-licensed to open-source
+* 
 *       3.5  (29-Dec-2021)  Updated to raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
@@ -69,7 +74,7 @@
 *           -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 *
 *   ADDITIONAL NOTES:
-*       On PLATFORM_ANDROID and PLATFORM_WEB file dialogs are not available
+*       On PLATFORM_ANDROID and PLATFORM_WEB system file dialogs are not available
 *
 *   DEVELOPERS:
 *       Ramon Santamaria (@raysan5):    Supervision, review, redesign, update and maintenance.
@@ -288,15 +293,6 @@ static unsigned int defaultStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 // Current active style template
 static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
 
-// Custom font variables
-// NOTE: They have to be global to be used bys tyle export functions
-static Font customFont = { 0 };             // Custom font
-static bool customFontLoaded = false;       // Custom font loaded flag (from font file or style file)
-static int codepointListCount = 0;          // Custom codepoint list count
-static int *codepointList = NULL;           // Custom codepoint list
-
-static char inFontFileName[512] = { 0 };    // Input font file name (required for font reloading on atlas regeneration)
-
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
@@ -400,10 +396,6 @@ int main(int argc, char *argv[])
     Texture texStyleTable = { 0 };
     float styleTablePositionX = 0.0f;
 
-    // Font atlas view variables
-    int fontSizeValue = 10;
-    int prevFontSizeValue = fontSizeValue;
-
     // Style required variables
     bool saveChangesRequired = false;     // Flag to notice save changes are required
 
@@ -444,6 +436,7 @@ int main(int argc, char *argv[])
     // GUI: Font Atlas Window
     //-----------------------------------------------------------------------------------
     GuiWindowFontAtlasState windowFontAtlasState = InitGuiWindowFontAtlas();
+    int fontSizeValue = windowFontAtlasState.fontGenSizeValue;
     //-----------------------------------------------------------------------------------
 
     // GUI: Help Window
@@ -485,6 +478,7 @@ int main(int argc, char *argv[])
     bool showExportStyleDialog = false;
     
     bool showLoadFontDialog = false;
+    bool showLoadCharsetDialog = false;
     bool showFontAtlasWindow = false;
     bool showExportFontAtlasDialog = false;
     //-----------------------------------------------------------------------------------
@@ -537,6 +531,7 @@ int main(int argc, char *argv[])
 
                 fontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
+                windowFontAtlasState.fontGenSizeValue = fontSizeValue;
 
                 // Load .rgs custom font in font
                 customFont = GuiGetFont();
@@ -556,12 +551,13 @@ int main(int argc, char *argv[])
                 if (inputFontFileLoaded) UnloadFont(customFont);
 
                 // NOTE: Font generation size depends on spinner size selection
-                customFont = LoadFontEx(droppedFiles.paths[0], fontSizeValue, codepointList, codepointListCount);
+                customFont = LoadFontEx(droppedFiles.paths[0], windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
 
                 if (customFont.texture.id > 0)
                 {
                     GuiSetFont(customFont);
                     strcpy(inFontFileName, droppedFiles.paths[0]);
+                    fontSizeValue = windowFontAtlasState.fontGenSizeValue;
                     inputFontFileLoaded = true;
                     customFontLoaded = true;
                 }
@@ -867,6 +863,7 @@ int main(int argc, char *argv[])
 
             customFont = GuiGetFont();
             customFontLoaded = true;
+            windowFontAtlasState.fontGenSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
@@ -876,6 +873,8 @@ int main(int argc, char *argv[])
             saveChangesRequired = false;
 
             mainToolbarState.prevVisualStyleActive = mainToolbarState.visualStyleActive;
+
+            windowFontAtlasState.fontWhiteRec = texShapesRec;
         }
 
         // Help options logic
@@ -893,22 +892,10 @@ int main(int argc, char *argv[])
         changedPropCounter = StyleChangesCounter(currentStyle);
         if (changedPropCounter > 0) saveChangesRequired = true;
 
-        // Reload font and generate new atlas at new size when required
-        if (inputFontFileLoaded && (inFontFileName[0] != '\0') &&   // Check an external font file is provided (not internal custom one)
-            !genFontSizeEditMode &&                                 // Check the spinner text editing has finished
-            (prevFontSizeValue != fontSizeValue))                   // Check selected size actually changed
-        {
-            UnloadFont(customFont);
-            customFont = LoadFontEx(inFontFileName, fontSizeValue, codepointList, codepointListCount);
-            GuiSetFont(customFont);
-            customFontLoaded = true;
-            saveChangesRequired = true;
-        }
+        // NOTE: Font reloading inside windowFontAtlas
 
         GuiSetStyle(DEFAULT, TEXT_SIZE, fontSizeValue);
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
-
-        prevFontSizeValue = fontSizeValue;
 
         // Controls selection on list view logic
         //----------------------------------------------------------------------------------
@@ -1153,6 +1140,10 @@ int main(int argc, char *argv[])
             // GUI: Font Atlas Window
             //----------------------------------------------------------------------------------------
             GuiWindowFontAtlas(&windowFontAtlasState);
+
+            if (windowFontAtlasState.btnLoadFontPressed) showLoadFontDialog = true;
+            if (windowFontAtlasState.btnLoadCharsetPressed) showLoadCharsetDialog = true;
+            if (windowFontAtlasState.btnExportFontAtlasPressed) showExportFontAtlasDialog = true;
             //----------------------------------------------------------------------------------------
 
             // GUI: Show style table image (if active and reloaded)
@@ -1267,7 +1258,7 @@ int main(int argc, char *argv[])
                 if (result == 1)
                 {
                     // Load font file
-                    Font tempFont = LoadFontEx(inFontFileName, fontSizeValue, codepointList, codepointListCount);
+                    Font tempFont = LoadFontEx(inFontFileName, windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
 
                     if (tempFont.texture.id > 0)
                     {
@@ -1277,10 +1268,81 @@ int main(int argc, char *argv[])
                         GuiSetFont(customFont);
                         inputFontFileLoaded = true;
                         customFontLoaded = true;
+                        fontSizeValue = windowFontAtlasState.fontGenSizeValue;
                     }
                 }
 
                 if (result >= 0) showLoadFontDialog = false;
+
+                windowFontAtlasState.btnLoadFontPressed = false;
+            }
+            //----------------------------------------------------------------------------------------
+
+            // GUI: Load Font Charset Dialog (and loading logic)
+            //----------------------------------------------------------------------------------------
+            if (showLoadCharsetDialog)
+            {
+#if defined(CUSTOM_MODAL_DIALOGS)
+                int result = GuiFileDialog(DIALOG_MESSAGE, "Load font charset ...", inFileName, "Ok", "Just drag and drop your .txt charset!");
+#else
+                int result = GuiFileDialog(DIALOG_OPEN_FILE, "Load font charset", inFileName, "*.txt", "Charset data (*.txt)");
+#endif
+                if (result == 1)
+                {
+                    // Load codepoints to generate the font
+                    // NOTE: A UTF8 text file should be provided, it will be processed to get codepoints
+                    char *text = LoadFileText(inFileName);
+                    if (text != NULL)
+                    {
+                        int codepointsCount = 0;
+                        int *codepoints = LoadCodepoints(text, &codepointsCount);
+                        UnloadFileText(text);
+
+                        if (codepointsCount > 0)
+                        {
+                            // Clear current custom codepoints list
+                            if (codepointList != NULL)
+                            {
+                                RL_FREE(codepointList);
+                                codepointListCount = 0;
+                            }
+
+                            codepointList = (int *)RL_CALLOC(codepointsCount, sizeof(int));
+
+                            // Create an array to store codepoints without duplicates
+                            int codepointsClearCount = codepointsCount;
+                            int *codepointsClear = (int *)RL_CALLOC(codepointsCount, sizeof(int));
+                            memcpy(codepointsClear, codepoints, codepointsCount*sizeof(int));
+
+                            // Remove duplicates
+                            for (int i = 0; i < codepointsClearCount; i++)
+                            {
+                                for (int j = i + 1; j < codepointsClearCount; j++)
+                                {
+                                    if (codepointsClear[i] == codepointsClear[j])
+                                    {
+                                        for (int k = j; k < codepointsClearCount; k++) codepointsClear[k] = codepointsClear[k + 1];
+
+                                        j--;
+                                        codepointsClearCount--;
+                                    }
+                                }
+                            }
+
+                            // Copy codepoints into our custom charset
+                            for (int i = 0; (i < codepointsClearCount); i++) codepointList[i] = codepointsClear[i];
+                            codepointListCount = codepointsClearCount;
+
+                            RL_FREE(codepointsClear);
+                        }
+
+                        UnloadCodepoints(codepoints);
+                    }
+                }
+
+                if (result >= 0) showLoadCharsetDialog = false;
+
+                windowFontAtlasState.btnLoadCharsetPressed = false;
             }
             //----------------------------------------------------------------------------------------
 
