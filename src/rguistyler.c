@@ -320,7 +320,6 @@ int main(int argc, char *argv[])
     char outFileName[512] = { 0 };      // Output file name (required for file save/export)
 
     bool inputFileLoaded = false;       // Flag to detect an input file has been loaded (required for fast save)
-    bool inputFontFileLoaded = false;   // Flag to detect an input font file has been loaded (required for font atlas regen)
     bool outputFileCreated = false;     // Flag to detect if an output file has been created (required for fast save)
 
 #if !defined(_DEBUG)
@@ -536,7 +535,6 @@ int main(int argc, char *argv[])
                 // Load .rgs custom font in font
                 customFont = GuiGetFont();
                 memset(inFontFileName, 0, 512);
-                inputFontFileLoaded = false;
                 customFontLoaded = true;
 
                 // Reset style backup for changes
@@ -548,7 +546,7 @@ int main(int argc, char *argv[])
             {
                 // Unload previous font if it was file provided but
                 // avoid unloading a font comming from some style tempalte
-                if (inputFontFileLoaded) UnloadFont(customFont);
+                if (customFontLoaded) UnloadFont(customFont);
 
                 // NOTE: Font generation size depends on spinner size selection
                 customFont = LoadFontEx(droppedFiles.paths[0], windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
@@ -558,7 +556,6 @@ int main(int argc, char *argv[])
                     GuiSetFont(customFont);
                     strcpy(inFontFileName, droppedFiles.paths[0]);
                     fontSizeValue = windowFontAtlasState.fontGenSizeValue;
-                    inputFontFileLoaded = true;
                     customFontLoaded = true;
                 }
             }
@@ -576,13 +573,12 @@ int main(int argc, char *argv[])
                     if (codepointsCount > 0)
                     {
                         // Clear current custom codepoints list
-                        if (codepointList != NULL)
+                        if (windowFontAtlasState.externalCodepointList != NULL)
                         {
-                            RL_FREE(codepointList);
-                            codepointListCount = 0;
+                            RL_FREE(windowFontAtlasState.externalCodepointList);
+                            windowFontAtlasState.externalCodepointListCount = 0;
+                            windowFontAtlasState.externalCodepointList = NULL;
                         }
-
-                        codepointList = (int *)RL_CALLOC(codepointsCount, sizeof(int));
 
                         // Create an array to store codepoints without duplicates
                         int codepointsClearCount = codepointsCount;
@@ -604,14 +600,33 @@ int main(int argc, char *argv[])
                             }
                         }
 
+                        // Allocate memory to fit duplicates-cleared codepoints
+                        windowFontAtlasState.externalCodepointList = (int *)RL_CALLOC(codepointsClearCount*sizeof(int), 1);
+
                         // Copy codepoints into our custom charset
-                        for (int i = 0; (i < codepointsClearCount); i++) codepointList[i] = codepointsClear[i];
-                        codepointListCount = codepointsClearCount;
+                        for (int i = 0; (i < codepointsClearCount); i++) windowFontAtlasState.externalCodepointList[i] = codepointsClear[i];
+                        windowFontAtlasState.externalCodepointListCount = codepointsClearCount;
 
                         RL_FREE(codepointsClear);
                     }
 
                     UnloadCodepoints(codepoints);
+                }
+            
+                // Re-load font file (if available)
+                if (FileExists(inFontFileName))
+                {
+                    Font tempFont = LoadFontEx(inFontFileName, windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
+
+                    if (tempFont.texture.id > 0)
+                    {
+                        if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
+                        customFont = tempFont;
+
+                        GuiSetFont(customFont);
+                        customFontLoaded = true;
+                        fontSizeValue = windowFontAtlasState.fontGenSizeValue;
+                    }
                 }
             }
 
@@ -1120,7 +1135,7 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 160, 24 }, TextFormat("Name: %s", (changedPropCounter > 0)? styleNameText : styleNames[mainToolbarState.visualStyleActive]));
             GuiStatusBar((Rectangle){159, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
 
-            GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", (codepointList == NULL)? 95 : codepointListCount, customFont.texture.width, customFont.texture.height));
+            GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", GuiGetFont().glyphCount, GuiGetFont().texture.width, GuiGetFont().texture.height));
             //----------------------------------------------------------------------------------------
 
             // GUI: Main toolbar panel
@@ -1236,7 +1251,6 @@ int main(int argc, char *argv[])
                     // Load .rgs custom font in font
                     customFont = GuiGetFont();
                     memset(inFontFileName, 0, 512);
-                    inputFontFileLoaded = false;
                     customFontLoaded = true;
 
                     saveChangesRequired = false;
@@ -1262,11 +1276,10 @@ int main(int argc, char *argv[])
 
                     if (tempFont.texture.id > 0)
                     {
-                        if (inputFontFileLoaded) UnloadFont(customFont);   // Unload previously loaded font
+                        if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
                         customFont = tempFont;
 
                         GuiSetFont(customFont);
-                        inputFontFileLoaded = true;
                         customFontLoaded = true;
                         fontSizeValue = windowFontAtlasState.fontGenSizeValue;
                     }
@@ -1301,13 +1314,12 @@ int main(int argc, char *argv[])
                         if (codepointsCount > 0)
                         {
                             // Clear current custom codepoints list
-                            if (codepointList != NULL)
+                            if (windowFontAtlasState.externalCodepointList != NULL)
                             {
-                                RL_FREE(codepointList);
-                                codepointListCount = 0;
+                                RL_FREE(windowFontAtlasState.externalCodepointList);
+                                windowFontAtlasState.externalCodepointListCount = 0;
+                                windowFontAtlasState.externalCodepointList = NULL;
                             }
-
-                            codepointList = (int *)RL_CALLOC(codepointsCount, sizeof(int));
 
                             // Create an array to store codepoints without duplicates
                             int codepointsClearCount = codepointsCount;
@@ -1329,14 +1341,33 @@ int main(int argc, char *argv[])
                                 }
                             }
 
+                            // Allocate memory to fit duplicates-cleared codepoints
+                            windowFontAtlasState.externalCodepointList = (int *)RL_CALLOC(codepointsClearCount*sizeof(int), 1);
+
                             // Copy codepoints into our custom charset
-                            for (int i = 0; (i < codepointsClearCount); i++) codepointList[i] = codepointsClear[i];
-                            codepointListCount = codepointsClearCount;
+                            for (int i = 0; (i < codepointsClearCount); i++) windowFontAtlasState.externalCodepointList[i] = codepointsClear[i];
+                            windowFontAtlasState.externalCodepointListCount = codepointsClearCount;
 
                             RL_FREE(codepointsClear);
                         }
 
                         UnloadCodepoints(codepoints);
+                    }
+
+                    // Re-load font file (if available)
+                    if (FileExists(inFontFileName))
+                    {
+                        Font tempFont = LoadFontEx(inFontFileName, windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
+
+                        if (tempFont.texture.id > 0)
+                        {
+                            if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
+                            customFont = tempFont;
+
+                            GuiSetFont(customFont);
+                            customFontLoaded = true;
+                            fontSizeValue = windowFontAtlasState.fontGenSizeValue;
+                        }
                     }
                 }
 
