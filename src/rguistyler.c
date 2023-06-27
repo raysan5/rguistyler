@@ -37,26 +37,25 @@
 *                           ADDED: Shapes white rectangle definition visually
 *                           ADDED: Support for custom font codepoints (Unicode)
 *                           ADDED: Support macOS builds (x86_64 + arm64)
-*                           REDESIGNED: Using raygui 4.0-dev
 *                           REVIEWED: Regenerated tool imagery
-*
-*                           Updated to raylib 4.5 and raygui 3.6
+*                           UPDATED: Using raylib 4.6-dev and raygui 4.0-dev
+* 
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
 *                           REVIEWED: Help window implementation
 * 
 *       4.1  (10-Oct-2022)  ADDED: Sponsor window for tools support
 *                           ADDED: Random style generator button (experimental)
-*                           Updated to raylib 4.5-dev and raygui 3.5-dev
+*                           UPDATED: Using raylib 4.5-dev and raygui 3.5-dev
 * 
 *       4.0  (02-Oct-2022)  ADDED: Main toolbar, for consistency with other tools
 *                           ADDED: Multiple new styles as templates
 *                           ADDED: Export style window with new options
 *                           REVIEWED: Layout metrics
-*                           Updated to raylib 4.2 and raygui 3.2
+*                           UPDATED: Using raylib 4.2 and raygui 3.2
 *                           Source code re-licensed to open-source
 * 
-*       3.5  (29-Dec-2021)  Updated to raylib 4.0 and raygui 3.1
+*       3.5  (29-Dec-2021)  UPDATED: Using raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
 *       raylib 4.6-dev          - Windowing/input management and drawing
@@ -479,7 +478,7 @@ int main(int argc, char *argv[])
     bool showLoadFontDialog = false;
     bool showLoadCharsetDialog = false;
     bool showFontAtlasWindow = false;
-    bool showExportFontAtlasDialog = false;
+    bool showSaveFontAtlasDialog = false;
     //-----------------------------------------------------------------------------------
 
 //#define STYLES_SPINNING_DEMO
@@ -1087,13 +1086,13 @@ int main(int argc, char *argv[])
                 GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, &colorPickerValue);
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 20, 20 }, TextFormat("R:  %03i", colorPickerValue.r));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 20, 20 }, TextFormat("G:  %03i", colorPickerValue.g));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 95, 20, 20 }, TextFormat("B:  %03i", colorPickerValue.b));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 80, 20 }, TextFormat("R:  %03i", colorPickerValue.r));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 80, 20 }, TextFormat("G:  %03i", colorPickerValue.g));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 95, 80, 20 }, TextFormat("B:  %03i", colorPickerValue.b));
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 125, 60, 55 }, "HSV");
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 130, 20, 20 }, TextFormat("H:  %.0f", colorHSV.x));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 20, 20 }, TextFormat("S:  %.0f%%", colorHSV.y*100));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 160, 20, 20 }, TextFormat("V:  %.0f%%", colorHSV.z*100));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 130, 80, 20 }, TextFormat("H:  %.0f", colorHSV.x));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 80, 20 }, TextFormat("S:  %.0f%%", colorHSV.y*100));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 160, 80, 20 }, TextFormat("V:  %.0f%%", colorHSV.z*100));
 
                 if (GuiTextBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 275, 60, 20 }, hexColorText, 9, textHexColorEditMode))
                 {
@@ -1158,7 +1157,7 @@ int main(int argc, char *argv[])
 
             if (windowFontAtlasState.btnLoadFontPressed) showLoadFontDialog = true;
             if (windowFontAtlasState.btnLoadCharsetPressed) showLoadCharsetDialog = true;
-            if (windowFontAtlasState.btnExportFontAtlasPressed) showExportFontAtlasDialog = true;
+            if (windowFontAtlasState.btnSaveFontAtlasPressed) showSaveFontAtlasDialog = true;
             //----------------------------------------------------------------------------------------
 
             // GUI: Show style table image (if active and reloaded)
@@ -1493,6 +1492,38 @@ int main(int argc, char *argv[])
                 }
 
                 if (result >= 0) showExportStyleDialog = false;
+            }
+            //----------------------------------------------------------------------------------------
+
+            // GUI: Save Font Atlas Image Dialog (and saving logic)
+            //----------------------------------------------------------------------------------------
+            if (showSaveFontAtlasDialog)
+            {
+#if defined(CUSTOM_MODAL_DIALOGS)
+                //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save font atlas image...", outFileName, "Ok;Cancel", NULL);
+                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 30, 280, 112 }, "#2#Save font atlas image...", NULL, "#2#Save", outFileName, 512, NULL);
+#else
+                int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save font atlas image...", outFileName, "*.png", "Image File (*.png)");
+#endif
+                if (result == 1)
+                {
+                    // Save file: outFileName
+                    // Check for valid extension and make sure it is
+                    if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
+
+                    Image image = LoadImageFromTexture(windowFontAtlasState.texFont);
+                    ExportImage(image, outFileName);
+                    UnloadImage(image);
+
+#if defined(PLATFORM_WEB)
+                    // Download file from MEMFS (emscripten memory filesystem)
+                    // NOTE: Second argument must be a simple filename (we can't use directories)
+                    // NOTE: Included security check to (partially) avoid malicious code on PLATFORM_WEB
+                    if (strchr(outFileName, '\'') == NULL) emscripten_run_script(TextFormat("saveFileFromMEMFSToDisk('%s','%s')", outFileName, GetFileName(outFileName)));
+#endif
+                }
+
+                if (result >= 0) showSaveFontAtlasDialog = false;
             }
             //----------------------------------------------------------------------------------------
 
