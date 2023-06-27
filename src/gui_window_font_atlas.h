@@ -49,6 +49,7 @@ typedef struct {
     // Custom state variables (depend on development software)
     // NOTE: This variables should be added manually if required
     Texture2D texFont;
+    Rectangle fontWhiteRec;
 
 } GuiWindowFontAtlasState;
 
@@ -96,6 +97,9 @@ static Vector2 prevFontAtlasPosition = { 0 };
 static Vector2 fontAtlasOffset = { 0 };
 static float fontAtlasScale = 1.0f;
 static bool panningMode = false;
+static Rectangle fontWhiteRecScreen = { 0 };
+static Vector2 fontWhiteRecStartPos = { 0 };
+static bool prevSelectWhiteRecActive = false;
 
 //----------------------------------------------------------------------------------
 // Internal Module Functions Definition
@@ -126,6 +130,8 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
     state.compressGlyphDataActive = true;
 
     // Custom variables initialization
+    state.texFont = (Texture2D){ 0 };
+    state.fontWhiteRec = (Rectangle){ 0 };
 
     return state;
 }
@@ -141,6 +147,8 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         state->btnExportFontAtlasPressed = GuiButton((Rectangle){ state->anchor.x + 64, state->anchor.y + 32, 24, 24 }, "#7#");
 
         if (GuiSpinner((Rectangle){ state->anchor.x + 168, state->anchor.y + 32, 96, 24 }, "Gen Size: ", &state->fontGenSizeValue, 0, 100, state->fontGenSizeEditMode)) state->fontGenSizeEditMode = !state->fontGenSizeEditMode;
+        
+        prevSelectWhiteRecActive = state->selectWhiteRecActive;
         GuiToggle((Rectangle){ state->anchor.x + 284, state->anchor.y + 32, 24, 24 }, "#79#", &state->selectWhiteRecActive);
 
         state->btnCropAtlasPressed = GuiButton((Rectangle){ state->anchor.x + 312, state->anchor.y + 32, 24, 24 }, "#38#");
@@ -154,45 +162,123 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         GuiStatusBar((Rectangle){ state->anchor.x + 0, state->anchor.y + 531, 217, 24 }, "File: Mecha.ttf");
         GuiStatusBar((Rectangle){ state->anchor.x + 216, state->anchor.y + 531, 145, 24 }, "Codepoints: 222");
         GuiStatusBar((Rectangle){ state->anchor.x + 360, state->anchor.y + 531, 161, 24 }, "Atlas Size: 512x512");
-        GuiStatusBar((Rectangle){ state->anchor.x + 520, state->anchor.y + 531, 204, 24 }, "White rec: [23, 34, 2, 4]");
+        GuiStatusBar((Rectangle){ state->anchor.x + 520, state->anchor.y + 531, 204, 24 }, 
+            TextFormat("White rec: [%i, %i, %i, %i]", (int)state->fontWhiteRec.x, (int)state->fontWhiteRec.y, (int)state->fontWhiteRec.width, (int)state->fontWhiteRec.height));
 
         // Update and draw font texture
         //--------------------------------------------------------------------------------------------------
-        fontAtlasScale += GetMouseWheelMove();
-        if (fontAtlasScale < 1.0f) fontAtlasScale = 1.0f;
-        else if (fontAtlasScale > 16.0f) fontAtlasScale = 16.0f;
+        Vector2 mousePosition = GetMousePosition();
 
-        // Calculate font atlas rectangle (considering transformations)
-        fontAtlasRec = (Rectangle){ fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2, 
-            fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2,
-            state->texFont.width*fontAtlasScale, state->texFont.height*fontAtlasScale };
-
-        // Font atlas panning with mouse logic
-        if (CheckCollisionPointRec(GetMousePosition(), fontAtlasRec))
+        if (!prevSelectWhiteRecActive && state->selectWhiteRecActive)
         {
-            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+            fontWhiteRecScreen.x = fontAtlasRec.x + state->fontWhiteRec.x*fontAtlasScale;
+            fontWhiteRecScreen.y = fontAtlasRec.y + state->fontWhiteRec.y*fontAtlasScale,
+            fontWhiteRecScreen.width = state->fontWhiteRec.width*fontAtlasScale;
+            fontWhiteRecScreen.height = state->fontWhiteRec.height*fontAtlasScale;
+        }
+
+        if (state->selectWhiteRecActive && CheckCollisionPointRec(mousePosition, (Rectangle){ state->anchor.x, state->anchor.y + 64, 724, 532 - 64 }))
+        {
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
             {
-                panningMode = true;
-                fontAtlasOffset = GetMousePosition();
-                prevFontAtlasPosition = fontAtlasPosition;
+                fontWhiteRecStartPos = mousePosition;
+
+                fontWhiteRecScreen.x = mousePosition.x;
+                fontWhiteRecScreen.y = mousePosition.y;
+            }
+            if (IsMouseButtonDown(MOUSE_LEFT_BUTTON))
+            {
+                fontWhiteRecScreen.width = mousePosition.x - fontWhiteRecStartPos.x;
+                fontWhiteRecScreen.height = mousePosition.y - fontWhiteRecStartPos.y;
+
+                // Take care of rectangles drawn in different directions
+                if (fontWhiteRecScreen.width < 0)
+                {
+                    fontWhiteRecScreen.x = mousePosition.x;
+                    fontWhiteRecScreen.width *= -1;
+                }
+
+                if (fontWhiteRecScreen.height < 0)
+                {
+                    fontWhiteRecScreen.y = mousePosition.y;
+                    fontWhiteRecScreen.height *= -1;
+                }
+            }
+            if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
+            {
+                state->fontWhiteRec.x = (fontWhiteRecScreen.x - fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2)/fontAtlasScale + state->texFont.width;
+                state->fontWhiteRec.y = (fontWhiteRecScreen.y - fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2)/fontAtlasScale + state->texFont.height;
+                state->fontWhiteRec.width = fontWhiteRecScreen.width/fontAtlasScale;
+                state->fontWhiteRec.height = fontWhiteRecScreen.height/fontAtlasScale;
+                if (state->fontWhiteRec.x < 0) state->fontWhiteRec.x = 0;
+                if (state->fontWhiteRec.y < 0) state->fontWhiteRec.y = 0;
             }
         }
-        if (panningMode)
+        else
         {
-            if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-            {
-                fontAtlasPosition.x = prevFontAtlasPosition.x + (GetMouseX() - fontAtlasOffset.x);
-                fontAtlasPosition.y = prevFontAtlasPosition.y + (GetMouseY() - fontAtlasOffset.y);
-            }
+            fontAtlasScale += GetMouseWheelMove();
+            if (fontAtlasScale < 1.0f) fontAtlasScale = 1.0f;
+            else if (fontAtlasScale > 16.0f) fontAtlasScale = 16.0f;
 
-            if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) panningMode = false;
+            // Calculate font atlas rectangle (considering transformations)
+            fontAtlasRec = (Rectangle){ fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2,
+                fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2,
+                state->texFont.width*fontAtlasScale, state->texFont.height*fontAtlasScale };
+
+            // Font atlas panning with mouse logic
+            if (CheckCollisionPointRec(GetMousePosition(), fontAtlasRec))
+            {
+                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                {
+                    panningMode = true;
+                    fontAtlasOffset = GetMousePosition();
+                    prevFontAtlasPosition = fontAtlasPosition;
+                }
+            }
+            if (panningMode)
+            {
+                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+                {
+                    fontAtlasPosition.x = prevFontAtlasPosition.x + (GetMouseX() - fontAtlasOffset.x);
+                    fontAtlasPosition.y = prevFontAtlasPosition.y + (GetMouseY() - fontAtlasOffset.y);
+                }
+
+                if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) panningMode = false;
+            }
         }
 
         BeginScissorMode(state->anchor.x + 1, state->anchor.y + 24 + 40, 724 - 2, 532 - 65);
             DrawRectangleRec(fontAtlasRec, BLACK);
             DrawRectangleLinesEx(fontAtlasRec, 1.0f, RED);
             DrawTexturePro(state->texFont, (Rectangle){ 0, 0, state->texFont.width, state->texFont.height }, fontAtlasRec, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
+        
+            if (state->selectWhiteRecActive)
+            {
+                DrawRectangleLinesEx(fontWhiteRecScreen, 1.0f, RED);
+
+                // Draw values for convenience
+                DrawTextEx(GuiGetFont(), TextFormat("[%i, %i]", (int)state->fontWhiteRec.x, (int)state->fontWhiteRec.y), 
+                    (Vector2){ fontWhiteRecScreen.x - 20, fontWhiteRecScreen.y - 20 }, GuiGetStyle(DEFAULT, TEXT_SIZE), 
+                    GuiGetStyle(DEFAULT, TEXT_SPACING), GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
+                DrawTextEx(GuiGetFont(), TextFormat("[%i, %i]", (int)state->fontWhiteRec.width, (int)state->fontWhiteRec.height),
+                    (Vector2){ fontWhiteRecScreen.x + fontWhiteRecScreen.width - 20, fontWhiteRecScreen.y + fontWhiteRecScreen.height + 20 }, 
+                    GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
+            }
+            else
+            {
+                DrawRectangleRec((Rectangle){ 
+                    fontAtlasRec.x + state->fontWhiteRec.x*fontAtlasScale, 
+                    fontAtlasRec.y + state->fontWhiteRec.y*fontAtlasScale,
+                    state->fontWhiteRec.width*fontAtlasScale, state->fontWhiteRec.height*fontAtlasScale }, 
+                    GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
+            }
         EndScissorMode();
+
+        if (state->selectWhiteRecActive) DrawRectangleLinesEx((Rectangle){ state->anchor.x, state->anchor.y + 64, 724, 532 - 64 }, 4, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED)));
+
+        //DrawText(TextFormat("Atlas TOP-LEFT: %i, %i", (int)(fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2), (int)(fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2)), 10, 10, 30, RED);
+        //DrawCircleV(fontAtlasPosition, 4, MAROON);
+        //DrawCircle((int)(fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2), (int)(fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2), 4, MAROON);
         //--------------------------------------------------------------------------------------------------
     }
     else

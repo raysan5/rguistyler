@@ -1112,9 +1112,9 @@ int main(int argc, char *argv[])
 
                 // Font options
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 90 }, "Text Drawing Options");
-                //if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 85, 24 }, "#30#Load")) showLoadFontFileDialog = true;
+                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 60, 24 }, "#30#Font")) windowFontAtlasState.windowActive = true;
 
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 90, anchorFontOptions.y + 16, 92, 24 }, "Draw Size: ", &fontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 110, anchorFontOptions.y + 16, 92, 24 }, "Size: ", &fontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 262, anchorFontOptions.y + 16, 92, 24 }, "Spacing: ", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 52, 345, 28 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
