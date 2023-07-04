@@ -1,0 +1,41 @@
+#
+# rgl layout text file (v3.0) - raygui layout file generated using rGuiLayout
+#
+# Number of controls:     15
+#
+# Ref. window:    r <x> <y> <width> <height>
+# Anchor info:    a <id> <name> <posx> <posy> <enabled>
+# Control info:   c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+r 0 0 -1 -1
+a 000 anchorMain 0 0 0
+a 001 anchor01 48 48 1
+a 002 anchor02 0 0 0
+a 003 anchor03 0 0 0
+a 004 anchor04 0 0 0
+a 005 anchor05 0 0 0
+a 006 anchor06 0 0 0
+a 007 anchor07 0 0 0
+a 008 anchor08 0 0 0
+a 009 anchor09 0 0 0
+a 010 anchor10 0 0 0
+a 011 anchor11 0 0 0
+a 012 anchor12 0 0 0
+a 013 anchor13 0 0 0
+a 014 anchor14 0 0 0
+a 015 anchor15 0 0 0
+c 000 0 windowFontAtlas 0 0 720 536 1 Font Atlas Generation
+c 001 19 StatusBar001 0 536 216 24 1 File: Mecha.ttf
+c 002 5 btnLoadFont 8 32 24 24 1 1
+c 003 5 btnLoadCharset 40 32 24 24 1 1
+c 004 15 fontGenSize 168 32 96 24 1 Gen Size:
+c 005 5 btnExportFontAtlas 72 32 24 24 1 1
+c 006 5 btncropAtlas 312 32 24 24 1 1
+c 007 8 selectWhiteRec 280 32 24 24 1 4
+c 008 3 fontPanel 0 64 720 472 1 
+c 009 19 StatusBar009 216 536 144 24 1 Codepoints: 222
+c 010 19 StatusBar010 360 536 160 24 1 Atlas Size: 512x512
+c 011 19 StatusBar011 520 536 200 24 1 White rec: [23, 34, 2, 4]
+c 012 8 compressImageData 384 32 24 24 1 C
+c 013 8 compressRecData 416 32 24 24 1 R
+c 014 8 compressGlyphData 448 32 24 24 1 G
