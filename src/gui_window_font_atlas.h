@@ -46,6 +46,7 @@ typedef struct {
     bool compressGlyphDataActive;
 
     int selectedCharset;
+    int prevSelectedCharset;
 
     // Custom state variables (depend on development software)
     // NOTE: This variables should be added manually if required
@@ -112,7 +113,6 @@ static Rectangle fontWhiteRecScreen = { 0 };
 static Vector2 fontWhiteRecStartPos = { 0 };
 static bool prevSelectWhiteRecActive = false;
 static int prevFontGenSizeValue = 10;
-static int prevSelectedCharset = 0;
 
 // Custom font variables
 // NOTE: They have to be global to be used bys tyle export functions
@@ -155,6 +155,7 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
     state.texFont = (Texture2D){ 0 };
     state.fontWhiteRec = texShapesRec;
     state.selectedCharset = 0;
+    state.prevSelectedCharset = 0;
     state.externalCodepointList = NULL;
     state.externalCodepointListCount = 0;
 
@@ -280,7 +281,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
                 prevFontGenSizeValue = state->fontGenSizeValue;
             }
 
-            if (prevSelectedCharset != state->selectedCharset)
+            if (state->prevSelectedCharset != state->selectedCharset)
             {
                 if (state->selectedCharset != 2) UnloadCodepoints(codepointList);
 
@@ -293,6 +294,21 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
                         codepointList = state->externalCodepointList;
                         codepointListCount = state->externalCodepointListCount;
                     }
+                }
+
+                // Unload font if it was previously loaded from file provided but
+                // avoid unloading a font comming from some style template
+                if (customFontLoaded)
+                {
+                    UnloadFont(customFont);
+
+                    // Load font file
+                    customFont = LoadFontEx(inFontFileName, state->fontGenSizeValue, codepointList, codepointListCount);
+
+                    GuiSetFont(customFont);
+
+                    // Reset shapes white pixel after font reloading
+                    SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
                 }
             }
         }
@@ -372,7 +388,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         state->btnLoadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 340, state->anchor.y + 32, 24, 24 }, "#31#");
 
         if (!FileExists(inFontFileName)) GuiDisable();
-        prevSelectedCharset = state->selectedCharset;
+        state->prevSelectedCharset = state->selectedCharset;
         GuiSetTooltip("Select font charset");
         GuiLabel((Rectangle){ state->anchor.x + 342 + 38, state->anchor.y + 32, 60, 24 }, "Charset: ");
         GuiComboBox((Rectangle){ state->anchor.x + 378 + 56, state->anchor.y + 32, 128, 24 }, (state->externalCodepointList != NULL)? "Basic;ISO-8859-15;Custom" : "Basic;ISO-8859-15", &state->selectedCharset);
