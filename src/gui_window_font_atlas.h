@@ -34,6 +34,8 @@ typedef struct {
     bool windowActive;
 
     bool btnLoadFontPressed;
+    bool btnUnloadFontPressed;
+    bool btnUnloadCharsetPressed;
     bool btnLoadCharsetPressed;
     bool fontGenSizeEditMode;
     int fontGenSizeValue;
@@ -55,6 +57,8 @@ typedef struct {
 
     int *externalCodepointList;        // External charset codepoints loaded from UTF-8 file
     unsigned int externalCodepointListCount;
+
+    bool fontAtlasRegen;
 
 } GuiWindowFontAtlasState;
 
@@ -140,7 +144,9 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
     state.windowActive = false;
 
     state.btnLoadFontPressed = false;
+    state.btnUnloadFontPressed = false;
     state.btnLoadCharsetPressed = false;
+    state.btnUnloadCharsetPressed = false;
     state.fontGenSizeEditMode = false;
     state.fontGenSizeValue = 10;
     state.btnSaveFontAtlasPressed = false;
@@ -161,6 +167,8 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
 
     codepointList = LoadCodepoints(charsetBasic, &codepointListCount);
 
+    state.fontAtlasRegen = false;
+
     return state;
 }
 
@@ -170,18 +178,24 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
     {
         // Update logic
         //--------------------------------------------------------------------------------------------------
-        // Reload font and generate new atlas at new size when required
-        if ((inFontFileName[0] != '\0') &&                 // Check an external font file is provided (not internal custom one)
-            !state->fontGenSizeEditMode &&                          // Check the spinner text editing has finished
-            (prevFontGenSizeValue != state->fontGenSizeValue))      // Check selected size actually changed
-        {
-            UnloadFont(customFont);
-            customFont = LoadFontEx(inFontFileName, state->fontGenSizeValue, codepointList, codepointListCount);
-            GuiSetFont(customFont);
-            customFontLoaded = true;
-        }
+        // Check if selected size actually changed to force atlas regen
+        if ((prevFontGenSizeValue != state->fontGenSizeValue) && !state->fontGenSizeEditMode) state->fontAtlasRegen = true;
 
         Vector2 mousePosition = GetMousePosition();
+
+        if (state->btnUnloadFontPressed)
+        {
+            memset(inFontFileName, 0, 512);
+            customFontLoaded = false;
+        }
+        else if (state->btnUnloadCharsetPressed)
+        {
+            RL_FREE(state->externalCodepointList);
+            state->externalCodepointList = NULL;
+            state->externalCodepointListCount = 0;
+            state->selectedCharset = 0;
+            state->fontAtlasRegen = true;
+        }
 
         if (IsKeyPressed(KEY_SPACE)) state->selectWhiteRecActive = !state->selectWhiteRecActive;
 
@@ -283,7 +297,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
 
             if (state->prevSelectedCharset != state->selectedCharset)
             {
-                if (state->selectedCharset != 2) UnloadCodepoints(codepointList);
+                if (state->prevSelectedCharset != 2) UnloadCodepoints(codepointList);
 
                 if (state->selectedCharset == 0) codepointList = LoadCodepoints(charsetBasic, &codepointListCount);
                 else if (state->selectedCharset == 1) codepointList = LoadCodepoints(charsetDefault, &codepointListCount);
@@ -296,21 +310,28 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
                     }
                 }
 
-                // Unload font if it was previously loaded from file provided but
-                // avoid unloading a font comming from some style template
-                if (customFontLoaded)
-                {
-                    UnloadFont(customFont);
-
-                    // Load font file
-                    customFont = LoadFontEx(inFontFileName, state->fontGenSizeValue, codepointList, codepointListCount);
-
-                    GuiSetFont(customFont);
-
-                    // Reset shapes white pixel after font reloading
-                    SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
-                }
+                state->fontAtlasRegen = true;
             }
+        }
+
+        // Reload font and generate new atlas at new size when required
+        if (customFontLoaded && state->fontAtlasRegen)
+        {
+            // Load font file
+            Font tempFont = LoadFontEx(inFontFileName, state->fontGenSizeValue, codepointList, codepointListCount);
+
+            if (tempFont.texture.id > 0)
+            {
+                if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
+                customFont = tempFont;
+
+                GuiSetFont(customFont);
+
+                // Reset shapes texture and rectangle
+                SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
+            }
+
+            state->fontAtlasRegen = false;  // Reset regen flag
         }
         //----------------------------------------------------------------------------------------------------------------------
 
@@ -354,42 +375,32 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         GuiEnableTooltip();
         GuiSetTooltip("Load font file");
         state->btnLoadFontPressed = GuiButton((Rectangle){ state->anchor.x + 12, state->anchor.y + 32, 24, 24 }, "#30#");
+        if (inFontFileName[0] == '\0') GuiDisable();
+        GuiSetTooltip("Unload font file");
+        state->btnUnloadFontPressed = GuiButton((Rectangle){ state->anchor.x + 12 + 28, state->anchor.y + 32, 24, 24 }, "#9#");
+        GuiEnable();
+        GuiSetTooltip("Save font atlas image");
+        state->btnSaveFontAtlasPressed = GuiButton((Rectangle){ state->anchor.x + 12 + 28 + 28, state->anchor.y + 32, 24, 24 }, "#12#");
 
         if (!FileExists(inFontFileName)) GuiDisable();
         prevFontGenSizeValue = state->fontGenSizeValue;
-        if (GuiSpinner((Rectangle){ state->anchor.x + 108, state->anchor.y + 32, 96, 24 }, "Gen Size: ", &state->fontGenSizeValue, 0, 100, state->fontGenSizeEditMode)) state->fontGenSizeEditMode = !state->fontGenSizeEditMode;
+        if (GuiSpinner((Rectangle){ state->anchor.x + 164, state->anchor.y + 32, 96, 24 }, "Gen Size: ", &state->fontGenSizeValue, 0, 100, state->fontGenSizeEditMode)) state->fontGenSizeEditMode = !state->fontGenSizeEditMode;
         
-        GuiSetTooltip("Regenerate font atlas");
-        if (GuiButton((Rectangle){ state->anchor.x + 210, state->anchor.y + 32, 80, 24 }, "#142#Regen"))
-        {
-            // Load font file
-            Font tempFont = LoadFontEx(inFontFileName, state->fontGenSizeValue, codepointList, codepointListCount);
-
-            if (tempFont.texture.id > 0)
-            {
-                if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
-                customFont = tempFont;
-
-                GuiSetFont(customFont);
-                customFontLoaded = true;
-
-                // Reset shapes texture and rectangle
-                SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
-            }
-        }
+        //GuiSetTooltip("Regenerate font atlas");
+        //if (GuiButton((Rectangle){ state->anchor.x + 210, state->anchor.y + 32, 80, 24 }, "#142#Regen")) state->fontAtlasRegen = true;
         GuiEnable();
 
-        GuiSetTooltip("Save font atlas image");
-        state->btnSaveFontAtlasPressed = GuiButton((Rectangle){ state->anchor.x + 210 + 80 + 4, state->anchor.y + 32, 24, 24 }, "#12#");
-
-        DrawLine(state->anchor.x + 294 + 24 + 12, state->anchor.y + 24, state->anchor.x + 294 + 24 + 12, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
-
-        GuiSetTooltip("Load font charset file");
-        state->btnLoadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 340, state->anchor.y + 32, 24, 24 }, "#31#");
+        DrawLine(state->anchor.x + 288 + 12, state->anchor.y + 24, state->anchor.x + 288 + 12, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
 
         if (!FileExists(inFontFileName)) GuiDisable();
+        GuiSetTooltip("Load custom charset file");
+        state->btnLoadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 312, state->anchor.y + 32, 24, 24 }, "#31#");
+        if (state->externalCodepointList == NULL) GuiDisable();
+        GuiSetTooltip("Unload custom charset file");
+        state->btnUnloadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 312 + 28, state->anchor.y + 32, 24, 24 }, "#9#");
+        if (FileExists(inFontFileName)) GuiEnable();
         state->prevSelectedCharset = state->selectedCharset;
-        GuiSetTooltip("Select font charset");
+        GuiSetTooltip("Select charset");
         GuiLabel((Rectangle){ state->anchor.x + 342 + 38, state->anchor.y + 32, 60, 24 }, "Charset: ");
         GuiComboBox((Rectangle){ state->anchor.x + 378 + 56, state->anchor.y + 32, 128, 24 }, (state->externalCodepointList != NULL)? "Basic;ISO-8859-15;Custom" : "Basic;ISO-8859-15", &state->selectedCharset);
         GuiEnable();

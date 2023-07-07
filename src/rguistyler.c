@@ -356,6 +356,7 @@ int main(int argc, char *argv[])
     const int screenHeight = 610;
 
     InitWindow(screenWidth, screenHeight, TextFormat("%s v%s | %s", toolName, toolVersion, toolDescription));
+    //EnableEventWaiting();
     SetExitKey(0);
 
     // General pourpose variables
@@ -582,6 +583,11 @@ int main(int argc, char *argv[])
                             windowFontAtlasState.externalCodepointList = NULL;
                         }
 
+                        // TODO: Make sure default charset is always available?
+                        //codepoints = RL_REALLOC(codepoints, (codepointsCount + 95)*sizeof(int));
+                        //for (int i = 0; i < 95; i++) codepoints[codepointsCount + i] = (int)charsetBasic[i];
+                        //codepointsCount += 95;
+
                         // Create an array to store codepoints without duplicates
                         int codepointsClearCount = codepointsCount;
                         int *codepointsClear = (int *)RL_CALLOC(codepointsCount, sizeof(int));
@@ -610,25 +616,13 @@ int main(int argc, char *argv[])
                         windowFontAtlasState.externalCodepointListCount = codepointsClearCount;
 
                         RL_FREE(codepointsClear);
+
+                        windowFontAtlasState.selectedCharset = 2;
+                        windowFontAtlasState.selectedCharset = 2;
+                        windowFontAtlasState.fontAtlasRegen = true;
                     }
 
                     UnloadCodepoints(codepoints);
-                }
-            
-                // Re-load font file (if available)
-                if (FileExists(inFontFileName))
-                {
-                    Font tempFont = LoadFontEx(inFontFileName, windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
-
-                    if (tempFont.texture.id > 0)
-                    {
-                        if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
-                        customFont = tempFont;
-
-                        GuiSetFont(customFont);
-                        customFontLoaded = true;
-                        fontSizeValue = windowFontAtlasState.fontGenSizeValue;
-                    }
                 }
             }
 
@@ -1362,25 +1356,13 @@ int main(int argc, char *argv[])
                             windowFontAtlasState.externalCodepointListCount = codepointsClearCount;
 
                             RL_FREE(codepointsClear);
+
+                            windowFontAtlasState.selectedCharset = 2;
+                            windowFontAtlasState.selectedCharset = 2;
+                            windowFontAtlasState.fontAtlasRegen = true;
                         }
 
                         UnloadCodepoints(codepoints);
-                    }
-
-                    // Re-load font file (if available)
-                    if (FileExists(inFontFileName))
-                    {
-                        Font tempFont = LoadFontEx(inFontFileName, windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
-
-                        if (tempFont.texture.id > 0)
-                        {
-                            if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
-                            customFont = tempFont;
-
-                            GuiSetFont(customFont);
-                            customFontLoaded = true;
-                            fontSizeValue = windowFontAtlasState.fontGenSizeValue;
-                        }
                     }
                 }
 
@@ -1847,6 +1829,8 @@ static unsigned char *SaveStyleToMemory(int *size)
 // a text style mode is also available for debug (no font embedding)
 static bool SaveStyle(const char *fileName, int format)
 {
+    #define GUI_STYLE_RGS_VERSION   500
+
     int success = false;
 
     FILE *rgsFile = NULL;
@@ -1875,13 +1859,13 @@ static bool SaveStyle(const char *fileName, int format)
             // }
 
             // Custom Font Data : Parameters (32 bytes)
-            // 16+4*N  | 4       | int        | Font data size (0 - no font)
+            // 16+4*N  | 4       | int        | Font data size (0 - no font, no more fields added!)
             // 20+4*N  | 4       | int        | Font base size
             // 24+4*N  | 4       | int        | Font glyph count [glyphCount]
             // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
             // 32+4*N  | 16      | Rectangle  | Font white rectangle
 
-            // Custom Font Data : Image (20 bytes + imSize)
+            // Custom Font Data : Image (20 bytes + imData)
             // NOTE: Font image atlas is always converted to GRAY+ALPHA
             // and atlas image data can be compressed (DEFLATE)
             // 48+4*N  | 4       | int        | Image data size (uncompressed)
@@ -1893,6 +1877,11 @@ static bool SaveStyle(const char *fileName, int format)
 
             // Custom Font Data : Recs (32 bytes*glyphCount)
             // NOTE: Font recs data can be compressed (DEFLATE)
+            // if (version >= 500)
+            // {
+            //     ...  | 4       | int       | Recs data compressed size (0 - not compressed)
+            // }
+            // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
             // foreach (glyph)
             // {
             //   ...   | 16      | Rectangle  | Glyph rectangle (in image)
@@ -1900,6 +1889,11 @@ static bool SaveStyle(const char *fileName, int format)
 
             // Custom Font Data : Glyph Info (32 bytes*glyphCount)
             // NOTE: Font glyphs info data can be compressed (DEFLATE)
+            // if (version >= 500)
+            // {
+            //     ...  | 4       | int       | Glyphs data compressed size (0 - not compressed)
+            // }
+            // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
             // foreach (glyph)
             // {
             //   ...   | 4       | int        | Glyph value
@@ -1910,7 +1904,7 @@ static bool SaveStyle(const char *fileName, int format)
             // ------------------------------------------------------
 
             char signature[5] = "rGS ";
-            short version = 200;
+            short version = GUI_STYLE_RGS_VERSION;            
             short reserved = 0;
 
             fwrite(signature, 1, 4, rgsFile);
@@ -1962,6 +1956,7 @@ static bool SaveStyle(const char *fileName, int format)
             // Write font data (embedding)
             if (customFontLoaded)
             {
+                // Load generated font atals texture into an image
                 Image imFont = LoadImageFromTexture(customFont.texture);
 
                 // Write font parameters
