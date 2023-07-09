@@ -288,6 +288,11 @@ static unsigned int defaultStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 // Current active style template
 static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
 
+static bool fontEmbeddedChecked = true;             // Select to embed font into style file
+static bool fontDataCompressedChecked = true;       // Export font data compressed (recs and glyphs)
+
+static Rectangle fontWhiteRec = { 0 };              // Font white rectangle, required to be updated from window font atlas
+
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
@@ -298,15 +303,14 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 
 // Load/Save/Export data functions
 static unsigned char *SaveStyleToMemory(int *size);         // Save style to memory buffer
-static bool SaveStyle(const char *fileName, int format);    // Save style binary file binary (.rgs)
-static void ExportStyleAsCode(const char *fileName, const char *styleName);        // Export gui style as color palette code
+static int SaveStyle(const char *fileName, int format);     // Save style binary file binary (.rgs)
+static void ExportStyleAsCode(const char *fileName, const char *styleName); // Export gui style as color palette code
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
 // Auxiliar functions
 static int StyleChangesCounter(unsigned int *refStyle);     // Count changed properties in current style (comparing to ref style)
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
 
-static Rectangle fontWhiteRec = { 0 };                      // Font white rectangle, required to be updated from window font atlas
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -455,11 +459,10 @@ int main(int argc, char *argv[])
     //-----------------------------------------------------------------------------------
     bool windowExportActive = false;
 
-    int exportFormatActive = 0;         // ComboBox file type selection
-    char styleNameText[128] = "Unnamed"; // Style name text box
-    bool styleNameEditMode = false;     // Style name text box edit mode
-    bool embedFontChecked = true;       // Select to embed font into style file
-    bool styleChunkChecked = false;     // Select to embed style as a PNG chunk (rGSf)
+    int exportFormatActive = 0;             // ComboBox file type selection
+    char styleNameText[128] = "Unnamed";    // Style name text box
+    bool styleNameEditMode = false;         // Style name text box edit mode
+    bool styleChunkChecked = true;          // Select to embed style as a PNG chunk (rGSf)
     //-----------------------------------------------------------------------------------
 
     // GUI: Exit Window
@@ -1197,7 +1200,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (windowExportActive)
             {
-                Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 196 };
+                Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 220 };
                 int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
 
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 24 + 12, 106, 24 }, "Style Name:");
@@ -1206,13 +1209,15 @@ int main(int argc, char *argv[])
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 12 + 48 + 8, 106, 24 }, "Style Format:");
                 GuiComboBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 12 + 48 + 8, 132, 24 }, "Binary (.rgs);Code (.h);Image (.png)", &exportFormatActive);
 
-                GuiDisable();   // Font embedded by default!
-                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 48 + 56, 16, 16 }, "Embed font atlas into style", &embedFontChecked);
+                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 48 + 56, 16, 16 }, "Font data embedded into style", &fontEmbeddedChecked);
+                GuiEnable();
+                //if (exportFormatActive != 2) GuiDisable();
+                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24, 16, 16 }, "Font data compressed", &fontDataCompressedChecked);
                 GuiEnable();
                 if (exportFormatActive != 2) GuiDisable();
-                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24, 16, 16 }, "Embed style as rGSf chunk", &styleChunkChecked);
+                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24 + 24, 16, 16 }, "Style embedded as rGSf chunk", &styleChunkChecked);
                 GuiEnable();
-
+                
                 if (result == 1)    // Export button pressed
                 {
                     windowExportActive = false;
@@ -1685,13 +1690,16 @@ static void ProcessCommandLine(int argc, char *argv[])
 // Load/Save/Export data functions
 //--------------------------------------------------------------------------------------------
 // Save current style to memory data array
+// WARNING: Using globals: fontEmbeddedChecked, fontDataCompressed
 static unsigned char *SaveStyleToMemory(int *size)
 {
+    #define GUI_STYLE_RGS_VERSION   500
+
     unsigned char *buffer = (unsigned char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
     int dataSize = 0;
 
     char signature[5] = "rGS ";
-    short version = 200;
+    short version = GUI_STYLE_RGS_VERSION;
     short reserved = 0;
     int changedPropCounter = StyleChangesCounter(defaultStyle);
 
@@ -1741,8 +1749,8 @@ static unsigned char *SaveStyleToMemory(int *size)
 
     int fontSize = 0;
 
-    // Write font data (embedding)
-    if (customFontLoaded)
+    // Embed font data if required
+    if (fontEmbeddedChecked && customFontLoaded)
     {
         Image imFont = LoadImageFromTexture(customFont.texture);
 
@@ -1798,20 +1806,64 @@ static unsigned char *SaveStyleToMemory(int *size)
         UnloadImage(imFont);
 
         // Write font recs data
-        for (int i = 0; i < customFont.glyphCount; i++)
+        if (fontDataCompressedChecked && (version >= 500))
         {
-            memcpy(buffer + dataSize, &customFont.recs[i], sizeof(Rectangle));
-            dataSize += sizeof(Rectangle);
+            int recsDataCompSize = 0;
+            unsigned char *recsDataCompressed = CompressData(customFont.recs, customFont.glyphCount*sizeof(Rectangle), &recsDataCompSize);
+
+            memcpy(buffer + dataSize, &recsDataCompSize, sizeof(int));
+            dataSize += 4;
+
+            memcpy(buffer + dataSize, recsDataCompressed, recsDataCompSize);
+            dataSize += recsDataCompSize;
+
+            RL_FREE(recsDataCompressed);
+        }
+        else
+        {
+            for (int i = 0; i < customFont.glyphCount; i++)
+            {
+                memcpy(buffer + dataSize, &customFont.recs[i], sizeof(Rectangle));
+                dataSize += sizeof(Rectangle);
+            }
         }
 
         // Write font chars info data
-        for (int i = 0; i < customFont.glyphCount; i++)
+        if (fontDataCompressedChecked && (version >= 500))
         {
-            memcpy(buffer + dataSize, &customFont.glyphs[i].value, sizeof(int));
-            memcpy(buffer + dataSize + 4, &customFont.glyphs[i].offsetX, sizeof(int));
-            memcpy(buffer + dataSize + 8, &customFont.glyphs[i].offsetY, sizeof(int));
-            memcpy(buffer + dataSize + 12, &customFont.glyphs[i].advanceX, sizeof(int));
-            dataSize += 16;
+            // NOTE: We only want to save some fields from GlyphInfo struct
+            int *glyphsData = (int *)RL_MALLOC(customFont.glyphCount*4*sizeof(int));
+
+            for (int i = 0; i < customFont.glyphCount; i++)
+            {
+                glyphsData[4*i + 0] = customFont.glyphs[i].value;
+                glyphsData[4*i + 1] = customFont.glyphs[i].offsetX;
+                glyphsData[4*i + 2] = customFont.glyphs[i].offsetY;
+                glyphsData[4*i + 3] = &customFont.glyphs[i].advanceX;
+            }
+
+            int glyphsDataCompSize = 0;
+            unsigned char *glyphsDataCompressed = CompressData(glyphsData, customFont.glyphCount*4*sizeof(int), &glyphsDataCompSize);
+
+            memcpy(buffer + dataSize, &glyphsDataCompSize, sizeof(int));
+            dataSize += 4;
+
+            memcpy(buffer + dataSize, glyphsDataCompressed, glyphsDataCompSize);
+            dataSize += glyphsDataCompSize;
+
+            RL_FREE(glyphsDataCompressed);
+            RL_FREE(glyphsData);
+        }
+        else
+        {
+            for (int i = 0; i < customFont.glyphCount; i++)
+            {
+                memcpy(buffer + dataSize, &customFont.glyphs[i].value, sizeof(int));
+                memcpy(buffer + dataSize + 4, &customFont.glyphs[i].offsetX, sizeof(int));
+                memcpy(buffer + dataSize + 8, &customFont.glyphs[i].offsetY, sizeof(int));
+                memcpy(buffer + dataSize + 12, &customFont.glyphs[i].advanceX, sizeof(int));
+                dataSize += 16;
+            }
         }
     }
     else
@@ -1827,207 +1879,86 @@ static unsigned char *SaveStyleToMemory(int *size)
 // Save raygui style binary file (.rgs)
 // NOTE: By default style is saved as binary file but
 // a text style mode is also available for debug (no font embedding)
-static bool SaveStyle(const char *fileName, int format)
+static int SaveStyle(const char *fileName, int format)
 {
     #define GUI_STYLE_RGS_VERSION   500
 
     int success = false;
 
-    FILE *rgsFile = NULL;
-
     if (format == STYLE_BINARY)
     {
-        rgsFile = fopen(fileName, "wb");
+        // Style File Structure (.rgs)
+        // ------------------------------------------------------
+        // Offset  | Size    | Type       | Description
+        // ------------------------------------------------------
+        // 0       | 4       | char       | Signature: "rGS "
+        // 4       | 2       | short      | Version: 200, 500
+        // 6       | 2       | short      | reserved
+        // 8       | 4       | int        | Num properties (only changed ones from default style)
 
-        if (rgsFile != NULL)
-        {
-            // Style File Structure (.rgs)
-            // ------------------------------------------------------
-            // Offset  | Size    | Type       | Description
-            // ------------------------------------------------------
-            // 0       | 4       | char       | Signature: "rGS "
-            // 4       | 2       | short      | Version: 200, 500
-            // 6       | 2       | short      | reserved
-            // 8       | 4       | int        | Num properties (only changed ones from default style)
+        // Properties Data: (controlId (2 byte) +  propertyId (2 byte) + propertyValue (4 bytes))*N
+        // foreach (property)
+        // {
+        //   8+8*i  | 2       | short      | ControlId
+        //   8+8*i  | 2       | short      | PropertyId
+        //   8+8*i  | 4       | int        | PropertyValue
+        // }
 
-            // Properties Data: (controlId (2 byte) +  propertyId (2 byte) + propertyValue (4 bytes))*N
-            // foreach (property)
-            // {
-            //   8+8*i  | 2       | short      | ControlId
-            //   8+8*i  | 2       | short      | PropertyId
-            //   8+8*i  | 4       | int        | PropertyValue
-            // }
+        // Custom Font Data : Parameters (32 bytes)
+        // 16+4*N  | 4       | int        | Font data size (0 - no font, no more fields added!)
+        // 20+4*N  | 4       | int        | Font base size
+        // 24+4*N  | 4       | int        | Font glyph count [glyphCount]
+        // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
+        // 32+4*N  | 16      | Rectangle  | Font white rectangle
 
-            // Custom Font Data : Parameters (32 bytes)
-            // 16+4*N  | 4       | int        | Font data size (0 - no font, no more fields added!)
-            // 20+4*N  | 4       | int        | Font base size
-            // 24+4*N  | 4       | int        | Font glyph count [glyphCount]
-            // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
-            // 32+4*N  | 16      | Rectangle  | Font white rectangle
+        // Custom Font Data : Image (20 bytes + imData)
+        // NOTE: Font image atlas is always converted to GRAY+ALPHA
+        // and atlas image data can be compressed (DEFLATE)
+        // 48+4*N  | 4       | int        | Image data size (uncompressed)
+        // 52+4*N  | 4       | int        | Image data size (compressed)
+        // 56+4*N  | 4       | int        | Image width
+        // 60+4*N  | 4       | int        | Image height
+        // 64+4*N  | 4       | int        | Image format
+        // 68+4*N  | imSize  | *          | Image data (comp or uncomp)
 
-            // Custom Font Data : Image (20 bytes + imData)
-            // NOTE: Font image atlas is always converted to GRAY+ALPHA
-            // and atlas image data can be compressed (DEFLATE)
-            // 48+4*N  | 4       | int        | Image data size (uncompressed)
-            // 52+4*N  | 4       | int        | Image data size (compressed)
-            // 56+4*N  | 4       | int        | Image width
-            // 60+4*N  | 4       | int        | Image height
-            // 64+4*N  | 4       | int        | Image format
-            // 68+4*N  | imSize  | *          | Image data (comp or uncomp)
+        // Custom Font Data : Recs (32 bytes*glyphCount)
+        // NOTE: Font recs data can be compressed (DEFLATE)
+        // if (version >= 500)
+        // {
+        //    ...  | 4       | int       | Recs data compressed size (0 - not compressed)
+        // }
+        // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
+        // foreach (glyph)
+        // {
+        //    ...  | 16      | Rectangle  | Glyph rectangle (in image)
+        // }
 
-            // Custom Font Data : Recs (32 bytes*glyphCount)
-            // NOTE: Font recs data can be compressed (DEFLATE)
-            // if (version >= 500)
-            // {
-            //     ...  | 4       | int       | Recs data compressed size (0 - not compressed)
-            // }
-            // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
-            // foreach (glyph)
-            // {
-            //   ...   | 16      | Rectangle  | Glyph rectangle (in image)
-            // }
+        // Custom Font Data : Glyph Info (32 bytes*glyphCount)
+        // NOTE: Font glyphs info data can be compressed (DEFLATE)
+        // if (version >= 500)
+        // {
+        //    ...  | 4       | int       | Glyphs data compressed size (0 - not compressed)
+        // }
+        // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
+        // foreach (glyph)
+        // {
+        //   ...   | 4       | int        | Glyph value
+        //   ...   | 4       | int        | Glyph offset X
+        //   ...   | 4       | int        | Glyph offset Y
+        //   ...   | 4       | int        | Glyph advance X
+        // }
+        // ------------------------------------------------------
 
-            // Custom Font Data : Glyph Info (32 bytes*glyphCount)
-            // NOTE: Font glyphs info data can be compressed (DEFLATE)
-            // if (version >= 500)
-            // {
-            //     ...  | 4       | int       | Glyphs data compressed size (0 - not compressed)
-            // }
-            // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
-            // foreach (glyph)
-            // {
-            //   ...   | 4       | int        | Glyph value
-            //   ...   | 4       | int        | Glyph offset X
-            //   ...   | 4       | int        | Glyph offset Y
-            //   ...   | 4       | int        | Glyph advance X
-            // }
-            // ------------------------------------------------------
+        int rgsFileDataSize = 0;
+        unsigned char *rgsFileData = SaveStyleToMemory(&rgsFileDataSize);
 
-            char signature[5] = "rGS ";
-            short version = GUI_STYLE_RGS_VERSION;            
-            short reserved = 0;
+        success = SaveFileData(fileName, rgsFileData, rgsFileDataSize);
 
-            fwrite(signature, 1, 4, rgsFile);
-            fwrite(&version, sizeof(short), 1, rgsFile);
-            fwrite(&reserved, sizeof(short), 1, rgsFile);
-
-            int changedPropCounter = StyleChangesCounter(defaultStyle);
-
-            fwrite(&changedPropCounter, sizeof(int), 1, rgsFile);
-
-            short controlId = 0;
-            short propertyId = 0;
-            int propertyValue = 0;
-
-            // Save first all properties that have changed in DEFAULT style
-            for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++)
-            {
-                if (defaultStyle[i] != GuiGetStyle(0, i))
-                {
-                    propertyId = (short)i;
-                    propertyValue = GuiGetStyle(0, i);
-
-                    fwrite(&controlId, sizeof(short), 1, rgsFile);
-                    fwrite(&propertyId, sizeof(short), 1, rgsFile);
-                    fwrite(&propertyValue, sizeof(int), 1, rgsFile);
-                }
-            }
-
-            // Save all properties that have changed in comparison to DEFAULT style
-            for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
-            {
-                for (int j = 0; j < RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED; j++)
-                {
-                    if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
-                    {
-                        controlId = (short)i;
-                        propertyId = (short)j;
-                        propertyValue = GuiGetStyle(i, j);
-
-                        fwrite(&controlId, sizeof(short), 1, rgsFile);
-                        fwrite(&propertyId, sizeof(short), 1, rgsFile);
-                        fwrite(&propertyValue, sizeof(int), 1, rgsFile);
-                    }
-                }
-            }
-
-            int fontSize = 0;
-
-            // Write font data (embedding)
-            if (customFontLoaded)
-            {
-                // Load generated font atals texture into an image
-                Image imFont = LoadImageFromTexture(customFont.texture);
-
-                // Write font parameters
-                int fontParamsSize = 32;
-                int fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-                int fontImageCompSize = fontImageUncompSize;
-                int fontGlyphDataSize = customFont.glyphCount*32;       // 32 bytes by char
-                int fontDataSize = fontParamsSize + fontImageUncompSize + fontGlyphDataSize;
-                int fontType = 0;       // 0-NORMAL, 1-SDF
-
-#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
-                // NOTE: If data is compressed using raylib CompressData() DEFLATE,
-                // it requires to be decompressed with raylib DecompressData(), that requires
-                // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
-
-                // Make sure font atlas image data is GRAY + ALPHA for better compression
-                if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA)
-                {
-                    ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
-                    fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-                }
-
-                // Compress font atlas image data
-                unsigned char *compData = CompressData(imFont.data, fontImageUncompSize, &fontImageCompSize);
-
-                // NOTE: Actually, fontDataSize is only used to check that there is font data included in the file
-                fontDataSize = fontParamsSize + fontImageCompSize + fontGlyphDataSize;
-#endif
-                fwrite(&fontDataSize, sizeof(int), 1, rgsFile);
-                fwrite(&customFont.baseSize, sizeof(int), 1, rgsFile);
-                fwrite(&customFont.glyphCount, sizeof(int), 1, rgsFile);
-                fwrite(&fontType, sizeof(int), 1, rgsFile);
-
-                // Save font white rectangle
-                fwrite(&fontWhiteRec, sizeof(Rectangle), 1, rgsFile);
-
-                // Write font image parameters
-                fwrite(&fontImageUncompSize, sizeof(int), 1, rgsFile);
-                fwrite(&fontImageCompSize, sizeof(int), 1, rgsFile);
-                fwrite(&imFont.width, sizeof(int), 1, rgsFile);
-                fwrite(&imFont.height, sizeof(int), 1, rgsFile);
-                fwrite(&imFont.format, sizeof(int), 1, rgsFile);
-#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
-                fwrite(compData, 1, fontImageCompSize, rgsFile);
-                MemFree(compData);
-#else
-                fwrite(imFont.data, 1, fontImageUncompSize, rgsFile);
-#endif
-                UnloadImage(imFont);
-
-                // Write font recs data
-                for (int i = 0; i < customFont.glyphCount; i++) fwrite(&customFont.recs[i], sizeof(Rectangle), 1, rgsFile);
-
-                // Write font chars info data
-                for (int i = 0; i < customFont.glyphCount; i++)
-                {
-                    fwrite(&customFont.glyphs[i].value, sizeof(int), 1, rgsFile);
-                    fwrite(&customFont.glyphs[i].offsetX, sizeof(int), 1, rgsFile);
-                    fwrite(&customFont.glyphs[i].offsetY, sizeof(int), 1, rgsFile);
-                    fwrite(&customFont.glyphs[i].advanceX, sizeof(int), 1, rgsFile);
-                }
-            }
-            else fwrite(&fontSize, sizeof(int), 1, rgsFile);
-
-            fclose(rgsFile);
-            success = true;
-        }
+        RL_FREE(rgsFileData);
     }
     else if (format == STYLE_TEXT)
     {
-        rgsFile = fopen(fileName, "wt");
+        FILE *rgsFile = fopen(fileName, "wt");
 
         if (rgsFile != NULL)
         {
