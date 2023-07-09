@@ -163,7 +163,7 @@ GuiWindowHelpState InitGuiWindowHelp(void)
     // Review size if it does not fit on the screen
     if (state.windowBounds.height > (GetScreenHeight() - 80))
     {
-        state.windowBounds.height = GetScreenHeight() - 80;
+        state.windowBounds.height = (float)GetScreenHeight() - 80;
         state.windowBounds.y = GetScreenHeight()/2 - state.windowBounds.height/2;
     }
    
@@ -222,7 +222,7 @@ void GuiWindowHelp(GuiWindowHelpState *state)
         // Draw scroll panel considering window bounds and content size
         Rectangle scissor = { 0 };
         GuiScrollPanel((Rectangle){ state->windowBounds.x, state->windowBounds.y + GUIHELPWINDOW_LINE_HEIGHT - 1, state->windowBounds.width, state->windowBounds.height - 24 + 1 }, NULL,
-                       (Rectangle){ state->windowBounds.x, state->windowBounds.y + GUIHELPWINDOW_LINE_HEIGHT, state->windowBounds.width - 16, state->contentHeight }, &state->scrollPanelOffset, &scissor);
+                       (Rectangle){ state->windowBounds.x, state->windowBounds.y + GUIHELPWINDOW_LINE_HEIGHT, state->windowBounds.width - 16, (float)state->contentHeight }, &state->scrollPanelOffset, &scissor);
 
         // Draw help info and separation lines
         // WARNING: We only scissor if scrolling is required, scissor mode forces a new draw call

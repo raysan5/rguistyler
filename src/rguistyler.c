@@ -565,7 +565,7 @@ int main(int argc, char *argv[])
                     SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
                 }
             }
-            else if (IsFileDropped(droppedFiles.paths[0], ".txt"))
+            else if (IsFileExtension(droppedFiles.paths[0], ".txt"))
             {
                 // Load codepoints to generate the font
                 // NOTE: A UTF8 text file should be provided, it will be processed to get codepoints
@@ -819,19 +819,19 @@ int main(int argc, char *argv[])
             Vector3 hsvNormal = { hueNormal, 0.8f, value };
             Vector3 hsvFocused = { hueFocused, 1.0f, 1.0f - hsvNormal.z };
             Vector3 hsvPressed = { huePressed, 0.5f, hsvFocused.z };
-            Vector3 hsvDisabled = { hueDisabled, 0.2, value };
+            Vector3 hsvDisabled = { hueDisabled, 0.2f, value };
 
             // Update style default color values
             GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
-            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7) / 10.0f, (fabsf(0.5 - hsvNormal.z) < 0.2)? 1.0 + ((GetRandomValue(3,5) / 10.0f) * fabsf(0.5 - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7)/10.0f, (fabsf(0.5f - hsvNormal.z) < 0.2f)? 1.0f + ((GetRandomValue(3, 5)/10.0f) * fabsf(0.5f - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
             GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
 
             GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, hsvFocused.y, hsvFocused.z)));
-            GuiSetStyle(DEFAULT, BASE_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, GetRandomValue(4, 7) / 10.0f, 1 - hsvFocused.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, GetRandomValue(4, 7)/10.0f, 1 - hsvFocused.z)));
             GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, hsvFocused.y, hsvFocused.z)));
 
             GuiSetStyle(DEFAULT, BORDER_COLOR_PRESSED, ColorToInt(ColorFromHSV(hsvPressed.x, hsvPressed.y, hsvPressed.z)));
-            GuiSetStyle(DEFAULT, BASE_COLOR_PRESSED, ColorToInt(ColorFromHSV(hsvPressed.x, GetRandomValue(4, 7) / 10.0f, 1 - hsvPressed.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_PRESSED, ColorToInt(ColorFromHSV(hsvPressed.x, GetRandomValue(4, 7)/10.0f, 1 - hsvPressed.z)));
             GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, ColorToInt(ColorFromHSV(hsvPressed.x, hsvPressed.y, hsvPressed.z)));
 
             GuiSetStyle(DEFAULT, BORDER_COLOR_DISABLED, ColorToInt(ColorFromHSV(hsvDisabled.x, hsvDisabled.y, hsvDisabled.z)));
@@ -1693,7 +1693,7 @@ static void ProcessCommandLine(int argc, char *argv[])
 // WARNING: Using globals: fontEmbeddedChecked, fontDataCompressed
 static unsigned char *SaveStyleToMemory(int *size)
 {
-    #define GUI_STYLE_RGS_VERSION   500
+    #define GUI_STYLE_RGS_VERSION   400
 
     unsigned char *buffer = (unsigned char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
     int dataSize = 0;
@@ -1806,7 +1806,7 @@ static unsigned char *SaveStyleToMemory(int *size)
         UnloadImage(imFont);
 
         // Write font recs data
-        if (fontDataCompressedChecked && (version >= 500))
+        if (fontDataCompressedChecked && (version >= 400))
         {
             int recsDataCompSize = 0;
             unsigned char *recsDataCompressed = CompressData(customFont.recs, customFont.glyphCount*sizeof(Rectangle), &recsDataCompSize);
@@ -1829,7 +1829,7 @@ static unsigned char *SaveStyleToMemory(int *size)
         }
 
         // Write font chars info data
-        if (fontDataCompressedChecked && (version >= 500))
+        if (fontDataCompressedChecked && (version >= 400))
         {
             // NOTE: We only want to save some fields from GlyphInfo struct
             int *glyphsData = (int *)RL_MALLOC(customFont.glyphCount*4*sizeof(int));
@@ -1881,7 +1881,7 @@ static unsigned char *SaveStyleToMemory(int *size)
 // a text style mode is also available for debug (no font embedding)
 static int SaveStyle(const char *fileName, int format)
 {
-    #define GUI_STYLE_RGS_VERSION   500
+    #define GUI_STYLE_RGS_VERSION   400
 
     int success = false;
 
@@ -1892,7 +1892,7 @@ static int SaveStyle(const char *fileName, int format)
         // Offset  | Size    | Type       | Description
         // ------------------------------------------------------
         // 0       | 4       | char       | Signature: "rGS "
-        // 4       | 2       | short      | Version: 200, 500
+        // 4       | 2       | short      | Version: 200, 400
         // 6       | 2       | short      | reserved
         // 8       | 4       | int        | Num properties (only changed ones from default style)
 
@@ -1923,7 +1923,7 @@ static int SaveStyle(const char *fileName, int format)
 
         // Custom Font Data : Recs (32 bytes*glyphCount)
         // NOTE: Font recs data can be compressed (DEFLATE)
-        // if (version >= 500)
+        // if (version >= 400)
         // {
         //    ...  | 4       | int       | Recs data compressed size (0 - not compressed)
         // }
@@ -1935,7 +1935,7 @@ static int SaveStyle(const char *fileName, int format)
 
         // Custom Font Data : Glyph Info (32 bytes*glyphCount)
         // NOTE: Font glyphs info data can be compressed (DEFLATE)
-        // if (version >= 500)
+        // if (version >= 400)
         // {
         //    ...  | 4       | int       | Glyphs data compressed size (0 - not compressed)
         // }

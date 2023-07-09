@@ -58,7 +58,7 @@ typedef struct {
     int propsStateActive;
 
     // Tool options
-    int viewStyleTableActive;
+    bool viewStyleTableActive;
     int prevViewStyleTableActive;
     
     bool btnFontAtlasPressed;
@@ -178,7 +178,7 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     int screenWidth = 748;  // WARNING: Screen width is hardcoded to avoid issues on screen scaling!
 
     // Toolbar panels
-    state->anchorRight.x = screenWidth - 104;       // Update right-anchor panel
+    state->anchorRight.x = (float)screenWidth - 104;            // Update right-anchor panel
     state->anchorVisuals.x = state->anchorRight.x - 220 + 1;    // Update right-anchor panel
 
     GuiPanel((Rectangle){ state->anchorFile.x, state->anchorFile.y, 160, 40 }, NULL);

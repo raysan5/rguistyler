@@ -329,6 +329,9 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
 
                 // Reset shapes texture and rectangle
                 SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
+
+                // TODO: Atlas image scanning to find white rectangle (1x1, avoid pixel bleeding - 3x3)
+                // Another solution: Always add a white rectangle at the end?
             }
 
             state->fontAtlasRegen = false;  // Reset regen flag
@@ -346,7 +349,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         BeginScissorMode(state->anchor.x + 1, state->anchor.y + 24 + 40, 724 - 2, 532 - 65);
             DrawRectangleRec(fontAtlasRec, BLACK);
             DrawRectangleLinesEx(fontAtlasRec, 1.0f, RED);
-            DrawTexturePro(state->texFont, (Rectangle){ 0, 0, state->texFont.width, state->texFont.height }, fontAtlasRec, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
+            DrawTexturePro(state->texFont, (Rectangle){ 0, 0, (float)state->texFont.width, (float)state->texFont.height }, fontAtlasRec, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
 
             if (state->selectWhiteRecActive)
             {

@@ -190,7 +190,7 @@ GuiWindowAboutState InitGuiWindowAbout(void)
 
     state.windowActive = false;
 
-    state.windowBounds = (Rectangle){ GetScreenWidth()/2 - 360/2, GetScreenHeight()/2 - 340/2, 360, 340 };
+    state.windowBounds = (Rectangle){ (float)GetScreenWidth()/2 - 360/2, (float)GetScreenHeight()/2 - 340/2, 360, 340 };
     state.panOffset = (Vector2){ 0, 0 };
     state.dragMode = false;
     state.supportDrag = false;
@@ -250,7 +250,7 @@ void GuiWindowAbout(GuiWindowAboutState *state)
         GuiLabel((Rectangle){ state->windowBounds.x + 85, state->windowBounds.y + (singleLine? 78 : 64), (float)state->windowBounds.width, 40 }, singleLine? TOOL_DESCRIPTION : TOOL_DESCRIPTION_BREAK);
 
         // Draw a background rectangle for convenience
-        DrawRectangle((int)state->windowBounds.x + 1, (int)state->windowBounds.y + 110, state->windowBounds.width - 2, 100, FADE(GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL)), 0.5f));
+        DrawRectangle((int)state->windowBounds.x + 1, (int)state->windowBounds.y + 110, (int)state->windowBounds.width - 2, 100, FADE(GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL)), 0.5f));
 
         GuiLine((Rectangle){ state->windowBounds.x, state->windowBounds.y + 100, (float)state->windowBounds.width, 20 }, NULL);
         GuiLabel((Rectangle){ state->windowBounds.x + 8, state->windowBounds.y + 112, 126, 24 }, lblUsedLibsText);
