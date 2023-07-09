@@ -437,7 +437,7 @@ int main(int argc, char *argv[])
     // GUI: Font Atlas Window
     //-----------------------------------------------------------------------------------
     GuiWindowFontAtlasState windowFontAtlasState = InitGuiWindowFontAtlas();
-    int fontSizeValue = windowFontAtlasState.fontGenSizeValue;
+    int fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
     //-----------------------------------------------------------------------------------
 
     // GUI: Help Window
@@ -529,9 +529,9 @@ int main(int argc, char *argv[])
                 SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
                 inputFileLoaded = true;
 
-                fontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+                fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
-                windowFontAtlasState.fontGenSizeValue = fontSizeValue;
+                windowFontAtlasState.fontGenSizeValue = fontDrawSizeValue;
 
                 // Load .rgs custom font in font
                 customFont = GuiGetFont();
@@ -545,25 +545,8 @@ int main(int argc, char *argv[])
             }
             else if (IsFileExtension(droppedFiles.paths[0], ".ttf") || IsFileExtension(droppedFiles.paths[0], ".otf"))
             {
-                // Load font file
-                Font tempFont = LoadFontEx(droppedFiles.paths[0], windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
-
-                if (tempFont.texture.id > 0)
-                {
-                    // Unload font if it was previously loaded from file provided but
-                    // avoid unloading a font comming from some style template
-                    if (customFontLoaded) UnloadFont(customFont);
-
-                    customFont = tempFont;
-
-                    GuiSetFont(customFont);
-                    strcpy(inFontFileName, droppedFiles.paths[0]);
-                    fontSizeValue = windowFontAtlasState.fontGenSizeValue;
-                    customFontLoaded = true;
-
-                    // Reset shapes white pixel after font reloading
-                    SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
-                }
+                strcpy(inFontFileName, droppedFiles.paths[0]);
+                windowFontAtlasState.fontAtlasRegen = true;
             }
             else if (IsFileExtension(droppedFiles.paths[0], ".txt"))
             {
@@ -878,7 +861,7 @@ int main(int argc, char *argv[])
             customFont = GuiGetFont();
             customFontLoaded = true;
             windowFontAtlasState.fontGenSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
-            fontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+            fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
@@ -910,7 +893,7 @@ int main(int argc, char *argv[])
 
         // NOTE: Font reloading inside windowFontAtlas
 
-        GuiSetStyle(DEFAULT, TEXT_SIZE, fontSizeValue);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, fontDrawSizeValue);
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
 
         // Controls selection on list view logic
@@ -1120,7 +1103,7 @@ int main(int argc, char *argv[])
                 GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 90 }, "Text Drawing Options");
                 if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 60, 24 }, "#30#Font")) windowFontAtlasState.windowActive = true;
 
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 110, anchorFontOptions.y + 16, 92, 24 }, "Size: ", &fontSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
+                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 110, anchorFontOptions.y + 16, 92, 24 }, "Size: ", &fontDrawSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
                 if (GuiSpinner((Rectangle){ anchorFontOptions.x + 262, anchorFontOptions.y + 16, 92, 24 }, "Spacing: ", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
 
                 if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 52, 345, 28 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
@@ -1277,24 +1260,8 @@ int main(int argc, char *argv[])
 #endif
                 if (result == 1)
                 {
-                    // Load font file
-                    Font tempFont = LoadFontEx(inFontFileName, windowFontAtlasState.fontGenSizeValue, codepointList, codepointListCount);
-
-                    if (tempFont.texture.id > 0)
-                    {
-                        // Unload font if it was previously loaded from file provided but
-                        // avoid unloading a font comming from some style template
-                        if (customFontLoaded) UnloadFont(customFont);
-
-                        customFont = tempFont;
-
-                        GuiSetFont(customFont);
-                        customFontLoaded = true;
-                        fontSizeValue = windowFontAtlasState.fontGenSizeValue;
-
-                        // Reset shapes white pixel after font reloading
-                        SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
-                    }
+                    windowFontAtlasState.fontAtlasRegen = true;
+                    //fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
                 }
 
                 if (result >= 0) showLoadFontDialog = false;

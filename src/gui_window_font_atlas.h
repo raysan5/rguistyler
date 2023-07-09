@@ -315,24 +315,25 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         }
 
         // Reload font and generate new atlas at new size when required
-        if (customFontLoaded && state->fontAtlasRegen)
+        if ((inFontFileName[0] != '\0') && state->fontAtlasRegen)
         {
             // Load font file
             Font tempFont = LoadFontEx(inFontFileName, state->fontGenSizeValue, codepointList, codepointListCount);
 
             if (tempFont.texture.id > 0)
             {
+                // TODO: Add a white rectangle at the bottom-right corner, 3x3 pixels, to be used for shapes rectangle
+
                 if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
                 customFont = tempFont;
-
                 GuiSetFont(customFont);
 
                 // Reset shapes texture and rectangle
                 SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
 
-                // TODO: Atlas image scanning to find white rectangle (1x1, avoid pixel bleeding - 3x3)
-                // Another solution: Always add a white rectangle at the end?
+                customFontLoaded = true;
             }
+            else memset(inFontFileName, 0, 512);
 
             state->fontAtlasRegen = false;  // Reset regen flag
         }
@@ -393,35 +394,42 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         //if (GuiButton((Rectangle){ state->anchor.x + 210, state->anchor.y + 32, 80, 24 }, "#142#Regen")) state->fontAtlasRegen = true;
         GuiEnable();
 
-        DrawLine(state->anchor.x + 288 + 12, state->anchor.y + 24, state->anchor.x + 288 + 12, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+        DrawLine(state->anchor.x + 260 + 12, state->anchor.y + 24, state->anchor.x + 260 + 12, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
 
         if (!FileExists(inFontFileName)) GuiDisable();
         GuiSetTooltip("Load custom charset file");
-        state->btnLoadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 312, state->anchor.y + 32, 24, 24 }, "#31#");
+        state->btnLoadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 284, state->anchor.y + 32, 24, 24 }, "#31#");
         if (state->externalCodepointList == NULL) GuiDisable();
         GuiSetTooltip("Unload custom charset file");
-        state->btnUnloadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 312 + 28, state->anchor.y + 32, 24, 24 }, "#9#");
+        state->btnUnloadCharsetPressed = GuiButton((Rectangle){ state->anchor.x + 312, state->anchor.y + 32, 24, 24 }, "#9#");
         if (FileExists(inFontFileName)) GuiEnable();
         state->prevSelectedCharset = state->selectedCharset;
         GuiSetTooltip("Select charset");
-        GuiLabel((Rectangle){ state->anchor.x + 342 + 38, state->anchor.y + 32, 60, 24 }, "Charset: ");
-        GuiComboBox((Rectangle){ state->anchor.x + 378 + 56, state->anchor.y + 32, 128, 24 }, (state->externalCodepointList != NULL)? "Basic;ISO-8859-15;Custom" : "Basic;ISO-8859-15", &state->selectedCharset);
+        GuiLabel((Rectangle){ state->anchor.x + 350, state->anchor.y + 32, 60, 24 }, "Charset: ");
+        GuiComboBox((Rectangle){ state->anchor.x + 348 + 56, state->anchor.y + 32, 128, 24 }, (state->externalCodepointList != NULL)? "Basic;ISO-8859-15;Custom" : "Basic;ISO-8859-15", &state->selectedCharset);
         GuiEnable();
 
-        DrawLine(state->anchor.x + 574, state->anchor.y + 24, state->anchor.x + 574, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+        DrawLine(state->anchor.x + 544, state->anchor.y + 24, state->anchor.x + 544, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
 
-        GuiSetTooltip("Toggle shapes rectangle selection (SPACE)");
-        prevSelectWhiteRecActive = state->selectWhiteRecActive;
-        GuiLabel((Rectangle){ state->anchor.x + 578 + 8, state->anchor.y + 32, 74, 24 }, "Shapes rec: ");
-        GuiToggle((Rectangle){ state->anchor.x + 578 + 82, state->anchor.y + 32, 24, 24 }, "#80#", &state->selectWhiteRecActive);
+        GuiLabel((Rectangle){ state->anchor.x + 548 + 8, state->anchor.y + 32, 74, 24 }, "Shapes rec: ");
+        GuiSetTooltip("Scan atlas for shapes rectangle");
+        if (GuiButton((Rectangle){ state->anchor.x + 548 + 82, state->anchor.y + 32, 24, 24 }, "#94#"))
+        {
+            // TODO: Atlas image scanning to find white rectangle (1x1, avoid pixel bleeding - 3x3)
+            
+            // Another easier solution: Always add a white rectangle at the end? -> bottom-right corner, 3x3 pixels
+        }
         GuiSetTooltip("Clear shapes rectangle");
-        if (GuiButton((Rectangle){ state->anchor.x + 578 + 82 + 24 + 4, state->anchor.y + 32, 24, 24 }, "#79#"))
+        if (GuiButton((Rectangle){ state->anchor.x + 548 + 82 + 24 + 4, state->anchor.y + 32, 24, 24 }, "#79#"))
         {
             state->fontWhiteRec = (Rectangle){ 0 };
 
             // Reset shapes texture and rectangle
             SetShapesTexture((Texture2D){ 0 }, (Rectangle){ 0 });
         }
+        GuiSetTooltip("Toggle shapes rectangle selection (SPACE)");
+        prevSelectWhiteRecActive = state->selectWhiteRecActive;
+        GuiToggle((Rectangle){ state->anchor.x + 548 + 82 + 48 + 8, state->anchor.y + 32, 24, 24 }, "#80#", &state->selectWhiteRecActive);
 
         /*
         GuiSetTooltip("Font atlas height crop (%2)");
