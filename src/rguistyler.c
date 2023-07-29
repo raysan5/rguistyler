@@ -738,9 +738,9 @@ int main(int argc, char *argv[])
                 else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
                 else closeWindow = true;
             #else
-                else if (showLoadFileDialog) showLoadFileDialog = false;
-                else if (showSaveFileDialog) showSaveFileDialog = false;
-                else if (showExportFileDialog) showExportFileDialog = false;
+                else if (showLoadStyleDialog) showLoadStyleDialog = false;
+                else if (showSaveStyleDialog) showSaveStyleDialog = false;
+                else if (showExportStyleDialog) showExportStyleDialog = false;
             #endif
             }
 
