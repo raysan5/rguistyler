@@ -349,8 +349,8 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         // Draw font atlas view
         BeginScissorMode(state->anchor.x + 1, state->anchor.y + 24 + 40, 724 - 2, 532 - 65);
             DrawRectangleRec(fontAtlasRec, BLACK);
-            DrawRectangleLinesEx(fontAtlasRec, 1.0f, RED);
             DrawTexturePro(state->texFont, (Rectangle){ 0, 0, (float)state->texFont.width, (float)state->texFont.height }, fontAtlasRec, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
+            DrawRectangleLinesEx(fontAtlasRec, 1.0f, Fade(RED, 0.6f));
 
             if (state->selectWhiteRecActive)
             {

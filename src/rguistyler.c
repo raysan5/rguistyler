@@ -2135,20 +2135,22 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    // WARNING: Uncompressed global image data can not be freed\n\n");
 #endif
             /*
+            // Assign global recs/glyphs data to loaded font
+            // NOTE: DO NOT DO THAT! GuiLoadStyleDefault() frees memory for styles loaded (other than default)
+            // it can be used to reset/free any previous loaded style to default before loading a new one 
             fprintf(txtFile, "    // Assign char recs data to global fontRecs\n");
             fprintf(txtFile, "    // WARNING: Font char rec data can not be freed\n");
             fprintf(txtFile, "    font.recs = %sFontRecs;\n\n", styleName);
+            
+            fprintf(txtFile, "    // Assign font char info data to global fontChars\n");
+            fprintf(txtFile, "    // WARNING: Font char info data can not be freed\n");
+            fprintf(txtFile, "    font.glyphs = %sFontChars;\n\n", styleName);
             */
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
             fprintf(txtFile, "    font.recs = (Rectangle *)RAYGUI_MALLOC(font.glyphCount*sizeof(Rectangle));\n");
             fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.glyphCount*sizeof(Rectangle));\n\n", styleName);
-            
-            /*
-            fprintf(txtFile, "    // Assign font char info data to global fontChars\n");
-            fprintf(txtFile, "    // WARNING: Font char info data can not be freed\n");
-            fprintf(txtFile, "    font.glyphs = %sFontChars;\n\n", styleName);
-            */
+
             fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
             fprintf(txtFile, "    font.glyphs = (GlyphInfo *)RAYGUI_MALLOC(font.glyphCount*sizeof(GlyphInfo));\n");
