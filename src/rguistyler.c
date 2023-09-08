@@ -33,12 +33,12 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       5.0  (xx-May-2023)  ADDED: New font atlas generation window
+*       5.0  (10-Jun-2023)  ADDED: New font atlas generation window
 *                           ADDED: Shapes white rectangle definition visually
 *                           ADDED: Support for custom font codepoints (Unicode)
 *                           ADDED: Support macOS builds (x86_64 + arm64)
 *                           REVIEWED: Regenerated tool imagery
-*                           UPDATED: Using raylib 4.6-dev and raygui 4.0-dev
+*                           UPDATED: Using raylib 4.6-dev and raygui 4.0
 * 
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
@@ -59,9 +59,9 @@
 *
 *   DEPENDENCIES:
 *       raylib 4.6-dev          - Windowing/input management and drawing
-*       raygui 4.0-dev          - Immediate-mode GUI controls with custom styling and icons
+*       raygui 4.0              - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.0                - PNG chunks management
-*       tinyfiledialogs 3.13.1  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
+*       tinyfiledialogs 3.13.3  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   BUILDING:
 *     - Windows (MinGW-w64):
