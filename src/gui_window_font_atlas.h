@@ -412,12 +412,11 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         DrawLine(state->anchor.x + 544, state->anchor.y + 24, state->anchor.x + 544, state->anchor.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
 
         GuiLabel((Rectangle){ state->anchor.x + 548 + 8, state->anchor.y + 32, 74, 24 }, "Shapes rec: ");
-        GuiSetTooltip("Scan atlas for shapes rectangle");
-        if (GuiButton((Rectangle){ state->anchor.x + 548 + 82, state->anchor.y + 32, 24, 24 }, "#94#"))
+        GuiSetTooltip("Set bottom-right corner rectangle");
+        if (GuiButton((Rectangle){ state->anchor.x + 548 + 82, state->anchor.y + 32, 24, 24 }, "#84#"))
         {
-            // TODO: Atlas image scanning to find white rectangle (1x1, avoid pixel bleeding - 3x3)
-            
-            // Another easier solution: Always add a white rectangle at the end? -> bottom-right corner, 3x3 pixels
+            // SOLUTION: Always add a white rectangle at the bottom-right corner, 3x3 pixels -> Added by raylib LoadFontEx()
+            state->fontWhiteRec = (Rectangle){ customFont.texture.width - 2, customFont.texture.height - 2, 1, 1 };
         }
         GuiSetTooltip("Clear shapes rectangle");
         if (GuiButton((Rectangle){ state->anchor.x + 548 + 82 + 24 + 4, state->anchor.y + 32, 24, 24 }, "#79#"))
@@ -431,19 +430,6 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         prevSelectWhiteRecActive = state->selectWhiteRecActive;
         GuiToggle((Rectangle){ state->anchor.x + 548 + 82 + 48 + 8, state->anchor.y + 32, 24, 24 }, "#80#", &state->selectWhiteRecActive);
 
-        /*
-        GuiSetTooltip("Font atlas height crop (%2)");
-        if (GuiButton((Rectangle){ state->anchor.x + 312, state->anchor.y + 32, 24, 24 }, "#38#"))
-        {
-            // Crop atlas texture by half vertically
-            // WARNING: This is a hack to avoid textures too big, GenImageFontAtlas() calculates size very conservatively
-            Image image = LoadImageFromTexture(state->texFont);
-            ImageCrop(&image, (Rectangle){ 0, 0, state->texFont.width, state->texFont.height/2 });
-            UnloadTexture(state->texFont);
-            state->texFont = LoadTextureFromImage(image);
-            UnloadImage(image);
-        }
-        */
         GuiSetTooltip(NULL);
 
         //GuiToggle((Rectangle){ state->anchor.x + 360, state->anchor.y + 32, 24, 24 }, "#178#", &state->compressImageDataActive);
