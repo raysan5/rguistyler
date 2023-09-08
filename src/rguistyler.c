@@ -60,7 +60,7 @@
 *   DEPENDENCIES:
 *       raylib 4.6-dev          - Windowing/input management and drawing
 *       raygui 4.0              - Immediate-mode GUI controls with custom styling and icons
-*       rpng 1.0                - PNG chunks management
+*       rpng 1.1                - PNG chunks management
 *       tinyfiledialogs 3.13.3  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   BUILDING:
@@ -874,7 +874,7 @@ int main(int argc, char *argv[])
             windowFontAtlasState.fontWhiteRec = texShapesRec;
         }
 
-        fontWhiteRec = windowFontAtlasState.fontWhiteRec;
+        fontWhiteRec = windowFontAtlasState.fontWhiteRec;   // Register fontWhiteRec from fontAtlas window
 
         // Help options logic
         if (mainToolbarState.btnHelpPressed) windowHelpState.windowActive = true;           // Help button logic
@@ -2162,7 +2162,8 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             {
                 fprintf(txtFile, "    // Setup a white rectangle on the font to be used on shapes drawing,\n");
                 fprintf(txtFile, "    // it makes possible to draw shapes and text (full UI) in a single draw call\n");
-                fprintf(txtFile, "    SetShapesTexture(font.texture, windowFontAtlasState.fontWhiteRec);\n\n");
+                fprintf(txtFile, "    Rectangle fontWhiteRec = { %.0f, %.0f, %.0f, %.0f };\n", fontWhiteRec.x, fontWhiteRec.y, fontWhiteRec.width, fontWhiteRec.height);
+                fprintf(txtFile, "    SetShapesTexture(font.texture, fontWhiteRec);\n\n");
             }
             else
             {
