@@ -166,6 +166,15 @@
 #include <string.h>                         // Required for: strcmp(), memcpy()
 #include <stdio.h>                          // Required for: fopen(), fclose(), fread()...
 
+#if defined(_MSC_VER) && ((defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__))
+    #include <direct.h>                     // Required for: _mkdir()
+    #define MKDIR(dir)  _mkdir(dir)
+#elif defined __GNUC__
+    #include <sys/types.h>
+    #include <sys/stat.h>                   // Required for: mkdir()
+    #define MKDIR(dir)  mkdir(dir, 0777)
+#endif
+
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
@@ -261,9 +270,21 @@ static const char *guiPropsDefaultText[14] = {
     "BORDER_COLOR_DISABLED",
     "BASE_COLOR_DISABLED",
     "TEXT_COLOR_DISABLED",
+
     // Additional extended properties for DEFAULT control
     "BACKGROUND_COLOR",          // DEFAULT extended property
     "LINE_COLOR"                 // DEFAULT extended property
+};
+
+static const char *guiPropsDefaultExtendedText[8] = {
+    "TEXT_SIZE",
+    "TEXT_SPACING",
+    "LINE_COLOR",
+    "BACKGROUND_COLOR",
+    "TEXT_LINE_SPACING",
+    "TEXT_ALIGNMENT_VERTICAL",
+    "TEXT_WRAP_MODE",
+    "EXT08"
 };
 
 // Style template names
@@ -287,6 +308,8 @@ static unsigned int defaultStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 
 // Current active style template
 static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
+
+static char *currentStyleName[64] = { 0 };          // Current style name
 
 static bool fontEmbeddedChecked = true;             // Select to embed font into style file
 static bool fontDataCompressedChecked = true;       // Export font data compressed (recs and glyphs)
@@ -657,6 +680,39 @@ int main(int argc, char *argv[])
 #if defined(PLATFORM_DESKTOP)
         // Toggle screen size (x2) mode
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
+
+        // Save all required materials for current style (convenience functionality)
+        // TODO: Review shortcut and exposure of this function
+        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
+        {
+            char styleNameLower[64] = { 0 };
+            strcpy(styleNameLower, TextToLower(currentStyleName));
+            if (!DirectoryExists(styleNameLower)) MKDIR(styleNameLower);
+
+            // Style header: style_name.h
+            ExportStyleAsCode(TextFormat("%s/style_%s.h", styleNameLower, styleNameLower), currentStyleName);
+
+            // Style binary: style_name.rgs
+            SaveStyle(TextFormat("%s/style_%s.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
+
+            // Style text (font required): style_name.txt.rgs
+            SaveStyle(TextFormat("%s/style_%s.txt.rgs", styleNameLower, styleNameLower), STYLE_TEXT);
+
+            // Style table (with style chunck): style_name.png
+            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
+            ExportImage(imStyleTable, TextFormat("%s/style_%s.png", styleNameLower, styleNameLower));
+            UnloadImage(imStyleTable);
+            // Write a custom chunk - rGSf (rGuiStyler file)
+            rpng_chunk chunk = { 0 };
+            memcpy(chunk.type, "rGSf", 4);  // Chunk type FOURCC
+            chunk.data = SaveStyleToMemory(&chunk.length);
+            rpng_chunk_write(TextFormat("%s/style_%s.png", styleNameLower, styleNameLower), chunk);
+            RPNG_FREE(chunk.data);
+
+            // Style screenshot: screenshot.png
+            // Select LABEL, BORDER_COLOR_FOCUSED -> Update required?
+            TakeScreenshot(TextFormat("%s/screenshot.png", styleNameLower));
+        }
 #endif
         // New style file, previous in/out files registeres are reseted
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
@@ -872,6 +928,9 @@ int main(int argc, char *argv[])
             mainToolbarState.prevVisualStyleActive = mainToolbarState.visualStyleActive;
 
             windowFontAtlasState.fontWhiteRec = texShapesRec;
+
+            memset(currentStyleName, 0, 64);
+            strcpy(currentStyleName, styleNames[mainToolbarState.visualStyleActive]);
         }
 
         fontWhiteRec = windowFontAtlasState.fontWhiteRec;   // Register fontWhiteRec from fontAtlas window
@@ -1095,8 +1154,10 @@ int main(int argc, char *argv[])
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 300, 365, 15 }, NULL);
 
                 if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
-                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 85, 24 }, "Text Alignment:");
-                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 110, anchorPropEditor.y + 320, 80, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &textAlignmentActive);
+                GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
+                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 104, 24 }, "Text Alignment:");
+                GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
+                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 120, anchorPropEditor.y + 320, 76, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &textAlignmentActive);
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
                 // Font options
@@ -1806,7 +1867,7 @@ static unsigned char *SaveStyleToMemory(int *size)
                 glyphsData[4*i + 0] = customFont.glyphs[i].value;
                 glyphsData[4*i + 1] = customFont.glyphs[i].offsetX;
                 glyphsData[4*i + 2] = customFont.glyphs[i].offsetY;
-                glyphsData[4*i + 3] = &customFont.glyphs[i].advanceX;
+                glyphsData[4*i + 3] = customFont.glyphs[i].advanceX;
             }
 
             int glyphsDataCompSize = 0;
@@ -1933,11 +1994,13 @@ static int SaveStyle(const char *fileName, int format)
 
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
-            fprintf(rgsFile, "# Info:  p <controlId> <propertyId> <propertyValue>  // Property description\n#\n");
+            fprintf(rgsFile, "# Provided info:\n");
+            fprintf(rgsFile, "#    f fontGenSize fontSpacing \"fontFileName\"\n");
+            fprintf(rgsFile, "#    p <controlId> <propertyId> <propertyValue>  Property description\n#\n");
 
             if (customFontLoaded)
             {
-                fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n");
+                fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n#\n");
                 fprintf(rgsFile, "f %i %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetFileName(inFontFileName));
             }
 
@@ -1947,7 +2010,8 @@ static int SaveStyle(const char *fileName, int format)
                 if (defaultStyle[j] != GuiGetStyle(0, j))
                 {
                     // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                    fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), (j < RAYGUI_MAX_PROPS_BASE)? guiPropsText[j] : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
+                    if (j < RAYGUI_MAX_PROPS_BASE) fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), guiPropsText[j]);
+                    else  fprintf(rgsFile, "p 00 %02i 0x%08x    %s \n", j, GuiGetStyle(0, j), guiPropsDefaultExtendedText[j - RAYGUI_MAX_PROPS_BASE]);
                 }
             }
 
@@ -1978,15 +2042,15 @@ static int SaveStyle(const char *fileName, int format)
 static void ExportStyleAsCode(const char *fileName, const char *styleName)
 {
     // DEFAULT extended properties
-    static const char *guiPropsExText[RAYGUI_MAX_PROPS_EXTENDED] = {
+    static const char *guiPropsExtText[RAYGUI_MAX_PROPS_EXTENDED] = {
         "TEXT_SIZE",
         "TEXT_SPACING",
         "LINE_COLOR",
         "BACKGROUND_COLOR",
         "TEXT_LINE_SPACING",
-        "EXTENDED02",
-        "EXTENDED03",
-        "EXTENDED04",
+        "TEXT_ALIGNMENT_VERTICAL",
+        "TEXT_WRAP_MODE",
+        "EXTENDED08",
     };
 
     FILE *txtFile = fopen(fileName, "wt");
@@ -1995,7 +2059,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
     {
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// StyleAsCode exporter v1.2 - Style data exported as a values array            //\n");
+        fprintf(txtFile, "// StyleAsCode exporter v2.0 - Style data exported as a values array            //\n");
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "// USAGE: On init call: GuiLoadStyle%s();                             //\n", TextToPascal(styleName));
         fprintf(txtFile, "//                                                                              //\n");
@@ -2006,12 +2070,15 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 
+        char styleNameLower[64] = { 0 };
+        strcpy(styleNameLower, TextToLower(styleName));
+
         // Export only properties that change from default style
-        fprintf(txtFile, "#define STYLE_PROPS_%s_COUNT  %i\n\n", TextToUpper(styleName), StyleChangesCounter(defaultStyle));
+        fprintf(txtFile, "#define %s_STYLE_PROPS_COUNT  %i\n\n", TextToUpper(styleName), StyleChangesCounter(defaultStyle));
 
         // Write byte data as hexadecimal text
         fprintf(txtFile, "// Custom style name: %s\n", styleName);
-        fprintf(txtFile, "static const GuiStyleProp styleProps%s[STYLE_PROPS_%s_COUNT] = {\n", styleName, TextToUpper(styleName));
+        fprintf(txtFile, "static const GuiStyleProp %sStyleProps[%s_STYLE_PROPS_COUNT] = {\n", styleNameLower, TextToUpper(styleName));
 
         // Write all properties that have changed in default style
         for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++)
@@ -2019,7 +2086,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             if (defaultStyle[i] != GuiGetStyle(0, i))
             {
                 if (i < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { 0, %i, 0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsText[i]);
-                else fprintf(txtFile, "    { 0, %i, 0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsExText[i - RAYGUI_MAX_PROPS_BASE]);
+                else fprintf(txtFile, "    { 0, %i, 0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsExtText[i - RAYGUI_MAX_PROPS_BASE]);
             }
         }
 
@@ -2040,7 +2107,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
         if (customFontLoaded)
         {
-            fprintf(txtFile, "// WARNING: This style uses a custom font: %s (size: %i, spacing: %i)\n\n",
+            fprintf(txtFile, "// WARNING: This style uses a custom font: \"%s\" (size: %i, spacing: %i)\n\n",
                     GetFileName(inFontFileName), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
         }
 
@@ -2068,22 +2135,22 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             unsigned char *compData = CompressData(imFont.data, imFontSize, &compDataSize);
 
             // Save font image data (compressed)
-            fprintf(txtFile, "#define %s_COMPRESSED_DATA_SIZE %i\n\n", TextToUpper(styleName), compDataSize);
-            fprintf(txtFile, "// Font image pixels data: DEFLATE compressed\n");
-            fprintf(txtFile, "static unsigned char %sFontData[%s_COMPRESSED_DATA_SIZE] = { ", styleName, TextToUpper(styleName));
+            fprintf(txtFile, "#define %s_STYLE_FONT_ATLAS_COMP_SIZE %i\n\n", TextToUpper(styleName), compDataSize);
+            fprintf(txtFile, "// Font atlas image pixels data: DEFLATE compressed\n");
+            fprintf(txtFile, "static unsigned char %sFontData[%s_STYLE_FONT_ATLAS_COMP_SIZE] = { ", styleNameLower, TextToUpper(styleName));
             for (int i = 0; i < compDataSize - 1; i++) fprintf(txtFile, ((i%BYTES_TEXT_PER_LINE == 0)? "0x%02x,\n    " : "0x%02x, "), compData[i]);
             fprintf(txtFile, "0x%02x };\n\n", compData[compDataSize - 1]);
             MemFree(compData);
 #else
             // Save font image data (uncompressed)
             fprintf(txtFile, "// Font image pixels data\n");
-            fprintf(txtFile, "static unsigned char %sFontImageData[%i] = { ", styleName, imFontSize);
+            fprintf(txtFile, "static unsigned char %sFontImageData[%i] = { ", styleNameLower, imFontSize);
             for (int i = 0; i < imFontSize - 1; i++) fprintf(txtFile, ((i%BYTES_TEXT_PER_LINE == 0)? "0x%02x,\n    " : "0x%02x, "), ((unsigned char *)imFont.data)[i]);
             fprintf(txtFile, "0x%02x };\n\n", ((unsigned char *)imFont.data)[imFontSize - 1]);
 #endif
             // Save font recs data
-            fprintf(txtFile, "// Font characters rectangles data\n");
-            fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleName, customFont.glyphCount);
+            fprintf(txtFile, "// Font glyphs rectangles data (on atlas)\n");
+            fprintf(txtFile, "static const Rectangle %sFontRecs[%i] = {\n", styleNameLower, customFont.glyphCount);
             for (int i = 0; i < customFont.glyphCount; i++)
             {
                 fprintf(txtFile, "    { %1.0f, %1.0f, %1.0f , %1.0f },\n", customFont.recs[i].x, customFont.recs[i].y, customFont.recs[i].width, customFont.recs[i].height);
@@ -2094,7 +2161,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             // NOTE: Individual glyphs image data not saved, it could be generated from atlas and recs
             fprintf(txtFile, "// Font glyphs info data\n");
             fprintf(txtFile, "// NOTE: No glyphs.image data provided\n");
-            fprintf(txtFile, "static const GlyphInfo %sFontChars[%i] = {\n", styleName, customFont.glyphCount);
+            fprintf(txtFile, "static const GlyphInfo %sFontGlyphs[%i] = {\n", styleNameLower, customFont.glyphCount);
             for (int i = 0; i < customFont.glyphCount; i++)
             {
                 fprintf(txtFile, "    { %i, %i, %i, %i, { 0 }},\n", customFont.glyphs[i].value, customFont.glyphs[i].offsetX, customFont.glyphs[i].offsetY, customFont.glyphs[i].advanceX);
@@ -2109,19 +2176,19 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "    // Load style properties provided\n");
         fprintf(txtFile, "    // NOTE: Default properties are propagated\n");
         fprintf(txtFile, "    for (int i = 0; i < %s_STYLE_PROPS_COUNT; i++)\n    {\n", TextToUpper(styleName));
-        fprintf(txtFile, "        GuiSetStyle(%sStyleProps[i].controlId, %sStyleProps[i].propertyId, %sStyleProps[i].propertyValue);\n    }\n\n", styleName, styleName, styleName);
+        fprintf(txtFile, "        GuiSetStyle(%sStyleProps[i].controlId, %sStyleProps[i].propertyId, %sStyleProps[i].propertyValue);\n    }\n\n", styleNameLower, styleNameLower, styleNameLower);
 
         if (customFontLoaded)
         {
             fprintf(txtFile, "    // Custom font loading\n");
 #if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
             fprintf(txtFile, "    // NOTE: Compressed font image data (DEFLATE), it requires DecompressData() function\n");
-            fprintf(txtFile, "    int %sFontDataSize = 0;\n", styleName);
-            fprintf(txtFile, "    unsigned char *data = DecompressData(%sFontData, %s_COMPRESSED_DATA_SIZE, &%sFontDataSize);\n", styleName, TextToUpper(styleName), styleName);
+            fprintf(txtFile, "    int %sFontDataSize = 0;\n", styleNameLower);
+            fprintf(txtFile, "    unsigned char *data = DecompressData(%sFontData, %s_STYLE_FONT_ATLAS_COMP_SIZE, &%sFontDataSize);\n", styleNameLower, TextToUpper(styleName), styleNameLower);
             fprintf(txtFile, "    Image imFont = { data, %i, %i, 1, %i };\n\n", imFont.width, imFont.height, imFont.format);
             //fprintf(txtFile, "    ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
 #else
-            fprintf(txtFile, "    Image imFont = { %sFontImageData, %i, %i, 1, %i };\n\n", styleName, imFont.width, imFont.height, imFont.format);
+            fprintf(txtFile, "    Image imFont = { %sFontImageData, %i, %i, 1, %i };\n\n", styleNameLower, imFont.width, imFont.height, imFont.format);
 #endif
             fprintf(txtFile, "    Font font = { 0 };\n");
             fprintf(txtFile, "    font.baseSize = %i;\n", GuiGetStyle(DEFAULT, TEXT_SIZE));
@@ -2149,12 +2216,12 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
             fprintf(txtFile, "    font.recs = (Rectangle *)RAYGUI_MALLOC(font.glyphCount*sizeof(Rectangle));\n");
-            fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.glyphCount*sizeof(Rectangle));\n\n", styleName);
+            fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.glyphCount*sizeof(Rectangle));\n\n", styleNameLower);
 
             fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
             fprintf(txtFile, "    font.glyphs = (GlyphInfo *)RAYGUI_MALLOC(font.glyphCount*sizeof(GlyphInfo));\n");
-            fprintf(txtFile, "    memcpy(font.glyphs, %sFontChars, font.glyphCount*sizeof(GlyphInfo));\n\n", styleName);
+            fprintf(txtFile, "    memcpy(font.glyphs, %sFontGlyphs, font.glyphCount*sizeof(GlyphInfo));\n\n", styleNameLower);
 
             fprintf(txtFile, "    GuiSetFont(font);\n\n");
 
