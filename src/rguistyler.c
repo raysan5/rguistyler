@@ -316,6 +316,8 @@ static bool fontDataCompressedChecked = true;       // Export font data compress
 
 static Rectangle fontWhiteRec = { 0 };              // Font white rectangle, required to be updated from window font atlas
 
+static version = 400;       // HACK: REMOVE after use!
+
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
@@ -400,11 +402,13 @@ int main(int argc, char *argv[])
         GuiLoadStyle(inFileName);
         SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
         inputFileLoaded = true;
+        strcpy(currentStyleName, GetFileNameWithoutExt(inFileName));
     }
     else
     {
         GuiLoadStyleDefault();
         customFont = GetFontDefault();
+        strcpy(currentStyleName, "default");
     }
 
     // Default light style + current style backups (used to track changes)
@@ -483,7 +487,7 @@ int main(int argc, char *argv[])
     bool windowExportActive = false;
 
     int exportFormatActive = 0;             // ComboBox file type selection
-    char styleNameText[128] = "Unnamed";    // Style name text box
+    //char styleNameText[128] = "Unnamed";    // Style name text box
     bool styleNameEditMode = false;         // Style name text box edit mode
     bool styleChunkChecked = true;          // Select to embed style as a PNG chunk (rGSf)
     //-----------------------------------------------------------------------------------
@@ -655,7 +659,7 @@ int main(int argc, char *argv[])
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
             SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
-            strcpy(styleNameText, GetFileNameWithoutExt(inFileName));
+            strcpy(currentStyleName, GetFileNameWithoutExt(inFileName));
 
             genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
@@ -668,7 +672,7 @@ int main(int argc, char *argv[])
 
             // Regenerate style table
             UnloadTexture(texStyleTable);
-            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
+            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
             texStyleTable = LoadTextureFromImage(imStyleTable);
             UnloadImage(imStyleTable);
 
@@ -691,6 +695,13 @@ int main(int argc, char *argv[])
 
             // Style header: style_name.h
             ExportStyleAsCode(TextFormat("%s/style_%s.h", styleNameLower, styleNameLower), currentStyleName);
+
+            //fontDataCompressedChecked = false;
+
+            // Style binary: style_name.old.rgs (backward compatible)
+            version = 300;
+            SaveStyle(TextFormat("%s/style_%s.old.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
+            version = 400;
 
             // Style binary: style_name.rgs
             SaveStyle(TextFormat("%s/style_%s.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
@@ -755,7 +766,7 @@ int main(int argc, char *argv[])
             {
                 // If no input/output file already loaded/saved, show save file dialog
                 exportFormatActive = STYLE_BINARY;
-                strcpy(outFileName, TextFormat("%s.rgs", TextToLower(styleNameText)));
+                strcpy(outFileName, TextFormat("%s.rgs", TextToLower(currentStyleName)));
                 showSaveStyleDialog = true;
             }
         }
@@ -954,6 +965,7 @@ int main(int argc, char *argv[])
 
         GuiSetStyle(DEFAULT, TEXT_SIZE, fontDrawSizeValue);
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
+        GuiSetStyle(DEFAULT, TEXT_LINE_SPACING, (int)(1.5f*fontDrawSizeValue));     // TODO: Expose property?
 
         // Controls selection on list view logic
         //----------------------------------------------------------------------------------
@@ -1035,7 +1047,7 @@ int main(int argc, char *argv[])
         {
             UnloadTexture(texStyleTable);
 
-            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
+            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
             texStyleTable = LoadTextureFromImage(imStyleTable);
             UnloadImage(imStyleTable);
         }
@@ -1180,8 +1192,10 @@ int main(int argc, char *argv[])
 
             // GUI: Status bar
             //----------------------------------------------------------------------------------------
-            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 160, 24 }, TextFormat("Name: %s", (changedPropCounter > 0)? styleNameText : styleNames[mainToolbarState.visualStyleActive]));
+            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 60, 24 }, "Name:"); //(changedPropCounter > 0)? currentStyleName : styleNames[mainToolbarState.visualStyleActive]));
             GuiStatusBar((Rectangle){159, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
+            
+            if (GuiTextBox((Rectangle){ 60 - 1, GetScreenHeight() - 24, 101, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
             GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", GuiGetFont().glyphCount, GuiGetFont().texture.width, GuiGetFont().texture.height));
             //----------------------------------------------------------------------------------------
@@ -1248,7 +1262,7 @@ int main(int argc, char *argv[])
                 int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
 
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 24 + 12, 106, 24 }, "Style Name:");
-                if (GuiTextBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 24 + 12, 132, 24 }, styleNameText, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
+                if (GuiTextBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 24 + 12, 132, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 12 + 48 + 8, 106, 24 }, "Style Format:");
                 GuiComboBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 12 + 48 + 8, 132, 24 }, "Binary (.rgs);Code (.h);Image (.png)", &exportFormatActive);
@@ -1391,7 +1405,6 @@ int main(int argc, char *argv[])
                             RL_FREE(codepointsClear);
 
                             windowFontAtlasState.selectedCharset = 2;
-                            windowFontAtlasState.selectedCharset = 2;
                             windowFontAtlasState.fontAtlasRegen = true;
                         }
 
@@ -1450,7 +1463,7 @@ int main(int argc, char *argv[])
 #else
                 // Consider different supported file types
                 char filters[64] = { 0 };
-                strcpy(outFileName, TextToLower(styleNameText));
+                strcpy(outFileName, TextToLower(currentStyleName));
 
                 switch (exportFormatActive)
                 {
@@ -1488,13 +1501,13 @@ int main(int argc, char *argv[])
                         {
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".h")) strcat(outFileName, ".h\0");
-                            ExportStyleAsCode(outFileName, styleNameText);
+                            ExportStyleAsCode(outFileName, currentStyleName);
                         } break;
                         case STYLE_TABLE_IMAGE:
                         {
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
-                            Image imStyleTable = GenImageStyleControlsTable(styleNameText);
+                            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
                             ExportImage(imStyleTable, outFileName);
                             UnloadImage(imStyleTable);
 
@@ -1727,7 +1740,7 @@ static unsigned char *SaveStyleToMemory(int *size)
     int dataSize = 0;
 
     char signature[5] = "rGS ";
-    short version = GUI_STYLE_RGS_VERSION;
+    //short version = GUI_STYLE_RGS_VERSION;
     short reserved = 0;
     int changedPropCounter = StyleChangesCounter(defaultStyle);
 
@@ -1834,21 +1847,38 @@ static unsigned char *SaveStyleToMemory(int *size)
         UnloadImage(imFont);
 
         // Write font recs data
-        if (fontDataCompressedChecked && (version >= 400))
+        // NOTE: Version 400 always adds the compression size parameter
+        if (version >= 400)
         {
             int recsDataCompSize = 0;
-            unsigned char *recsDataCompressed = CompressData(customFont.recs, customFont.glyphCount*sizeof(Rectangle), &recsDataCompSize);
 
-            memcpy(buffer + dataSize, &recsDataCompSize, sizeof(int));
-            dataSize += 4;
+            if (fontDataCompressedChecked)
+            {
+                unsigned char *recsDataCompressed = CompressData(customFont.recs, customFont.glyphCount*sizeof(Rectangle), &recsDataCompSize);
 
-            memcpy(buffer + dataSize, recsDataCompressed, recsDataCompSize);
-            dataSize += recsDataCompSize;
+                memcpy(buffer + dataSize, &recsDataCompSize, sizeof(int));
+                dataSize += 4;
 
-            RL_FREE(recsDataCompressed);
+                memcpy(buffer + dataSize, recsDataCompressed, recsDataCompSize);
+                dataSize += recsDataCompSize;
+
+                RL_FREE(recsDataCompressed);
+            }
+            else
+            {
+                memcpy(buffer + dataSize, &recsDataCompSize, sizeof(int));
+                dataSize += 4;
+
+                for (int i = 0; i < customFont.glyphCount; i++)
+                {
+                    memcpy(buffer + dataSize, &customFont.recs[i], sizeof(Rectangle));
+                    dataSize += sizeof(Rectangle);
+                }
+            }
         }
         else
         {
+            // Fallback for older versions, no compression and no compression size stored
             for (int i = 0; i < customFont.glyphCount; i++)
             {
                 memcpy(buffer + dataSize, &customFont.recs[i], sizeof(Rectangle));
@@ -1857,33 +1887,53 @@ static unsigned char *SaveStyleToMemory(int *size)
         }
 
         // Write font chars info data
-        if (fontDataCompressedChecked && (version >= 400))
+        // NOTE: Version 400 always adds the compression size parameter
+        if (version >= 400)
         {
-            // NOTE: We only want to save some fields from GlyphInfo struct
-            int *glyphsData = (int *)RL_MALLOC(customFont.glyphCount*4*sizeof(int));
-
-            for (int i = 0; i < customFont.glyphCount; i++)
-            {
-                glyphsData[4*i + 0] = customFont.glyphs[i].value;
-                glyphsData[4*i + 1] = customFont.glyphs[i].offsetX;
-                glyphsData[4*i + 2] = customFont.glyphs[i].offsetY;
-                glyphsData[4*i + 3] = customFont.glyphs[i].advanceX;
-            }
-
             int glyphsDataCompSize = 0;
-            unsigned char *glyphsDataCompressed = CompressData(glyphsData, customFont.glyphCount*4*sizeof(int), &glyphsDataCompSize);
 
-            memcpy(buffer + dataSize, &glyphsDataCompSize, sizeof(int));
-            dataSize += 4;
+            if (fontDataCompressedChecked)
+            {
+                // NOTE: We only want to save some fields from GlyphInfo struct
+                int *glyphsData = (int *)RL_MALLOC(customFont.glyphCount*4*sizeof(int));
 
-            memcpy(buffer + dataSize, glyphsDataCompressed, glyphsDataCompSize);
-            dataSize += glyphsDataCompSize;
+                for (int i = 0; i < customFont.glyphCount; i++)
+                {
+                    glyphsData[4*i + 0] = customFont.glyphs[i].value;
+                    glyphsData[4*i + 1] = customFont.glyphs[i].offsetX;
+                    glyphsData[4*i + 2] = customFont.glyphs[i].offsetY;
+                    glyphsData[4*i + 3] = customFont.glyphs[i].advanceX;
+                }
 
-            RL_FREE(glyphsDataCompressed);
-            RL_FREE(glyphsData);
+                unsigned char *glyphsDataCompressed = CompressData(glyphsData, customFont.glyphCount*4*sizeof(int), &glyphsDataCompSize);
+
+                memcpy(buffer + dataSize, &glyphsDataCompSize, sizeof(int));
+                dataSize += 4;
+
+                memcpy(buffer + dataSize, glyphsDataCompressed, glyphsDataCompSize);
+                dataSize += glyphsDataCompSize;
+
+                RL_FREE(glyphsDataCompressed);
+                RL_FREE(glyphsData);
+            }
+            else
+            {
+                memcpy(buffer + dataSize, &glyphsDataCompSize, sizeof(int));
+                dataSize += 4;
+
+                for (int i = 0; i < customFont.glyphCount; i++)
+                {
+                    memcpy(buffer + dataSize, &customFont.glyphs[i].value, sizeof(int));
+                    memcpy(buffer + dataSize + 4, &customFont.glyphs[i].offsetX, sizeof(int));
+                    memcpy(buffer + dataSize + 8, &customFont.glyphs[i].offsetY, sizeof(int));
+                    memcpy(buffer + dataSize + 12, &customFont.glyphs[i].advanceX, sizeof(int));
+                    dataSize += 16;
+                }
+            }
         }
         else
         {
+            // Fallback for older versions, no compression and no compression size stored
             for (int i = 0; i < customFont.glyphCount; i++)
             {
                 memcpy(buffer + dataSize, &customFont.glyphs[i].value, sizeof(int));
@@ -1995,13 +2045,41 @@ static int SaveStyle(const char *fileName, int format)
             // Write some description comments
             fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
             fprintf(rgsFile, "# Provided info:\n");
-            fprintf(rgsFile, "#    f fontGenSize fontSpacing \"fontFileName\"\n");
+            fprintf(rgsFile, "#    f fontGenSize charsetFileName fontFileName\n");
             fprintf(rgsFile, "#    p <controlId> <propertyId> <propertyValue>  Property description\n#\n");
 
             if (customFontLoaded)
             {
+                // Save charset into an external file
+                // NOTE: Only saving charset if not basic one (95 codepoints)
+                // WARNING: codepointList and codepointListCount are global variables in gui_window_font_atlas module
+                if (codepointListCount > 95)
+                {
+                    char *textData = (char *)RL_CALLOC(1024*1024, 1);    // Allocate 1MB for text data
+
+                    const char *value = NULL;
+                    int valueSize = 0;
+
+                    for (int i = 0, k = 0; i < codepointListCount; i++, k += valueSize)
+                    {
+                        value = CodepointToUTF8(codepointList[i], &valueSize);
+
+                        for (int c = 0; c < valueSize; c++) textData[k + c] = value[c];
+                    }
+
+                    // Save charset data
+                    SaveFileText(TextFormat("%s/charset.txt", GetDirectoryPath(fileName)), textData);
+
+                    RL_FREE(textData);
+                }
+
                 fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n#\n");
-                fprintf(rgsFile, "f %i %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING), GetFileName(inFontFileName));
+
+                if (FileExists(TextFormat("%s/charset.txt", GetDirectoryPath(fileName))))   // Check charset.txt saved successfully
+                {
+                    fprintf(rgsFile, "f %i %s %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), "charset.txt", GetFileName(inFontFileName));
+                }
+                else fprintf(rgsFile, "f %i 0 %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GetFileName(inFontFileName));
             }
 
             // Save DEFAULT properties that changed
@@ -2061,7 +2139,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "// StyleAsCode exporter v2.0 - Style data exported as a values array            //\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// USAGE: On init call: GuiLoadStyle%s();                             //\n", TextToPascal(styleName));
+        fprintf(txtFile, "// USAGE: On init call: GuiLoadStyle%s();                                   //\n", TextToPascal(styleName));
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/raygui                        //\n");
         fprintf(txtFile, "// feedback and support:       ray[at]raylibtech.com                            //\n");
@@ -2255,13 +2333,13 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 // Draw controls table image
 static Image GenImageStyleControlsTable(const char *styleName)
 {
-    #define TABLE_LEFT_PADDING      15
+    #define TABLE_LEFT_PADDING      12
     #define TABLE_TOP_PADDING       20
 
     #define TABLE_CELL_HEIGHT       40
-    #define TABLE_CELL_PADDING       5          // Control padding inside cell
+    #define TABLE_CELL_PADDING       8          // Control padding inside cell
 
-    #define TABLE_CONTROLS_COUNT    12
+    #define TABLE_CONTROLS_COUNT    13
 
     enum TableControlType {
         TYPE_LABEL = 0,
@@ -2271,6 +2349,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         TYPE_SLIDER,
         TYPE_SLIDERBAR,
         TYPE_PROGRESSBAR,
+        TYPE_TOGGLESLIDER,
         TYPE_COMBOBOX,
         TYPE_DROPDOWNBOX,
         TYPE_TEXTBOX,
@@ -2287,6 +2366,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         "SLIDER",
         "SLIDERBAR",
         "PROGRESSBAR",
+        "TOGGLESLIDER",
         "COMBOBOX",
         "DROPDOWNBOX",
         "TEXTBOX",      // TEXTBOXMULTI
@@ -2303,11 +2383,12 @@ static Image GenImageStyleControlsTable(const char *styleName)
         100,    // SLIDER
         100,    // SLIDERBAR
         100,    // PROGRESSBAR
+        200,    // TOGGLESLIDER
         140,    // COMBOBOX,
         160,    // DROPDOWNBOX
         100,    // TEXTBOX
         100,    // VALUEBOX
-        100,    // SPINNER
+        101,    // SPINNER
     };
 
     int tableStateNameWidth = 100;   // First column with state name width
@@ -2336,8 +2417,7 @@ static Image GenImageStyleControlsTable(const char *styleName)
         ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
         // Draw style title
-        DrawText("raygui style:  ", TABLE_LEFT_PADDING, 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-        DrawText(TextFormat("%s", styleName), TABLE_LEFT_PADDING + MeasureText("raygui style:  ", 10), 20, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL)));
+        GuiLabel((Rectangle){ TABLE_LEFT_PADDING, 15, 200, 20 }, TextFormat("raygui style: %s", styleName));
 
         // Draw left column
         //----------------------------------------------------------------------------------------
@@ -2371,7 +2451,6 @@ static Image GenImageStyleControlsTable(const char *styleName)
             rec.y += TABLE_CELL_HEIGHT/2;
             rec.height = TABLE_CELL_HEIGHT;
 
-            bool tempBool = false;
             float tempFloat = 40.0f;
 
             // Draw control 4 states: DISABLED, NORMAL, FOCUSED, PRESSED
@@ -2380,13 +2459,16 @@ static Image GenImageStyleControlsTable(const char *styleName)
                 // Draw grid lines: control state
                 GuiGroupBox(rec, NULL);
 
+                bool tempBool = false;
+                int tempInt = 0;
+
                 GuiSetState(j);
                     // Draw control centered correctly in grid
                     switch (i)
                     {
-                        case TYPE_LABEL: GuiLabelButton((Rectangle){ rec.x, rec.y, controlWidth[i], 40 }, "Label"); break;
-                        case TYPE_BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "Button"); break;
-                        case TYPE_TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "Toggle", &tempBool); break;
+                        case TYPE_LABEL: GuiLabelButton((Rectangle){ rec.x, rec.y, controlWidth[i], 40 }, "#10#Label"); break;
+                        case TYPE_BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#2#Button"); break;
+                        case TYPE_TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#39#Toggle", &tempBool); break;
                         case TYPE_CHECKBOX:
                         {
                             GuiCheckBox((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "NoCheck", &tempBool);
@@ -2403,8 +2485,17 @@ static Image GenImageStyleControlsTable(const char *styleName)
                             GuiProgressBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, &tempFloat, 0, 100);
                             GuiSetState(j);
                         } break;
-                        case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "ComboBox;ComboBox", 0); break;
-                        case TYPE_DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "DropdownBox;DropdownBox", &dropdownActive, false); break;
+                        case TYPE_TOGGLESLIDER: 
+                        {
+                            GuiSetStyle(SLIDER, SLIDER_PADDING, 2);
+                            GuiToggleSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i]/2 - TABLE_CELL_PADDING, 24 }, "#87#OFF;#83#ON", &tempInt);
+                            DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+                            tempInt = 1;
+                            GuiToggleSlider((Rectangle){ rec.x + rec.width/2 + TABLE_CELL_PADDING, rec.y + rec.height/2 - 24/2, controlWidth[i]/2 - TABLE_CELL_PADDING, 24 }, "#87#OFF;#83#ON", &tempInt);
+                            GuiSetStyle(SLIDER, SLIDER_PADDING, 1);
+                        } break;
+                        case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#40#ComboBox;ComboBox", 0); break;
+                        case TYPE_DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#41#DropdownBox;DropdownBox", &dropdownActive, false); break;
                         case TYPE_TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "text box", 32, false); break;
                         case TYPE_VALUEBOX: GuiValueBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, NULL, &value, 0, 100, false); break;
                         case TYPE_SPINNER: GuiSpinner((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, NULL, &value, 0, 100, false); break;
@@ -2421,8 +2512,10 @@ static Image GenImageStyleControlsTable(const char *styleName)
         }
 
         // Draw copyright and software info (bottom-right)
-        DrawText("raygui style table automatically generated with rGuiStyler", TABLE_LEFT_PADDING, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
-        DrawText("rGuiStyler created by raylib technologies (@raylibtech)", tableWidth - MeasureText("rGuiStyler created by raylib technologies (@raylibtech)", 10) - 20, tableHeight - 30, 10, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
+        GuiLabel((Rectangle){ TABLE_LEFT_PADDING, tableHeight - 26, 400, 10 }, "raygui style table automatically generated with rGuiStyler");
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
+        GuiLabel((Rectangle){ tableWidth - 400 - TABLE_LEFT_PADDING, tableHeight - 26, 400, 10 }, "rGuiStyler created by raylib technologies (@raylibtech)");
+        GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 
     EndTextureMode();
     //--------------------------------------------------------------------------------------------
