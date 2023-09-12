@@ -6,11 +6,11 @@ A simple and easy-to-use [raygui](https://github.com/raysan5/raygui) styles edit
 
 Useful for tools style customization. The best tool companion for [rGuiLayout](https://raylibtech.itch.io/rguilayout) and [rGuiIcons](https://raylibtech.itch.io/rguiicons).
 
-rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rguistyler) and it can also be downloaded as a **standalone tool** for _Windows_ and _Linux_ with some extra features.
+rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rguistyler) and it can also be downloaded as a **standalone tool** for `Windows`, `Linux` and `macOS` with some extra features.
 
 <br>
 
-_NOTE: This tool is itended to be used with [**raygui 3.5-dev**](https://github.com/raysan5/raygui)_
+**NOTE: Latest `rGuiStyler 5.0` release is intended to be used with [`raygui 4.0`](https://github.com/raysan5/raygui/releases/tag/4.0)) release.**
 
 ## rGuiStyler Features
 
@@ -18,11 +18,12 @@ _NOTE: This tool is itended to be used with [**raygui 3.5-dev**](https://github.
  - **Style preview** in real time with individual test controls
  - **Style templates** available to start customizing new styles
  - Selectable controls state: **NORMAL, FOCUSED, PRESSED, DISABLED**
- - Save and load as binary style file `.rgs` (font embedded!)
- - Export style as an embeddable **code file** (`.h`) (font embedded!)
+ - Save and load as binary style file `.rgs` (with font embedded!)
+ - Export style as an embeddable **code file** (`.h`) (with font embedded!)
  - Export style as a `.png` **controls table image** for showcase
- - Embed style as custom `rGSf` png chunk (rgs file data)
+ - Embed style as png image chunk: `rGSf` (rgs file data)
  - Import, configure and preview **style fonts** (`.ttf`/`.otf`)
+ - Load custom font charset for the style (Unicode codepoints)
  - Color palette for quick color save/selection
  - **12 custom style examples** included
  
@@ -34,7 +35,7 @@ _NOTE: This tool is itended to be used with [**raygui 3.5-dev**](https://github.
 
 ## rGuiStyler Screenshot
 
-![rGuiStyler](screenshots/rguistyler_v400_light_shot01.png)
+![rGuiStyler](screenshots/rguistyler_v500_light_shot01.png)
  
 ## rGuiStyler Usage
 
