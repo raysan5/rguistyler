@@ -423,6 +423,9 @@ int main(int argc, char *argv[])
     // Style table variables
     Texture texStyleTable = { 0 };
     float styleTablePositionX = 0.0f;
+    float styleTableOffsetX = 0.0f;
+    float prevStyleTablePositionX = 0.0f;
+    bool styleTablePanningMode = false;
 
     // Style required variables
     bool saveChangesRequired = false;     // Flag to notice save changes are required
@@ -1227,9 +1230,31 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (mainToolbarState.viewStyleTableActive && (mainToolbarState.prevViewStyleTableActive == mainToolbarState.viewStyleTableActive))
             {
+                // Style table panning with mouse logic
+                if (CheckCollisionPointRec(GetMousePosition(), (Rectangle){ 0, screenHeight/2 - texStyleTable.height/2, GetScreenWidth(), texStyleTable.height }))
+                {
+                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                    {
+                        styleTablePanningMode = true;
+                        styleTableOffsetX = GetMousePosition().x;
+                        prevStyleTablePositionX = styleTablePositionX;
+                    }
+                }
+                if (styleTablePanningMode)
+                {
+                    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) styleTablePositionX = prevStyleTablePositionX - (GetMouseX() - styleTableOffsetX);
+
+                    if (styleTablePositionX < 0) styleTablePositionX = 0;
+                    else if (styleTablePositionX > (texStyleTable.width - GetScreenWidth())) styleTablePositionX = texStyleTable.width - GetScreenWidth();
+
+                    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) styleTablePanningMode = false;
+                }
+
                 DrawTexture(texStyleTable, -styleTablePositionX, screenHeight/2 - texStyleTable.height/2, WHITE);
                 DrawRectangleLines(-styleTablePositionX, screenHeight/2 - texStyleTable.height/2, texStyleTable.width, texStyleTable.height, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                 GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, &styleTablePositionX, 0.0f, (float)texStyleTable.width - screenWidth);
+            
+                if (GuiButton((Rectangle){ GetScreenWidth() - 36, 8, 24, 24 }, "#113#")) mainToolbarState.viewStyleTableActive = false;
             }
             //----------------------------------------------------------------------------------------
 
