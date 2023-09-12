@@ -34,10 +34,10 @@
 *
 *   VERSIONS HISTORY:
 *       5.0  (12-Sep-2023)  UPDATED: Using **raygui 4.0** and latest raylib 4.6-dev
+*                           ADDED: Support macOS builds (x86_64 + arm64)
 *                           ADDED: New font atlas generation window
 *                           ADDED: Shapes white rectangle definition visually
 *                           ADDED: Support for custom font codepoints (Unicode)
-*                           ADDED: Support macOS builds (x86_64 + arm64)
 *                           ADDED: Style table movement controls
 *                           REVIEWED: Style table controls exposed
 *                           REVIEWED: Regenerated tool imagery
