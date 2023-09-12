@@ -108,7 +108,7 @@
 #define TOOL_VERSION            "5.0"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
 #define TOOL_DESCRIPTION_BREAK  "A simple and easy-to-use raygui\nstyles editor"
-#define TOOL_RELEASE_DATE       "May.2023"
+#define TOOL_RELEASE_DATE       "Sep.2023"
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
 #define SUPPORT_COMPRESSED_FONT_ATLAS
@@ -309,14 +309,14 @@ static unsigned int defaultStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 // Current active style template
 static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
 
-static char *currentStyleName[64] = { 0 };          // Current style name
+static char currentStyleName[64] = { 0 };           // Current style name
 
 static bool fontEmbeddedChecked = true;             // Select to embed font into style file
 static bool fontDataCompressedChecked = true;       // Export font data compressed (recs and glyphs)
 
 static Rectangle fontWhiteRec = { 0 };              // Font white rectangle, required to be updated from window font atlas
 
-static version = 400;       // HACK: REMOVE after use!
+//static short version = 400;       // HACK: REMOVE after use!
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -509,7 +509,7 @@ int main(int argc, char *argv[])
     
     bool showLoadFontDialog = false;
     bool showLoadCharsetDialog = false;
-    bool showFontAtlasWindow = false;
+    //bool showFontAtlasWindow = false;
     bool showSaveFontAtlasDialog = false;
     //-----------------------------------------------------------------------------------
 
@@ -688,6 +688,7 @@ int main(int argc, char *argv[])
         // Toggle screen size (x2) mode
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
 
+/*
         // Save all required materials for current style (convenience functionality)
         // TODO: Review shortcut and exposure of this function
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
@@ -727,6 +728,7 @@ int main(int argc, char *argv[])
             // Select LABEL, BORDER_COLOR_FOCUSED -> Update required?
             TakeScreenshot(TextFormat("%s/screenshot.png", styleNameLower));
         }
+*/
 #endif
         // New style file, previous in/out files registeres are reseted
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
@@ -1140,7 +1142,9 @@ int main(int argc, char *argv[])
 
                 if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
                 if (currentSelectedControl == DEFAULT) GuiDisable();
-                GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propertyValue, 0, 20);
+                float propValueFloat = (float)propertyValue;
+                GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propValueFloat, 0, 20);
+                propertyValue = (int)propValueFloat;
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
@@ -1765,7 +1769,7 @@ static unsigned char *SaveStyleToMemory(int *size)
     int dataSize = 0;
 
     char signature[5] = "rGS ";
-    //short version = GUI_STYLE_RGS_VERSION;
+    short version = GUI_STYLE_RGS_VERSION;
     short reserved = 0;
     int changedPropCounter = StyleChangesCounter(defaultStyle);
 
@@ -1879,7 +1883,7 @@ static unsigned char *SaveStyleToMemory(int *size)
 
             if (fontDataCompressedChecked)
             {
-                unsigned char *recsDataCompressed = CompressData(customFont.recs, customFont.glyphCount*sizeof(Rectangle), &recsDataCompSize);
+                unsigned char *recsDataCompressed = CompressData((unsigned char *)customFont.recs, customFont.glyphCount*sizeof(Rectangle), &recsDataCompSize);
 
                 memcpy(buffer + dataSize, &recsDataCompSize, sizeof(int));
                 dataSize += 4;
@@ -1930,7 +1934,7 @@ static unsigned char *SaveStyleToMemory(int *size)
                     glyphsData[4*i + 3] = customFont.glyphs[i].advanceX;
                 }
 
-                unsigned char *glyphsDataCompressed = CompressData(glyphsData, customFont.glyphCount*4*sizeof(int), &glyphsDataCompSize);
+                unsigned char *glyphsDataCompressed = CompressData((unsigned char *)glyphsData, customFont.glyphCount*4*sizeof(int), &glyphsDataCompSize);
 
                 memcpy(buffer + dataSize, &glyphsDataCompSize, sizeof(int));
                 dataSize += 4;
