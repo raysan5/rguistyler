@@ -33,12 +33,14 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       5.0  (10-Jun-2023)  ADDED: New font atlas generation window
+*       5.0  (12-Sep-2023)  UPDATED: Using **raygui 4.0** and latest raylib 4.6-dev
+*                           ADDED: New font atlas generation window
 *                           ADDED: Shapes white rectangle definition visually
 *                           ADDED: Support for custom font codepoints (Unicode)
 *                           ADDED: Support macOS builds (x86_64 + arm64)
+*                           ADDED: Style table movement controls
+*                           REVIEWED: Style table controls exposed
 *                           REVIEWED: Regenerated tool imagery
-*                           UPDATED: Using raylib 4.6-dev and raygui 4.0
 * 
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
