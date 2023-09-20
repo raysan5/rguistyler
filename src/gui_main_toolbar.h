@@ -200,8 +200,11 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     state->btnRandomStylePressed = GuiButton((Rectangle) { state->anchorFile.x + 12 + 72 + 12 + 28, state->anchorFile.y + 8, 24, 24 }, "#78#");
 
     // Edit options
+    int prevState = GuiGetState();
+    if (prevState == STATE_DISABLED) GuiSetState(STATE_NORMAL);
     GuiLabel((Rectangle){ state->anchorEdit.x + 10, 8, 35, 24 }, "State:");
     if (GuiDropdownBox((Rectangle){ state->anchorEdit.x + 12 + 40, 8, 124, 24 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &state->propsStateActive, state->propsStateEditMode)) state->propsStateEditMode = !state->propsStateEditMode;
+    if (prevState == STATE_DISABLED) GuiSetState(STATE_DISABLED);
 
     // Tool options
     GuiSetTooltip("Show style table image (F5)");

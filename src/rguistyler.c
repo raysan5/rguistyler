@@ -1211,13 +1211,13 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", GuiGetFont().glyphCount, GuiGetFont().texture.width, GuiGetFont().texture.height));
             //----------------------------------------------------------------------------------------
 
+            // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
+            if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
+
             // GUI: Main toolbar panel
             //----------------------------------------------------------------------------------
             GuiMainToolbar(&mainToolbarState);
             //----------------------------------------------------------------------------------
-
-            // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
-            if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
 
             // WARNING: Before drawing the windows, we unlock them
             GuiUnlock();
@@ -1262,7 +1262,7 @@ int main(int argc, char *argv[])
                 DrawRectangleLines(-styleTablePositionX, screenHeight/2 - texStyleTable.height/2, texStyleTable.width, texStyleTable.height, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                 GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, &styleTablePositionX, 0.0f, (float)texStyleTable.width - screenWidth);
             
-                if (GuiButton((Rectangle){ GetScreenWidth() - 36, 8, 24, 24 }, "#113#")) mainToolbarState.viewStyleTableActive = false;
+                if (GuiButton((Rectangle){ screenWidth - 36, screenHeight/2 - texStyleTable.height/2 + 8, 24, 24 }, "#113#")) mainToolbarState.viewStyleTableActive = false;
             }
             //----------------------------------------------------------------------------------------
 
