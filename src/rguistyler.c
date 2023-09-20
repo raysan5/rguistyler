@@ -1465,6 +1465,7 @@ int main(int argc, char *argv[])
                 {
                     // Save file: outFileName
                     // Check for valid extension and make sure it is
+                    if (outFileName[0] == '\0') strcpy(outFileName, "style.rgs");   // Check for empty name
                     if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
 
                     // Save style file (text or binary)
@@ -1494,6 +1495,8 @@ int main(int argc, char *argv[])
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
                 int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 60, 280, 112 }, "#7#Export raygui style file...", NULL, "#7#Export", outFileName, 512, NULL);
 #else
+                if (outFileName[0] == '\0') strcpy(outFileName, "style");   // Check for empty name
+
                 // Consider different supported file types
                 char filters[64] = { 0 };
                 strcpy(outFileName, TextToLower(currentStyleName));
@@ -1584,6 +1587,7 @@ int main(int argc, char *argv[])
                 {
                     // Save file: outFileName
                     // Check for valid extension and make sure it is
+                    if (outFileName[0] == '\0') strcpy(outFileName, "style_font.png");   // Check for empty name
                     if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
 
                     Image image = LoadImageFromTexture(windowFontAtlasState.texFont);
