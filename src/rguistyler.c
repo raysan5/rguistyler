@@ -1214,13 +1214,13 @@ int main(int argc, char *argv[])
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
             if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
 
+            // WARNING: Before drawing the windows, we unlock them
+            GuiUnlock();
+            
             // GUI: Main toolbar panel
             //----------------------------------------------------------------------------------
             GuiMainToolbar(&mainToolbarState);
             //----------------------------------------------------------------------------------
-
-            // WARNING: Before drawing the windows, we unlock them
-            GuiUnlock();
 
             // Set default NORMAL state for all controls not in main screen
             GuiSetState(STATE_NORMAL);
