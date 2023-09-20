@@ -33,14 +33,16 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       5.0  (12-Sep-2023)  UPDATED: Using **raygui 4.0** and latest raylib 4.6-dev
-*                           ADDED: Support macOS builds (x86_64 + arm64)
+*       5.0  (20-Sep-2023)  ADDED: Support macOS builds (x86_64 + arm64)
 *                           ADDED: New font atlas generation window
 *                           ADDED: Shapes white rectangle definition visually
 *                           ADDED: Support for custom font codepoints (Unicode)
 *                           ADDED: Style table movement controls
+*                           ADDED: Style name input in status bar
 *                           REVIEWED: Style table controls exposed
 *                           REVIEWED: Regenerated tool imagery
+*                           REVIEWED: Disabled sponsors window at launch
+*                           UPDATED: Using raygui 4.0 and latest raylib 4.6-dev
 * 
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
@@ -410,7 +412,7 @@ int main(int argc, char *argv[])
     {
         GuiLoadStyleDefault();
         customFont = GetFontDefault();
-        strcpy(currentStyleName, "default");
+        strcpy(currentStyleName, "Light");
     }
 
     // Default light style + current style backups (used to track changes)
