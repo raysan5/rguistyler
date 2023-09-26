@@ -43,22 +43,22 @@
 *                           REVIEWED: Regenerated tool imagery
 *                           REVIEWED: Disabled sponsors window at launch
 *                           UPDATED: Using raygui 4.0 and latest raylib 4.6-dev
-* 
+*
 *       4.2  (13-Dec-2022)  ADDED: Welcome window with sponsors info
 *                           REDESIGNED: Main toolbar to add tooltips
 *                           REVIEWED: Help window implementation
-* 
+*
 *       4.1  (10-Oct-2022)  ADDED: Sponsor window for tools support
 *                           ADDED: Random style generator button (experimental)
 *                           UPDATED: Using raylib 4.5-dev and raygui 3.5-dev
-* 
+*
 *       4.0  (02-Oct-2022)  ADDED: Main toolbar, for consistency with other tools
 *                           ADDED: Multiple new styles as templates
 *                           ADDED: Export style window with new options
 *                           REVIEWED: Layout metrics
 *                           UPDATED: Using raylib 4.2 and raygui 3.2
 *                           Source code re-licensed to open-source
-* 
+*
 *       3.5  (29-Dec-2021)  UPDATED: Using raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
@@ -510,7 +510,7 @@ int main(int argc, char *argv[])
     bool showLoadStyleDialog = false;
     bool showSaveStyleDialog = false;
     bool showExportStyleDialog = false;
-    
+
     bool showLoadFontDialog = false;
     bool showLoadCharsetDialog = false;
     //bool showFontAtlasWindow = false;
@@ -1205,7 +1205,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 60, 24 }, "Name:"); //(changedPropCounter > 0)? currentStyleName : styleNames[mainToolbarState.visualStyleActive]));
             GuiStatusBar((Rectangle){159, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
-            
+
             if (GuiTextBox((Rectangle){ 60 - 1, GetScreenHeight() - 24, 101, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
             GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", GuiGetFont().glyphCount, GuiGetFont().texture.width, GuiGetFont().texture.height));
@@ -1216,7 +1216,7 @@ int main(int argc, char *argv[])
 
             // WARNING: Before drawing the windows, we unlock them
             GuiUnlock();
-            
+
             // GUI: Main toolbar panel
             //----------------------------------------------------------------------------------
             GuiMainToolbar(&mainToolbarState);
@@ -1261,7 +1261,7 @@ int main(int argc, char *argv[])
                 DrawTexture(texStyleTable, -styleTablePositionX, screenHeight/2 - texStyleTable.height/2, WHITE);
                 DrawRectangleLines(-styleTablePositionX, screenHeight/2 - texStyleTable.height/2, texStyleTable.width, texStyleTable.height, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                 GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, &styleTablePositionX, 0.0f, (float)texStyleTable.width - screenWidth);
-            
+
                 if (GuiButton((Rectangle){ screenWidth - 36, screenHeight/2 - texStyleTable.height/2 + 8, 24, 24 }, "#113#")) mainToolbarState.viewStyleTableActive = false;
             }
             //----------------------------------------------------------------------------------------
@@ -1308,7 +1308,7 @@ int main(int argc, char *argv[])
                 if (exportFormatActive != 2) GuiDisable();
                 GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24 + 24, 16, 16 }, "Style embedded as rGSf chunk", &styleChunkChecked);
                 GuiEnable();
-                
+
                 if (result == 1)    // Export button pressed
                 {
                     windowExportActive = false;
@@ -2319,11 +2319,11 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             /*
             // Assign global recs/glyphs data to loaded font
             // NOTE: DO NOT DO THAT! GuiLoadStyleDefault() frees memory for styles loaded (other than default)
-            // it can be used to reset/free any previous loaded style to default before loading a new one 
+            // it can be used to reset/free any previous loaded style to default before loading a new one
             fprintf(txtFile, "    // Assign char recs data to global fontRecs\n");
             fprintf(txtFile, "    // WARNING: Font char rec data can not be freed\n");
             fprintf(txtFile, "    font.recs = %sFontRecs;\n\n", styleName);
-            
+
             fprintf(txtFile, "    // Assign font char info data to global fontChars\n");
             fprintf(txtFile, "    // WARNING: Font char info data can not be freed\n");
             fprintf(txtFile, "    font.glyphs = %sFontChars;\n\n", styleName);
@@ -2515,14 +2515,14 @@ static Image GenImageStyleControlsTable(const char *styleName)
                         } break;
                         case TYPE_SLIDER: GuiSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, &tempFloat, 0, 100); break;
                         case TYPE_SLIDERBAR: GuiSliderBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, &tempFloat, 0, 100); break;
-                        case TYPE_PROGRESSBAR: 
+                        case TYPE_PROGRESSBAR:
                         {
                             if (j < 3) GuiSetState(0);
                             tempFloat = 60;
                             GuiProgressBar((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 10/2, controlWidth[i], 10 }, NULL, NULL, &tempFloat, 0, 100);
                             GuiSetState(j);
                         } break;
-                        case TYPE_TOGGLESLIDER: 
+                        case TYPE_TOGGLESLIDER:
                         {
                             GuiSetStyle(SLIDER, SLIDER_PADDING, 2);
                             GuiToggleSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i]/2 - TABLE_CELL_PADDING, 24 }, "#87#OFF;#83#ON", &tempInt);
