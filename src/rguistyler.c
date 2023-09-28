@@ -313,14 +313,20 @@ static unsigned int defaultStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 // Current active style template
 static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)] = { 0 };
 
-static char currentStyleName[64] = { 0 };           // Current style name
+static bool fontEmbeddedChecked = true;         // Select to embed font into style file
+static bool fontDataCompressedChecked = true;   // Export font data compressed (recs and glyphs)
 
-static bool fontEmbeddedChecked = true;             // Select to embed font into style file
-static bool fontDataCompressedChecked = true;       // Export font data compressed (recs and glyphs)
+static Rectangle fontWhiteRec = { 0 };          // Font white rectangle, required to be updated from window font atlas
 
-static Rectangle fontWhiteRec = { 0 };              // Font white rectangle, required to be updated from window font atlas
+static char currentStyleName[64] = { 0 };       // Current style name
 
-//static short version = 400;       // HACK: REMOVE after use!
+// NOTE: Max length depends on OS, in Windows MAX_PATH = 256
+static char inFileName[512] = { 0 };            // Input file name (required in case of drag & drop over executable)
+static char outFileName[512] = { 0 };           // Output file name (required for file save/export)
+
+static bool inputFileLoaded = false;            // Flag to detect an input file has been loaded (required for fast save)
+static bool outputFileCreated = false;          // Flag to detect if an output file has been created (required for fast save)
+
 
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
@@ -346,12 +352,6 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    
 //------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-    char inFileName[512] = { 0 };       // Input file name (required in case of drag & drop over executable)
-    char outFileName[512] = { 0 };      // Output file name (required for file save/export)
-
-    bool inputFileLoaded = false;       // Flag to detect an input file has been loaded (required for fast save)
-    bool outputFileCreated = false;     // Flag to detect if an output file has been created (required for fast save)
-
 #if !defined(_DEBUG)
     SetTraceLogLevel(LOG_NONE);         // Disable raylib trace log messsages
 #endif
@@ -461,6 +461,8 @@ int main(int argc, char *argv[])
 
     bool screenSizeActive = false;
     bool controlsWindowActive = true;   // Show window: controls
+
+    int styleFrameCounter = 0;
     //-----------------------------------------------------------------------------------
 
     // GUI: Main toolbar panel (file and visualization)
@@ -903,6 +905,10 @@ int main(int argc, char *argv[])
             // Update color boxes palette
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
         }
+
+        //styleFrameCounter++;
+        //if ((styleFrameCounter%120) == 0) mainToolbarState.visualStyleActive++;
+        //if (mainToolbarState.visualStyleActive > 11) mainToolbarState.visualStyleActive = 0;
 
         // Visual options logic
         if (mainToolbarState.visualStyleActive != mainToolbarState.prevVisualStyleActive)
@@ -1675,9 +1681,6 @@ static void ProcessCommandLine(int argc, char *argv[])
 {
     // CLI required variables
     bool showUsageInfo = false;         // Toggle command line usage info
-
-    char inFileName[512] = { 0 };       // Input file name
-    char outFileName[512] = { 0 };      // Output file name
     int outputFormat = STYLE_BINARY;    // Formats: STYLE_BINARY, STYLE_AS_CODE, STYLE_TABLE_IMAGE
 
     // Process command line arguments
