@@ -2001,7 +2001,7 @@ static int SaveStyle(const char *fileName, int format)
 {
     #define GUI_STYLE_RGS_VERSION   400
 
-    int success = false;
+    int result = 0;
 
     if (format == STYLE_BINARY)
     {
@@ -2070,7 +2070,7 @@ static int SaveStyle(const char *fileName, int format)
         int rgsFileDataSize = 0;
         unsigned char *rgsFileData = SaveStyleToMemory(&rgsFileDataSize);
 
-        success = SaveFileData(fileName, rgsFileData, rgsFileDataSize);
+        result = SaveFileData(fileName, rgsFileData, rgsFileDataSize);
 
         RL_FREE(rgsFileData);
     }
@@ -2148,11 +2148,11 @@ static int SaveStyle(const char *fileName, int format)
             }
 
             fclose(rgsFile);
-            success = true;
+            result = 1;
         }
     }
 
-    return success;
+    return result;
 }
 
 // Export gui style as (ready-to-use) code file
