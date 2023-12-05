@@ -29,7 +29,7 @@
 PLATFORM              ?= PLATFORM_DESKTOP
 
 # Define project variables
-PROJECT_NAME          ?= rtoolname
+PROJECT_NAME          ?= rguistyler
 PROJECT_VERSION       ?= 1.0
 PROJECT_BUILD_PATH    ?= .
 
@@ -301,7 +301,7 @@ endif
 # Define source code files required
 #------------------------------------------------------------------------------------------------
 PROJECT_SOURCE_FILES ?= \
-    rtoolname.c \
+    $(PROJECT_NAME).c \
     external/tinyfiledialogs.c
 
 # Define all object files from source files
