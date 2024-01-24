@@ -100,8 +100,6 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state);
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
-extern Rectangle texShapesRec;
-
 // Basic charset (95 codepoints)
 static const char *charsetBasic = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
 // Default charset: ISO-8859-15 (213 codepoints)
@@ -159,7 +157,7 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
 
     // Custom variables initialization
     state.texFont = (Texture2D){ 0 };
-    state.fontWhiteRec = texShapesRec;
+    state.fontWhiteRec = GetShapesTextureRectangle();
     state.selectedCharset = 0;
     state.prevSelectedCharset = 0;
     state.externalCodepointList = NULL;
