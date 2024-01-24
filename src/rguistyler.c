@@ -836,8 +836,9 @@ int main(int argc, char *argv[])
             }
 
             // Select visual style
-            if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
-            else if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
+            // TODO: WARNING: Issue with export window text box cursor movement 
+            //if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
+            //else if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
             if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = MAX_GUI_STYLES_AVAILABLE - 1;
             else if (mainToolbarState.visualStyleActive >(MAX_GUI_STYLES_AVAILABLE - 1)) mainToolbarState.visualStyleActive = 0;
         }
@@ -953,10 +954,16 @@ int main(int argc, char *argv[])
 
             mainToolbarState.prevVisualStyleActive = mainToolbarState.visualStyleActive;
 
-            windowFontAtlasState.fontWhiteRec = texShapesRec;
+            windowFontAtlasState.fontWhiteRec = GetShapesTextureRectangle();
 
             memset(currentStyleName, 0, 64);
             strcpy(currentStyleName, styleNames[mainToolbarState.visualStyleActive]);
+
+            // Regenerate image table
+            UnloadTexture(texStyleTable);
+            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
+            texStyleTable = LoadTextureFromImage(imStyleTable);
+            UnloadImage(imStyleTable);
         }
 
         fontWhiteRec = windowFontAtlasState.fontWhiteRec;   // Register fontWhiteRec from fontAtlas window
@@ -1061,7 +1068,6 @@ int main(int argc, char *argv[])
         if (mainToolbarState.viewStyleTableActive && (mainToolbarState.prevViewStyleTableActive != mainToolbarState.viewStyleTableActive))
         {
             UnloadTexture(texStyleTable);
-
             Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
             texStyleTable = LoadTextureFromImage(imStyleTable);
             UnloadImage(imStyleTable);
