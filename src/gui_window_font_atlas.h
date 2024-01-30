@@ -385,9 +385,10 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         state->btnSaveFontAtlasPressed = GuiButton((Rectangle){ state->anchor.x + 12 + 28 + 28, state->anchor.y + 32, 24, 24 }, "#12#");
 
         if (!FileExists(inFontFileName)) GuiDisable();
+        GuiDisableTooltip();
         prevFontGenSizeValue = state->fontGenSizeValue;
         if (GuiSpinner((Rectangle){ state->anchor.x + 164, state->anchor.y + 32, 96, 24 }, "Gen Size: ", &state->fontGenSizeValue, 0, 100, state->fontGenSizeEditMode)) state->fontGenSizeEditMode = !state->fontGenSizeEditMode;
-        
+        GuiEnableTooltip();
         //GuiSetTooltip("Regenerate font atlas");
         //if (GuiButton((Rectangle){ state->anchor.x + 210, state->anchor.y + 32, 80, 24 }, "#142#Regen")) state->fontAtlasRegen = true;
         GuiEnable();
