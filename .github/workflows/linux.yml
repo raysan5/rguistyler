@@ -59,6 +59,7 @@ jobs:
         ls ${{ env.PROJECT_BUILD_PATH }}
         cp ${{ env.PROJECT_BUILD_PATH }}/${{ env.PROJECT_NAME }} ${{ env.PROJECT_RELEASE_PATH }}
         cp ${{ env.PROJECT_NAME }}/README.md ${{ env.PROJECT_RELEASE_PATH }}
+        cp ${{ env.PROJECT_NAME }}/LICENSE ${{ env.PROJECT_RELEASE_PATH }}
         mkdir ${{ env.PROJECT_RELEASE_PATH }}/styles
         cp ${{ env.PROJECT_NAME }}/styles/style_jungle.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
         cp ${{ env.PROJECT_NAME }}/styles/style_candy.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
@@ -76,7 +77,7 @@ jobs:
 
     # Issue: Double zip: https://github.com/actions/upload-artifact/issues/39
     - name: Upload Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PROJECT_RELEASE_PATH }}.zip
         path: ./${{ env.PROJECT_RELEASE_PATH }}.zip
