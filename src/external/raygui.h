@@ -142,6 +142,7 @@
 *
 *   VERSIONS HISTORY:
 *       4.1-dev (2024)    Current dev version...
+*                         ADDED: guiControlExclusiveMode and guiControlExclusiveRec for exclusive modes
 *
 *       4.0 (12-Sep-2023) ADDED: GuiToggleSlider()
 *                         ADDED: GuiColorPickerHSV() and GuiColorPanelHSV()
@@ -443,7 +444,6 @@
     } Font;
 #endif
 
-
 // Style property
 // NOTE: Used when exporting style as code for convenience
 typedef struct GuiStyleProp {
@@ -547,7 +547,6 @@ typedef enum {
 // At this moment TEXT_PADDING and TEXT_ALIGNMENT is configured and saved per control while
 // TEXT_SIZE, TEXT_SPACING, TEXT_LINE_SPACING, TEXT_ALIGNMENT_VERTICAL, TEXT_WRAP_MODE are global and
 // should be configured by user as needed while defining the UI layout
-
 
 // Gui extended properties depend on control
 // NOTE: RAYGUI_MAX_PROPS_EXTENDED properties (by default, max 8 properties)
@@ -700,7 +699,6 @@ RAYGUIAPI char **GuiLoadIcons(const char *fileName, bool loadIconsName); // Load
 RAYGUIAPI void GuiDrawIcon(int iconId, int posX, int posY, int pixelSize, Color color); // Draw icon using pixel size at specified position
 #endif
 
-
 // Controls
 //----------------------------------------------------------------------------------------------------------
 // Container/separator controls, useful for controls organization
@@ -745,7 +743,6 @@ RAYGUIAPI int GuiColorBarHue(Rectangle bounds, const char *text, float *value); 
 RAYGUIAPI int GuiColorPickerHSV(Rectangle bounds, const char *text, Vector3 *colorHsv);                // Color Picker control that avoids conversion to RGB on each call (multiple color controls)
 RAYGUIAPI int GuiColorPanelHSV(Rectangle bounds, const char *text, Vector3 *colorHsv);                 // Color Panel control that updates Hue-Saturation-Value color value, used by GuiColorPickerHSV()
 //----------------------------------------------------------------------------------------------------------
-
 
 #if !defined(RAYGUI_NO_ICONS)
 
@@ -1292,9 +1289,9 @@ static unsigned int guiIcons[RAYGUI_ICON_MAX_ICONS*RAYGUI_ICON_DATA_ELEMENTS] = 
     0x00000000, 0x0042007e, 0x40027fc2, 0x40024002, 0x40024002, 0x40024002, 0x7ffe4002, 0x00000000,      // ICON_FOLDER
     0x3ff00000, 0x201c2010, 0x20042004, 0x20042004, 0x20042004, 0x20042004, 0x20042004, 0x00003ffc,      // ICON_FILE
     0x1ff00000, 0x20082008, 0x17d02fe8, 0x05400ba0, 0x09200540, 0x23881010, 0x2fe827c8, 0x00001ff0,      // ICON_SAND_TIMER
-    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,      // ICON_220
-    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,      // ICON_221
-    0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,      // ICON_222
+    0x01800000, 0x02400240, 0x05a00420, 0x09900990, 0x11881188, 0x21842004, 0x40024182, 0x00003ffc,      // ICON_WARNING
+    0x7ffe0000, 0x4ff24002, 0x4c324ff2, 0x4f824c02, 0x41824f82, 0x41824002, 0x40024182, 0x00007ffe,      // ICON_HELP_BOX
+    0x7ffe0000, 0x41824002, 0x40024182, 0x41824182, 0x41824182, 0x41824182, 0x40024182, 0x00007ffe,      // ICON_INFO_BOX
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,      // ICON_223
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,      // ICON_224
     0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,      // ICON_225
@@ -3560,6 +3557,7 @@ int GuiColorBarHue(Rectangle bounds, const char *text, float *hue)
 //      float GuiColorBarAlpha(Rectangle bounds, float alpha)
 //      float GuiColorBarHue(Rectangle bounds, float value)
 // NOTE: bounds define GuiColorPanel() size
+// NOTE: this picker converts RGB to HSV, which can cause the Hue control to jump. If you have this problem, consider using the HSV variant instead
 int GuiColorPicker(Rectangle bounds, const char *text, Color *color)
 {
     int result = 0;
@@ -3572,6 +3570,7 @@ int GuiColorPicker(Rectangle bounds, const char *text, Color *color)
     Rectangle boundsHue = { (float)bounds.x + bounds.width + GuiGetStyle(COLORPICKER, HUEBAR_PADDING), (float)bounds.y, (float)GuiGetStyle(COLORPICKER, HUEBAR_WIDTH), (float)bounds.height };
     //Rectangle boundsAlpha = { bounds.x, bounds.y + bounds.height + GuiGetStyle(COLORPICKER, BARS_PADDING), bounds.width, GuiGetStyle(COLORPICKER, BARS_THICK) };
 
+    // NOTE: this conversion can cause low hue-resolution, if the r, g and b value are very similar, which causes the hue bar to shift around when only the GuiColorPanel is used.
     Vector3 hsv = ConvertRGBtoHSV(RAYGUI_CLITERAL(Vector3){ (*color).r/255.0f, (*color).g/255.0f, (*color).b/255.0f });
 
     GuiColorBarHue(boundsHue, NULL, &hsv.x);
@@ -3712,7 +3711,6 @@ int GuiColorPanelHSV(Rectangle bounds, const char *text, Vector3 *colorHsv)
 
     return result;
 }
-
 
 // Message Box control
 int GuiMessageBox(Rectangle bounds, const char *title, const char *message, const char *buttons)
@@ -3930,7 +3928,6 @@ void GuiDisableTooltip(void) { guiTooltip = false; }
 
 // Set tooltip string
 void GuiSetTooltip(const char *tooltip) { guiTooltipPtr = tooltip; }
-
 
 //----------------------------------------------------------------------------------
 // Styles loading functions
@@ -5530,7 +5527,6 @@ static int GetCodepointNext(const char *text, int *codepointSize)
         codepoint = ptr[0];
         *codepointSize = 1;
     }
-
 
     return codepoint;
 }
