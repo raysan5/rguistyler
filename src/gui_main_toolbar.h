@@ -72,7 +72,7 @@ typedef struct {
     // Info options
     bool btnHelpPressed;
     bool btnAboutPressed;
-    bool btnSponsorPressed;
+    bool btnIssuePressed;
     bool btnUserPressed;
 
     // Custom variables
@@ -161,7 +161,7 @@ GuiMainToolbarState InitGuiMainToolbar(void)
     // Info options
     state.btnHelpPressed = false;
     state.btnAboutPressed = false;
-    state.btnSponsorPressed = false;
+    state.btnIssuePressed = false;
     state.btnUserPressed = false;
     
     // Custom variables
@@ -223,11 +223,11 @@ void GuiMainToolbar(GuiMainToolbarState *state)
 
     // Info options
     GuiSetTooltip("Show help window (F1)");
-    state->btnHelpPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 72 - 8, state->anchorRight.y + 8, 24, 24 }, "#193#"); 
+    state->btnHelpPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 72 - 8, state->anchorRight.y + 8, 24, 24 }, "#221#"); 
     GuiSetTooltip("Show info window (F2)");
-    state->btnAboutPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 48 - 4, state->anchorRight.y + 8, 24, 24 }, "#191#");
-    GuiSetTooltip("Show sponsors window (F3)");
-    state->btnSponsorPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 24, state->anchorRight.y + 8, 24, 24 }, "#186#");
+    state->btnAboutPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 48 - 4, state->anchorRight.y + 8, 24, 24 }, "#222#");
+    GuiSetTooltip("Report an issue (F3)");
+    state->btnIssuePressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 24, state->anchorRight.y + 8, 24, 24 }, "#220#");
 
     GuiSetTooltip(NULL);
 }

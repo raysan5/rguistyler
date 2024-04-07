@@ -354,7 +354,6 @@
     <ClInclude Include="..\..\..\src\gui_window_about.h" />
     <ClInclude Include="..\..\..\src\gui_window_font_atlas.h" />
     <ClInclude Include="..\..\..\src\gui_window_help.h" />
-    <ClInclude Include="..\..\..\src\gui_window_sponsor.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\rguistyler.c" />

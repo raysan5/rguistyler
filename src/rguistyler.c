@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v5.0 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v5.1 - A simple and easy-to-use raygui styles editor
 *
 *   FEATURES:
 *       - Global and control specific styles edition
@@ -33,6 +33,11 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
+*       5.1  (06-Apr-2024)  ADDED: Issue report window
+*                           REMOVED: Sponsors window
+*                           REVIEWED: Main toolbar and help window
+*                           UPDATED: Using raylib 5.1-dev and raygui 4.1-dev
+* 
 *       5.0  (20-Sep-2023)  ADDED: Support macOS builds (x86_64 + arm64)
 *                           ADDED: New font atlas generation window
 *                           ADDED: Shapes white rectangle definition visually
@@ -62,8 +67,8 @@
 *       3.5  (29-Dec-2021)  UPDATED: Using raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
-*       raylib 4.6-dev          - Windowing/input management and drawing
-*       raygui 4.0              - Immediate-mode GUI controls with custom styling and icons
+*       raylib 5.1-dev          - Windowing/input management and drawing
+*       raygui 4.1-dev          - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.1                - PNG chunks management
 *       tinyfiledialogs 3.13.3  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
@@ -109,10 +114,10 @@
 
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
-#define TOOL_VERSION            "5.0"
+#define TOOL_VERSION            "5.1"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
 #define TOOL_DESCRIPTION_BREAK  "A simple and easy-to-use raygui\nstyles editor"
-#define TOOL_RELEASE_DATE       "Sep.2023"
+#define TOOL_RELEASE_DATE       "Apr.2024"
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
 #define SUPPORT_COMPRESSED_FONT_ATLAS
@@ -140,9 +145,6 @@
 
 #define GUI_WINDOW_ABOUT_IMPLEMENTATION
 #include "gui_window_about.h"               // GUI: About Window
-
-#define GUI_WINDOW_SPONSOR_IMPLEMENTATION
-#include "gui_window_sponsor.h"             // GUI: Sponsor Window
 
 #define GUI_FILE_DIALOGS_IMPLEMENTATION
 #include "gui_file_dialogs.h"               // GUI: File Dialogs
@@ -488,12 +490,12 @@ int main(int argc, char *argv[])
 
     // GUI: Sponsor Window
     //-----------------------------------------------------------------------------------
-    GuiWindowSponsorState windowSponsorState = InitGuiWindowSponsor();
+    bool showIssueReportWindow = false;
     //-----------------------------------------------------------------------------------
 
     // GUI: Export Window
     //-----------------------------------------------------------------------------------
-    bool windowExportActive = false;
+    bool showExportWindow = false;
 
     int exportFormatActive = 0;             // ComboBox file type selection
     //char styleNameText[128] = "Unnamed";    // Style name text box
@@ -504,7 +506,7 @@ int main(int argc, char *argv[])
     // GUI: Exit Window
     //-----------------------------------------------------------------------------------
     bool closeWindow = false;
-    bool windowExitActive = false;
+    bool showExitWindow = false;
     //-----------------------------------------------------------------------------------
 
     // GUI: Custom file dialogs
@@ -547,7 +549,7 @@ int main(int argc, char *argv[])
     {
         // WARNING: ASINCIFY requires this line,
         // it contains the call to emscripten_sleep() for PLATFORM_WEB
-        if (WindowShouldClose()) windowExitActive = true;
+        if (WindowShouldClose()) showExitWindow = true;
 
         // Dropped files logic
         //----------------------------------------------------------------------------------
@@ -783,7 +785,7 @@ int main(int argc, char *argv[])
         }
 
         // Show dialog: export style file (.rgs, .png, .h)
-        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) || mainToolbarState.btnExportFilePressed) windowExportActive = true;
+        if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_E)) || mainToolbarState.btnExportFilePressed) showExportWindow = true;
 
         // Make sure shortcuts do not interfere with text-editing boxes
         if (!textHexColorEditMode && !genFontSizeEditMode && !fontSpacingEditMode && !fontSampleEditMode && !styleNameEditMode)
@@ -794,8 +796,8 @@ int main(int argc, char *argv[])
             // Toggle window: about
             if (IsKeyPressed(KEY_F2)) windowAboutState.windowActive = !windowAboutState.windowActive;
 
-            // Toggle window: sponsor
-            if (IsKeyPressed(KEY_F3)) windowSponsorState.windowActive = !windowSponsorState.windowActive;
+            // Toggle window: issue
+            if (IsKeyPressed(KEY_F3)) showIssueReportWindow = !showIssueReportWindow;
 
             // Show window: style table image
             if (IsKeyPressed(KEY_F5)) mainToolbarState.viewStyleTableActive = !mainToolbarState.viewStyleTableActive;
@@ -808,12 +810,12 @@ int main(int argc, char *argv[])
             {
                 if (windowHelpState.windowActive) windowHelpState.windowActive = false;
                 else if (windowAboutState.windowActive) windowAboutState.windowActive = false;
-                else if (windowSponsorState.windowActive) windowSponsorState.windowActive = false;
+                else if (showIssueReportWindow) showIssueReportWindow = false;
                 else if (windowFontAtlasState.windowActive) windowFontAtlasState.windowActive = false;
                 else if (mainToolbarState.viewStyleTableActive) mainToolbarState.viewStyleTableActive = false;
-                else if (windowExportActive) windowExportActive = false;
+                else if (showExportWindow) showExportWindow = false;
             #if defined(PLATFORM_DESKTOP)
-                else if (changedPropCounter > 0) windowExitActive = !windowExitActive;
+                else if (changedPropCounter > 0) showExitWindow = !showExitWindow;
                 else closeWindow = true;
             #else
                 else if (showLoadStyleDialog) showLoadStyleDialog = false;
@@ -969,9 +971,9 @@ int main(int argc, char *argv[])
         fontWhiteRec = windowFontAtlasState.fontWhiteRec;   // Register fontWhiteRec from fontAtlas window
 
         // Help options logic
-        if (mainToolbarState.btnHelpPressed) windowHelpState.windowActive = true;           // Help button logic
-        if (mainToolbarState.btnAboutPressed) windowAboutState.windowActive = true;         // About window button logic
-        if (mainToolbarState.btnSponsorPressed) windowSponsorState.windowActive = true;     // User sponsor logic
+        if (mainToolbarState.btnHelpPressed) windowHelpState.windowActive = true;
+        if (mainToolbarState.btnAboutPressed) windowAboutState.windowActive = true;
+        if (mainToolbarState.btnIssuePressed) showIssueReportWindow = true;
         //----------------------------------------------------------------------------------
 
         // Basic program flow logic
@@ -1117,14 +1119,14 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
 
         // WARNING: Some windows should lock the main screen controls when shown
-        if (windowHelpState.windowActive ||
-            windowAboutState.windowActive ||
-            windowSponsorState.windowActive ||
-            windowFontAtlasState.windowActive ||
-            mainToolbarState.viewStyleTableActive ||
+        if (mainToolbarState.viewStyleTableActive ||
             mainToolbarState.propsStateEditMode ||
-            windowExitActive ||
-            windowExportActive ||
+            windowHelpState.windowActive ||
+            windowAboutState.windowActive ||
+            windowFontAtlasState.windowActive ||
+            showExitWindow ||
+            showExportWindow ||
+            showIssueReportWindow ||
             showLoadStyleDialog ||
             showSaveStyleDialog ||
             showExportStyleDialog) GuiLock();
@@ -1292,16 +1294,26 @@ int main(int argc, char *argv[])
             GuiWindowAbout(&windowAboutState);
             //----------------------------------------------------------------------------------------
 
-            // GUI: Sponsor Window
+            // GUI: Issue Report Window
             //----------------------------------------------------------------------------------------
-            windowSponsorState.windowBounds.x = (float)screenWidth/2 - windowSponsorState.windowBounds.width/2;
-            windowSponsorState.windowBounds.y = (float)screenHeight/2 - windowSponsorState.windowBounds.height/2;
-            GuiWindowSponsor(&windowSponsorState);
+            if (showIssueReportWindow)
+            {
+                Rectangle messageBox = { (float)GetScreenWidth()/2 - 300/2, (float)GetScreenHeight()/2 - 190/2 - 20, 300, 190 };
+                int result = GuiMessageBox(messageBox, "#220#Report Issue", 
+                    "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub");
+
+                if (result == 1)    // Report issue pressed
+                {
+                    OpenURL("https://github.com/raysan5/rguistyler/issues");
+                    showIssueReportWindow = false;
+                }
+                else if (result == 0) showIssueReportWindow = false;
+            }
             //----------------------------------------------------------------------------------------
 
             // GUI: Export Window
             //----------------------------------------------------------------------------------------
-            if (windowExportActive)
+            if (showExportWindow)
             {
                 Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 220 };
                 int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
@@ -1323,20 +1335,20 @@ int main(int argc, char *argv[])
 
                 if (result == 1)    // Export button pressed
                 {
-                    windowExportActive = false;
+                    showExportWindow = false;
                     showExportStyleDialog = true;
                 }
-                else if (result == 0) windowExportActive = false;
+                else if (result == 0) showExportWindow = false;
             }
             //----------------------------------------------------------------------------------
 
             // GUI: Exit Window
             //----------------------------------------------------------------------------------------
-            if (windowExitActive)
+            if (showExitWindow)
             {
                 int result = GuiMessageBox((Rectangle){ (float)screenWidth/2 - 125, (float)screenHeight/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
 
-                if ((result == 0) || (result == 2)) windowExitActive = false;
+                if ((result == 0) || (result == 2)) showExitWindow = false;
                 else if (result == 1) closeWindow = true;
             }
             //----------------------------------------------------------------------------------------
@@ -2209,8 +2221,8 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         {
             if (defaultStyle[i] != GuiGetStyle(0, i))
             {
-                if (i < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { 0, %i, 0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsText[i]);
-                else fprintf(txtFile, "    { 0, %i, 0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsExtText[i - RAYGUI_MAX_PROPS_BASE]);
+                if (i < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsText[i]);
+                else fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsExtText[i - RAYGUI_MAX_PROPS_BASE]);
             }
         }
 
@@ -2221,8 +2233,8 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             {
                 if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
                 {
-                    if (j < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { %i, %i, 0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
-                    else fprintf(txtFile, "    { %i, %i, 0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], TextFormat("EXTENDED%02i", j - RAYGUI_MAX_PROPS_BASE + 1));
+                    if (j < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiPropsText[j]);
+                    else fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], TextFormat("EXTENDED%02i", j - RAYGUI_MAX_PROPS_BASE + 1));
                 }
             }
         }
