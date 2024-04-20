@@ -1273,7 +1273,7 @@ int main(int argc, char *argv[])
                 }
 
                 DrawTexture(texStyleTable, -styleTablePositionX, screenHeight/2 - texStyleTable.height/2, WHITE);
-                DrawRectangleLines(-styleTablePositionX, screenHeight/2 - texStyleTable.height/2, texStyleTable.width, texStyleTable.height, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+                DrawRectangleLinesEx((Rectangle){ -styleTablePositionX, screenHeight/2 - texStyleTable.height/2, texStyleTable.width, texStyleTable.height }, 1.0f, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                 GuiSlider((Rectangle){ 0, screenHeight/2 + texStyleTable.height/2, screenWidth, 15 }, NULL, NULL, &styleTablePositionX, 0.0f, (float)texStyleTable.width - screenWidth);
 
                 if (GuiButton((Rectangle){ screenWidth - 36, screenHeight/2 - texStyleTable.height/2 + 8, 24, 24 }, "#113#")) mainToolbarState.viewStyleTableActive = false;
