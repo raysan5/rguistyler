@@ -37,7 +37,7 @@
 *                           REMOVED: Sponsors window
 *                           REVIEWED: Main toolbar and help window
 *                           UPDATED: Using raylib 5.1-dev and raygui 4.1-dev
-* 
+*
 *       5.0  (20-Sep-2023)  ADDED: Support macOS builds (x86_64 + arm64)
 *                           ADDED: New font atlas generation window
 *                           ADDED: Shapes white rectangle definition visually
@@ -838,7 +838,7 @@ int main(int argc, char *argv[])
             }
 
             // Select visual style
-            // TODO: WARNING: Issue with export window text box cursor movement 
+            // TODO: WARNING: Issue with export window text box cursor movement
             //if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
             //else if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
             if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = MAX_GUI_STYLES_AVAILABLE - 1;
@@ -887,7 +887,7 @@ int main(int argc, char *argv[])
 
             // Update style default color values
             GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
-            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7)/10.0f, (fabsf(0.5f - hsvNormal.z) < 0.2f)? 1.0f + ((GetRandomValue(3, 5)/10.0f) * fabsf(0.5f - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7)/10.0f, (fabsf(0.5f - hsvNormal.z) < 0.2f)? 1.0f + ((GetRandomValue(3, 5)/10.0f)*fabsf(0.5f - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
             GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
 
             GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, hsvFocused.y, hsvFocused.z)));
@@ -1299,7 +1299,7 @@ int main(int argc, char *argv[])
             if (showIssueReportWindow)
             {
                 Rectangle messageBox = { (float)GetScreenWidth()/2 - 300/2, (float)GetScreenHeight()/2 - 190/2 - 20, 300, 190 };
-                int result = GuiMessageBox(messageBox, "#220#Report Issue", 
+                int result = GuiMessageBox(messageBox, "#220#Report Issue",
                     "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub");
 
                 if (result == 1)    // Report issue pressed
