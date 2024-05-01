@@ -12,7 +12,7 @@
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2022 raylib technologies (@raylibtech) / Ramon Santamaria (@raysan5)
+*   Copyright (c) 2022-2024 raylib technologies (@raylibtech) / Ramon Santamaria (@raysan5)
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -142,7 +142,7 @@ GuiWindowHelpState InitGuiWindowHelp(void)
     state.windowActive = false;
     state.supportDrag = false;
 
-    state.windowBounds = (Rectangle){ GetScreenWidth()/2 - 360/2, 0, 360, 0 };
+    state.windowBounds = (Rectangle){ (float)GetScreenWidth()/2 - 360/2, 0, 360, 0 };
     state.panOffset = (Vector2){ 0, 0 };
     state.dragMode = false;
 
@@ -226,7 +226,7 @@ void GuiWindowHelp(GuiWindowHelpState *state)
 
         // Draw help info and separation lines
         // WARNING: We only scissor if scrolling is required, scissor mode forces a new draw call
-        if (state->contentHeight > (state->windowBounds.height - 24)) BeginScissorMode(scissor.x, scissor.y, scissor.width + 2, scissor.height);
+        if (state->contentHeight > (state->windowBounds.height - 24)) BeginScissorMode((int)scissor.x, (int)scissor.y, (int)scissor.width + 2, (int)scissor.height);
 
             for (int i = 0; i < GUIHELPWINDOW_MAX_LINES; i++)
             {
