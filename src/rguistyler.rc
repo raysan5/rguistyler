@@ -1,27 +1,24 @@
 GLFW_ICON ICON "rguistyler.ico"
-
 1 VERSIONINFO
-FILEVERSION     5,0,0,0
-PRODUCTVERSION  5,0,0,0
+FILEVERSION     5,1,0,0
+PRODUCTVERSION  5,1,0,0
 BEGIN
   BLOCK "StringFileInfo"
   BEGIN
-	//BLOCK "080904E4" 	// English UK
-    BLOCK "040904E4"	// English US
+    BLOCK "040904E4"    // English US
     BEGIN
-	  VALUE "CompanyName", "raylib technologies"
+      VALUE "CompanyName", "raylib technologies"
       VALUE "FileDescription", "rGuiStyler - A simple and easy-to-use raygui styles editor"
-      VALUE "FileVersion", "5.0"
+      VALUE "FileVersion", "5.1"
       VALUE "InternalName", "rguistyler"
-      VALUE "LegalCopyright", "(c) 2023 raylib technologies (@raylibtech)"
-      //VALUE "OriginalFilename", "raylib_app.exe"
+      VALUE "LegalCopyright", "(c) 2024 raylib technologies (@raylibtech)"
+      VALUE "OriginalFilename", "rguistyler"
       VALUE "ProductName", "rGuiStyler"
-      VALUE "ProductVersion", "5.0"
+      VALUE "ProductVersion", "5.1"
     END
   END
   BLOCK "VarFileInfo"
   BEGIN
-	//VALUE "Translation", 0x809, 1252	// English UK
-    VALUE "Translation", 0x409, 1252	// English US
+    VALUE "Translation", 0x409, 1252    // English US
   END
 END
