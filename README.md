@@ -35,7 +35,7 @@ rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtec
 
 ## rGuiStyler Screenshot
 
-![rGuiStyler](screenshots/rguistyler_v500_light_shot01.png)
+![rGuiStyler](screenshots/rguistyler_v500_shot01.png)
  
 ## rGuiStyler Usage
 
