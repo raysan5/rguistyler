@@ -202,7 +202,7 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     // Edit options
     int prevState = GuiGetState();
     if (prevState == STATE_DISABLED) GuiSetState(STATE_NORMAL);
-    GuiLabel((Rectangle){ state->anchorEdit.x + 10, 8, 35, 24 }, "State:");
+    GuiLabel((Rectangle){ state->anchorEdit.x + 10, 8, 60, 24 }, "State:");
     if (GuiDropdownBox((Rectangle){ state->anchorEdit.x + 12 + 40, 8, 124, 24 }, "NORMAL;FOCUSED;PRESSED;DISABLED", &state->propsStateActive, state->propsStateEditMode)) state->propsStateEditMode = !state->propsStateEditMode;
     if (prevState == STATE_DISABLED) GuiSetState(STATE_DISABLED);
 
