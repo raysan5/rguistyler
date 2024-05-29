@@ -329,7 +329,6 @@ static char outFileName[512] = { 0 };           // Output file name (required fo
 static bool inputFileLoaded = false;            // Flag to detect an input file has been loaded (required for fast save)
 static bool outputFileCreated = false;          // Flag to detect if an output file has been created (required for fast save)
 
-
 //----------------------------------------------------------------------------------
 // Module Functions Declaration
 //----------------------------------------------------------------------------------
@@ -339,15 +338,14 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 #endif
 
 // Load/Save/Export data functions
-static unsigned char *SaveStyleToMemory(int *size);         // Save style to memory buffer
 static int SaveStyle(const char *fileName, int format);     // Save style binary file binary (.rgs)
-static void ExportStyleAsCode(const char *fileName, const char *styleName); // Export gui style as color palette code
+static unsigned char *SaveStyleToMemory(int *size);         // Save style to memory buffer
+static void ExportStyleAsCode(const char *fileName, const char *styleName); // Export gui style as properties array
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
 // Auxiliar functions
 static int StyleChangesCounter(unsigned int *refStyle);     // Count changed properties in current style (comparing to ref style)
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color);    // Gui color box
-
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -2173,7 +2171,7 @@ static int SaveStyle(const char *fileName, int format)
     return result;
 }
 
-// Export gui style as (ready-to-use) code file
+// Export gui style as properties array
 // NOTE: Code file already implements a function to load style
 static void ExportStyleAsCode(const char *fileName, const char *styleName)
 {
