@@ -404,7 +404,7 @@ int main(int argc, char *argv[])
     if ((inFileName[0] != '\0') && (IsFileExtension(inFileName, ".rgs")))
     {
         GuiLoadStyle(inFileName);
-        SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+        SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
         inputFileLoaded = true;
         strcpy(currentStyleName, GetFileNameWithoutExt(inFileName));
     }
@@ -562,7 +562,7 @@ int main(int argc, char *argv[])
                 GuiLoadStyle(droppedFiles.paths[0]);    // Load new style properties
 
                 strcpy(inFileName, droppedFiles.paths[0]);
-                SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+                SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
                 inputFileLoaded = true;
 
                 fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
@@ -667,7 +667,7 @@ int main(int argc, char *argv[])
             GuiLoadStyle(stylesList[styleCounter]);  // Load new style properties
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
-            SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+            SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
             strcpy(currentStyleName, GetFileNameWithoutExt(inFileName));
 
             genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
@@ -759,17 +759,10 @@ int main(int argc, char *argv[])
             if (inputFileLoaded || outputFileCreated)
             {
                 // Priority to output file saving
-                if (outputFileCreated)
-                {
-                    SaveStyle(outFileName, STYLE_BINARY);
-                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(outFileName)));
-                }
-                else
-                {
-                    SaveStyle(inFileName, STYLE_BINARY);
-                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
-                }
+                if (outputFileCreated) SaveStyle(outFileName, STYLE_BINARY);
+                else SaveStyle(inFileName, STYLE_BINARY);
 
+                SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
                 saveChangesRequired = false;
             }
             else
@@ -1364,7 +1357,7 @@ int main(int argc, char *argv[])
                 {
                     // Load style
                     GuiLoadStyle(inFileName);
-                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(inFileName)));
+                    SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
                     inputFileLoaded = true;
 
                     // Load .rgs custom font in font
@@ -1495,7 +1488,7 @@ int main(int argc, char *argv[])
                     outputFileCreated = true;
 
                     // Set window title for future savings
-                    SetWindowTitle(TextFormat("%s v%s - %s", toolName, toolVersion, GetFileName(outFileName)));
+                    SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(outFileName)));
 
                 #if defined(PLATFORM_WEB)
                     // Download file from MEMFS (emscripten memory filesystem)
