@@ -67,10 +67,10 @@
 *       3.5  (29-Dec-2021)  UPDATED: Using raylib 4.0 and raygui 3.1
 *
 *   DEPENDENCIES:
-*       raylib 5.1-dev          - Windowing/input management and drawing
-*       raygui 4.1-dev          - Immediate-mode GUI controls with custom styling and icons
+*       raylib 5.5-dev          - Windowing/input management and drawing
+*       raygui 4.5-dev          - Immediate-mode GUI controls with custom styling and icons
 *       rpng 1.1                - PNG chunks management
-*       tinyfiledialogs 3.13.3  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
+*       tinyfiledialogs 3.18    - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   BUILDING:
 *     - Windows (MinGW-w64):
