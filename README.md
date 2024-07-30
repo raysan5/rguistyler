@@ -1,18 +1,14 @@
-<img align="left" src="logo/rguistyler_256x256.png" width=256>
-
-# rGuiStyler
+# `rGuiStyler`
 
 A simple and easy-to-use [raygui](https://github.com/raysan5/raygui) styles editor.
 
 Useful for tools style customization. The best tool companion for [rGuiLayout](https://raylibtech.itch.io/rguilayout) and [rGuiIcons](https://raylibtech.itch.io/rguiicons).
 
-rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rguistyler) and it can also be downloaded as a **standalone tool** for `Windows`, `Linux` and `macOS` with some extra features.
-
-<br>
+`rGuiStyler` can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rguistyler) and it can also be downloaded as a **standalone tool** for `Windows`, `Linux` and `macOS` with some extra features.
 
 **NOTE: Latest `rGuiStyler 5.0` release is intended to be used with [`raygui 4.0`](https://github.com/raysan5/raygui/releases/tag/4.0) release.**
 
-## rGuiStyler Features
+## Features
 
  - **Global and control specific styles edition**
  - **Style preview** in real time with individual test controls
@@ -25,19 +21,16 @@ rGuiStyler can be used for free as a [WebAssembly online tool](https://raylibtec
  - Import, configure and preview **style fonts** (`.ttf`/`.otf`)
  - Load custom font charset for the style (Unicode codepoints)
  - Color palette for quick color save/selection
- - **12 custom style examples** included
- 
-### rGuiStyler Standalone Additional Features
-
+ - **+10 custom style examples** included for reference
  - Command-line support for `.rgs`/`.h`/`.png` batch conversion
- - Command-line support for `.rgs` plain text file export
  - **Completely portable (single-file, no-dependencies)**
+ - **Free and open source** 
 
-## rGuiStyler Screenshot
+## Screenshot
 
 ![rGuiStyler](screenshots/rguistyler_v500_shot01.png)
  
-## rGuiStyler Usage
+## Usage
 
 The tool is quite intuitive, the expected steps to follow are: 
  1. Choose the control to edit from first ListView (`DEFAULT` referes to global style for all controls)
@@ -52,7 +45,7 @@ Once the desired style has been created, press the `Export Style` button to save
 
  > rguistyler.exe --help
 
-## rGuiStyler License
+## License
 
 `rGuiStyler` source code is distributed as **open source**, licensed under an unmodified [zlib/libpng license](LICENSE). 
 
