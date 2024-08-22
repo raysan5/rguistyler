@@ -178,8 +178,9 @@
 #elif defined __GNUC__
     #include <sys/types.h>
     #include <sys/stat.h>                   // Required for: mkdir()
-    #define MKDIR(dir)  mkdir(dir, 0777)
+    #define MKDIR(dir)  mkdir(dir)          // OLD: mkdir(dir, 0777)
 #endif
+
 
 //----------------------------------------------------------------------------------
 // Defines and Macros
