@@ -691,7 +691,7 @@ int main(int argc, char *argv[])
         {
             char styleNameLower[64] = { 0 };
             strcpy(styleNameLower, TextToLower(currentStyleName));
-            if (!DirectoryExists(styleNameLower)) MKDIR(styleNameLower);
+            if (!DirectoryExists(styleNameLower)) MakeDirectory(styleNameLower);
 
             // Style header: style_name.h
             ExportStyleAsCode(TextFormat("%s/style_%s.h", styleNameLower, styleNameLower), currentStyleName);
