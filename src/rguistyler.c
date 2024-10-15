@@ -172,16 +172,6 @@
 #include <string.h>                         // Required for: strcmp(), memcpy()
 #include <stdio.h>                          // Required for: fopen(), fclose(), fread()...
 
-#if defined(_MSC_VER) && ((defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__))
-    #include <direct.h>                     // Required for: _mkdir()
-    #define MKDIR(dir)  _mkdir(dir)
-#elif defined __GNUC__
-    #include <sys/types.h>
-    #include <sys/stat.h>                   // Required for: mkdir()
-    #define MKDIR(dir)  mkdir(dir)          // OLD: mkdir(dir, 0777)
-#endif
-
-
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------
@@ -694,7 +684,6 @@ int main(int argc, char *argv[])
 #if defined(PLATFORM_DESKTOP)
         // Toggle screen size (x2) mode
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
-
 /*
         // Save all required materials for current style (convenience functionality)
         // TODO: Review shortcut and exposure of this function
