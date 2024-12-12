@@ -216,7 +216,7 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     GuiLabel((Rectangle){ state->anchorVisuals.x + 10, state->anchorVisuals.y + 8, 60, 24 }, "Style:");
     GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 40);
     GuiSetTooltip("Select base style template");
-    GuiComboBox((Rectangle){ state->anchorVisuals.x + 8 + 48, state->anchorVisuals.y + 8, 120, 24 }, "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete", &state->visualStyleActive);
+    GuiComboBox((Rectangle){ state->anchorVisuals.x + 8 + 48, state->anchorVisuals.y + 8, 120, 24 }, "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete;Amber;RLTech", &state->visualStyleActive);
     GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 32);
     GuiSetTooltip("Reload current style template (LCTRL+R)");
     state->btnReloadStylePressed = GuiButton((Rectangle){ state->anchorVisuals.x + 8 + 48 + 120 + 8, state->anchorVisuals.y + 8, 24, 24 }, "#76#");
