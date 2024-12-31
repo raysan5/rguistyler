@@ -11,7 +11,7 @@ BEGIN
       VALUE "FileDescription", "rGuiStyler | A simple and easy-to-use raygui styles editor"
       VALUE "FileVersion", "5.1"
       VALUE "InternalName", "rguistyler"
-      VALUE "LegalCopyright", "(c) 2024 raylib technologies (@raylibtech)"
+      VALUE "LegalCopyright", "(c) 2025 raylib technologies (@raylibtech)"
       VALUE "OriginalFilename", "rguistyler"
       VALUE "ProductName", "rGuiStyler"
       VALUE "ProductVersion", "5.1"
