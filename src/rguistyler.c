@@ -213,7 +213,7 @@ static const char *toolDescription = TOOL_DESCRIPTION;
 
 // Controls name text
 // NOTE: Some styles are shared by multiple controls
-static const char *guiControlText[RAYGUI_MAX_CONTROLS] = {
+static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
     "DEFAULT",
     "LABEL",        // LABELBUTTON
     "BUTTON",
@@ -332,7 +332,7 @@ static void ProcessCommandLine(int argc, char *argv[]);     // Process command l
 
 // Load/Save/Export data functions
 static int SaveStyle(const char *fileName, int format);     // Save style binary file binary (.rgs)
-static unsigned char *SaveStyleToMemory(int *size);         // Save style to memory buffer
+static char *SaveStyleToMemory(int *size);                  // Save style to memory buffer
 static void ExportStyleAsCode(const char *fileName, const char *styleName); // Export gui style as properties array
 static Image GenImageStyleControlsTable(const char *styleName); // Draw controls table image
 
@@ -1775,11 +1775,11 @@ static void ProcessCommandLine(int argc, char *argv[])
 //--------------------------------------------------------------------------------------------
 // Save current style to memory data array
 // WARNING: Using globals: fontEmbeddedChecked, fontDataCompressed
-static unsigned char *SaveStyleToMemory(int *size)
+static char *SaveStyleToMemory(int *size)
 {
     #define GUI_STYLE_RGS_VERSION   400
 
-    unsigned char *buffer = (unsigned char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
+    char *buffer = (char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
     int dataSize = 0;
 
     char signature[5] = "rGS ";
