@@ -225,7 +225,7 @@ static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
     "DROPDOWNBOX",
     "TEXTBOX",      // TEXTBOXMULTI
     "VALUEBOX",
-    "SPINNER",
+    "CONTROL11",
     "LISTVIEW",
     "COLORPICKER",
     "SCROLLBAR",
@@ -572,7 +572,7 @@ int main(int argc, char *argv[])
                 changedPropCounter = 0;
                 saveChangesRequired = false;
             }
-            else if (IsFileExtension(droppedFiles.paths[0], ".ttf") || IsFileExtension(droppedFiles.paths[0], ".otf"))
+            else if (IsFileExtension(droppedFiles.paths[0], ".ttf;.otf"))
             {
                 strcpy(inFontFileName, droppedFiles.paths[0]);
                 windowFontAtlasState.fontAtlasRegen = true;
@@ -1143,13 +1143,13 @@ int main(int argc, char *argv[])
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
 
-                if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
-                if (currentSelectedControl == DEFAULT) GuiDisable();
+                //if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
+                //if (currentSelectedControl == DEFAULT) GuiDisable();
                 float propValueFloat = (float)propertyValue;
                 GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propValueFloat, 0, 20);
                 propertyValue = (int)propValueFloat;
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-                if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
+                //if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, &colorPickerValue);
@@ -2071,7 +2071,7 @@ static int SaveStyle(const char *fileName, int format)
         // ------------------------------------------------------
 
         int rgsFileDataSize = 0;
-        unsigned char *rgsFileData = SaveStyleToMemory(&rgsFileDataSize);
+        char *rgsFileData = SaveStyleToMemory(&rgsFileDataSize);
 
         result = SaveFileData(fileName, rgsFileData, rgsFileDataSize);
 
