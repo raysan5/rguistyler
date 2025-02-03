@@ -151,7 +151,7 @@
 
 // raygui embedded styles (used as templates)
 // NOTE: Included in the same order as selector
-#define MAX_GUI_STYLES_AVAILABLE   14       // NOTE: Included light style
+#define MAX_GUI_STYLES_AVAILABLE    14      // WARNING: Required for styleNames[]
 #include "styles/style_jungle.h"            // raygui style: jungle
 #include "styles/style_candy.h"             // raygui style: candy
 #include "styles/style_lavanda.h"           // raygui style: lavanda
@@ -287,7 +287,7 @@ static const char *guiPropsDefaultExtendedText[8] = {
 };
 
 // Style template names
-static const char *styleNames[12] = {
+static const char *styleNames[MAX_GUI_STYLES_AVAILABLE] = {
     "Light",
     "Jungle",
     "Candy",
@@ -299,7 +299,9 @@ static const char *styleNames[12] = {
     "Dark",
     "Cherry",
     "Sunny",
-    "Enefete"
+    "Enefete",
+    "Amber",
+    "RLTech"
 };
 
 // Default style backup to check changed properties
@@ -819,13 +821,6 @@ int main(int argc, char *argv[])
                 if (mainToolbarState.visualStyleActive == 0) mainToolbarState.prevVisualStyleActive = 1;
                 else mainToolbarState.prevVisualStyleActive = 0;
             }
-
-            // Select visual style
-            // TODO: WARNING: Issue with export window text box cursor movement
-            //if (IsKeyPressed(KEY_LEFT)) mainToolbarState.visualStyleActive--;
-            //else if (IsKeyPressed(KEY_RIGHT)) mainToolbarState.visualStyleActive++;
-            if (mainToolbarState.visualStyleActive < 0) mainToolbarState.visualStyleActive = MAX_GUI_STYLES_AVAILABLE - 1;
-            else if (mainToolbarState.visualStyleActive >(MAX_GUI_STYLES_AVAILABLE - 1)) mainToolbarState.visualStyleActive = 0;
         }
         //----------------------------------------------------------------------------------
 
@@ -899,6 +894,8 @@ int main(int argc, char *argv[])
         // Visual options logic
         if (mainToolbarState.visualStyleActive != mainToolbarState.prevVisualStyleActive)
         {
+            LOG("INFO: Current Visual Style: %i\n", mainToolbarState.visualStyleActive);
+            
             // When a new template style is selected, everything is reseted
             currentSelectedControl = -1;
             currentSelectedProperty = -1;
@@ -921,7 +918,7 @@ int main(int argc, char *argv[])
                 case 10: GuiLoadStyleSunny(); break;
                 case 11: GuiLoadStyleEnefete(); break;
                 case 12: GuiLoadStyleAmber(); break;
-                case 13: GuiLoadStyleRLtech(); break;
+                case 13: GuiLoadStyleRltech(); break;
                 default: break;
             }
 
@@ -943,6 +940,7 @@ int main(int argc, char *argv[])
 
             windowFontAtlasState.fontWhiteRec = GetShapesTextureRectangle();
 
+            // WARNING: Make sure styleNames[] size matches number of gui styles!
             memset(currentStyleName, 0, 64);
             strcpy(currentStyleName, styleNames[mainToolbarState.visualStyleActive]);
 
@@ -1226,7 +1224,14 @@ int main(int argc, char *argv[])
 
             // GUI: Font Atlas Window
             //----------------------------------------------------------------------------------------
+            int prevFontSize = windowFontAtlasState.fontGenSizeValue;
+
             GuiWindowFontAtlas(&windowFontAtlasState);
+
+            if (windowFontAtlasState.fontGenSizeValue != prevFontSize)
+            {
+                fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
+            }
 
             if (windowFontAtlasState.btnLoadFontPressed) showLoadFontDialog = true;
             if (windowFontAtlasState.btnLoadCharsetPressed) showLoadCharsetDialog = true;
