@@ -427,7 +427,7 @@ int main(int argc, char *argv[])
     bool styleTablePanningMode = false;
 
     // Style required variables
-    bool saveChangesRequired = false;     // Flag to notice save changes are required
+    bool saveChangesRequired = false; // Flag to notice save changes are required
 
     // GUI: Main Layout
     //-----------------------------------------------------------------------------------
@@ -456,8 +456,6 @@ int main(int argc, char *argv[])
 
     bool screenSizeActive = false;
     bool controlsWindowActive = true;   // Show window: controls
-
-    int styleFrameCounter = 0;
     //-----------------------------------------------------------------------------------
 
     // GUI: Main toolbar panel (file and visualization)
