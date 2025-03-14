@@ -58,9 +58,6 @@ typedef struct {
     int propsStateActive;
 
     // Tool options
-    bool viewStyleTableActive;
-    int prevViewStyleTableActive;
-    
     bool btnFontAtlasPressed;
 
     // Visual options
@@ -148,9 +145,6 @@ GuiMainToolbarState InitGuiMainToolbar(void)
     state.propsStateActive = 0;
 
     // Tool options
-    state.viewStyleTableActive = false;
-    state.prevViewStyleTableActive = false;
-    
     state.btnFontAtlasPressed = false;
 
     // Visuals options
@@ -207,8 +201,8 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     if (prevState == STATE_DISABLED) GuiSetState(STATE_DISABLED);
 
     // Tool options
-    GuiSetTooltip("Show style table image (F5)");
-    GuiToggle((Rectangle){ state->anchorTools.x + 14, 8, 24, 24 }, "#101#", &state->viewStyleTableActive);
+    //GuiSetTooltip("Show style table image (F5)");
+    //GuiToggle((Rectangle){ state->anchorTools.x + 14, 8, 24, 24 }, "#101#", &state->viewStyleTableActive);
     GuiSetTooltip("Show font atlas window (F6)");
     state->btnFontAtlasPressed = GuiButton((Rectangle){ state->anchorTools.x + 14 + 24 + 4, 8, 24, 24 }, "#30#");
 
