@@ -338,7 +338,7 @@ static char *SaveStyleToMemory(int *size);                  // Save style to mem
 static void ExportStyleAsCode(const char *fileName, const char *styleName); // Export gui style as properties array
 
 static void DrawStyleControlsTable(int posX, int posY);     // Draw style controls table
-static Image GenImageStyleControlsTable(const char *styleName); // Generate controls table image
+static Image GenImageStyleControlsTable(int width, int height, const char *styleName); // Generate controls table image
 
 // Auxiliar functions
 static int StyleChangesCounter(unsigned int *refStyle);     // Count changed properties in current style (comparing to ref style)
@@ -675,7 +675,7 @@ int main(int argc, char *argv[])
 
             // Regenerate style table
             UnloadTexture(texStyleTable);
-            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
+            Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
             texStyleTable = LoadTextureFromImage(imStyleTable);
             UnloadImage(imStyleTable);
 
@@ -688,7 +688,7 @@ int main(int argc, char *argv[])
         // Toggle screen size (x2) mode
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
 /*
-        // Save all required materials for current style (convenience functionality)
+        // Save all style file formats for current style (convenience functionality)
         // TODO: Review shortcut and exposure of this function
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
         {
@@ -713,7 +713,7 @@ int main(int argc, char *argv[])
             SaveStyle(TextFormat("%s/style_%s.txt.rgs", styleNameLower, styleNameLower), STYLE_TEXT);
 
             // Style table (with style chunck): style_name.png
-            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
+            Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
             ExportImage(imStyleTable, TextFormat("%s/style_%s.png", styleNameLower, styleNameLower));
             UnloadImage(imStyleTable);
             // Write a custom chunk - rGSf (rGuiStyler file)
@@ -941,12 +941,6 @@ int main(int argc, char *argv[])
             // WARNING: Make sure styleNames[] size matches number of gui styles!
             memset(currentStyleName, 0, 64);
             strcpy(currentStyleName, styleNames[mainToolbarState.visualStyleActive]);
-
-            // Regenerate image table
-            //UnloadTexture(texStyleTable);
-            //Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
-            //texStyleTable = LoadTextureFromImage(imStyleTable);
-            //UnloadImage(imStyleTable);
         }
 
         fontWhiteRec = windowFontAtlasState.fontWhiteRec;   // Register fontWhiteRec from fontAtlas window
@@ -1044,31 +1038,6 @@ int main(int argc, char *argv[])
             if (mousePos.y < colorPickerRec.y) SetMousePosition(mousePos.x, colorPickerRec.y);
             else if (mousePos.y > colorPickerRec.y + colorPickerRec.height) SetMousePosition(mousePos.x, colorPickerRec.y + colorPickerRec.height);
         }
-        //----------------------------------------------------------------------------------
-
-        // Style table image generation (only on toggle activation) and logic
-        //----------------------------------------------------------------------------------
-        /*
-        if (mainToolbarState.viewStyleTableActive && (mainToolbarState.prevViewStyleTableActive != mainToolbarState.viewStyleTableActive))
-        {
-            UnloadTexture(texStyleTable);
-            Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
-            texStyleTable = LoadTextureFromImage(imStyleTable);
-            UnloadImage(imStyleTable);
-        }
-
-        if (mainToolbarState.viewStyleTableActive)
-        {
-            if (IsKeyDown(KEY_RIGHT)) styleTablePositionX += 5;
-            else if (IsKeyDown(KEY_LEFT)) styleTablePositionX -= 5;
-
-            styleTablePositionX += GetMouseWheelMove()*10;
-            if (styleTablePositionX < 0) styleTablePositionX = 0;
-            else if (styleTablePositionX > (texStyleTable.width - screenWidth)) styleTablePositionX = texStyleTable.width - screenWidth;
-        }
-
-        mainToolbarState.prevViewStyleTableActive = mainToolbarState.viewStyleTableActive;
-        */
         //----------------------------------------------------------------------------------
 
         // Font image atals logic
@@ -1564,10 +1533,10 @@ int main(int argc, char *argv[])
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
                             
-                            // TODO: Export table image
-                            //Image imStyleTable = GenImageStyleControlsTable(currentStyleName);
-                            //ExportImage(imStyleTable, outFileName);
-                            //UnloadImage(imStyleTable);
+                            // Export table image
+                            Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
+                            ExportImage(imStyleTable, outFileName);
+                            UnloadImage(imStyleTable);
 
                             // Write a custom chunk - rGSf (rGuiStyler file)
                             if (styleChunkChecked)
@@ -1771,10 +1740,10 @@ static void ProcessCommandLine(int argc, char *argv[])
             case STYLE_AS_CODE: ExportStyleAsCode(TextFormat("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
             {
-                // TODO: Gen and export table image
-                //Image imStyleTable = GenImageStyleControlsTable(GetFileNameWithoutExt(outFileName));
-                //ExportImage(imStyleTable, TextFormat("%s%s", outFileName, ".png"));
-                //UnloadImage(imStyleTable);
+                // Gen and export table image
+                Image imStyleTable = GenImageStyleControlsTable(1920, 256, GetFileNameWithoutExt(outFileName));
+                ExportImage(imStyleTable, TextFormat("%s%s", outFileName, ".png"));
+                UnloadImage(imStyleTable);
             } break;
             default: break;
         }
