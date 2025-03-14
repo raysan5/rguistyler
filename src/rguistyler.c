@@ -2434,10 +2434,15 @@ static void DrawStyleControlsTable(int posX, int posY)
     int sliderWidth = GuiGetStyle(SLIDER, SLIDER_WIDTH);
     GuiSetStyle(SLIDER, SLIDER_WIDTH, 10);
 
-
     // Draw left column
     //----------------------------------------------------------------------------------------
     rec = (Rectangle){ posX + TABLE_LEFT_PADDING, posY + TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableStateNameWidth, TABLE_CELL_HEIGHT };
+
+    // Draw style palette as small rectangles for easy color reference
+    for (int i = 0; i < 12; i++)
+    {
+        DrawRectangle(rec.x + 8*i, rec.y - 14, 8, 8, GetColor((unsigned int)GuiGetStyle(0, i)));
+    }
 
     for (int i = 0; i < 4; i++)
     {
@@ -2463,6 +2468,28 @@ static void DrawStyleControlsTable(int posX, int posY)
         int labelTextAlignment = GuiGetStyle(LABEL, TEXT_ALIGNMENT);
         GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
         GuiLabel(rec, tableControlsName[i]);
+
+        // Draw specific-control color palette, only if different than default
+        for (int c = 0; c < 12; c++)
+        {
+            switch (i)
+            {
+                case TYPE_LABEL: if (GuiGetStyle(LABEL, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(LABEL, c))); break;
+                case TYPE_BUTTON: if (GuiGetStyle(BUTTON, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(BUTTON, c))); break;
+                case TYPE_TOGGLE: if (GuiGetStyle(TOGGLE, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(TOGGLE, c))); break;
+                case TYPE_CHECKBOX: if (GuiGetStyle(CHECKBOX, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(CHECKBOX, c))); break;
+                case TYPE_SLIDER: if (GuiGetStyle(SLIDER, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(SLIDER, c))); break;
+                case TYPE_SLIDERBAR: if (GuiGetStyle(SLIDER, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(SLIDER, c))); break;
+                case TYPE_PROGRESSBAR: if (GuiGetStyle(PROGRESSBAR, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(PROGRESSBAR, c))); break;
+                case TYPE_TOGGLESLIDER: if (GuiGetStyle(TOGGLE, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(TOGGLE, c))); break;
+                case TYPE_COMBOBOX: if (GuiGetStyle(COMBOBOX, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(COMBOBOX, c))); break;
+                case TYPE_DROPDOWNBOX: if (GuiGetStyle(DROPDOWNBOX, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(DROPDOWNBOX, c))); break;
+                case TYPE_TEXTBOX: if (GuiGetStyle(TEXTBOX, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(TEXTBOX, c))); break;
+                case TYPE_VALUEBOX: if (GuiGetStyle(VALUEBOX, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(VALUEBOX, c))); break;
+                case TYPE_SPINNER: if (GuiGetStyle(VALUEBOX, c) != GuiGetStyle(DEFAULT, c)) DrawRectangle(rec.x + c*4, rec.y - 6, 4, 4, GetColor(GuiGetStyle(VALUEBOX, c))); break;
+                default: break;
+            }
+        }
 
         rec.y += TABLE_CELL_HEIGHT/2;
         rec.height = TABLE_CELL_HEIGHT;
@@ -2547,12 +2574,6 @@ static Image GenImageStyleControlsTable(int width, int height, const char *style
         GuiLabel((Rectangle){ TABLE_LEFT_PADDING, 15, 200, 20 }, TextFormat("raygui style: %s", styleName));
 
         DrawStyleControlsTable(0, 0);
-
-        // Draw style palette as small rectangles for easy color reference
-        for (int i = 0; i < RAYGUI_MAX_PROPS_BASE; i++)
-        {
-            DrawRectangle(STYLE_PALETTE_TILE_SIZE*i, 0, STYLE_PALETTE_TILE_SIZE, STYLE_PALETTE_TILE_SIZE, GetColor((unsigned int)GuiGetStyle(0, i)));
-        }
 
         // Draw copyright and software info (bottom-right)
         GuiLabel((Rectangle){ TABLE_LEFT_PADDING, height - 26, 400, 10 }, "raygui style table automatically generated with rGuiStyler");
