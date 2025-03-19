@@ -204,7 +204,7 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     //GuiSetTooltip("Show style table image (F5)");
     //GuiToggle((Rectangle){ state->anchorTools.x + 14, 8, 24, 24 }, "#101#", &state->viewStyleTableActive);
     GuiSetTooltip("Show font atlas window (F6)");
-    state->btnFontAtlasPressed = GuiButton((Rectangle){ state->anchorTools.x + 14 + 24 + 4, 8, 24, 24 }, "#30#");
+    state->btnFontAtlasPressed = GuiButton((Rectangle){ state->anchorTools.x + 14, 8, 52, 24 }, "#30#");
 
     // Visuals options
     GuiLabel((Rectangle){ state->anchorVisuals.x + 10, state->anchorVisuals.y + 8, 60, 24 }, "Style:");
