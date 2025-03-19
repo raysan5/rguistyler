@@ -204,6 +204,22 @@ typedef enum {
     STYLE_TEXT              // Style text file (.rgs), only supported on command-line
 } GuiStyleFileType;
 
+enum TableControlType {
+    TYPE_LABEL = 0,
+    TYPE_BUTTON,
+    TYPE_TOGGLE,
+    TYPE_CHECKBOX,
+    TYPE_SLIDER,
+    TYPE_SLIDERBAR,
+    TYPE_PROGRESSBAR,
+    TYPE_TOGGLESLIDER,
+    TYPE_COMBOBOX,
+    TYPE_DROPDOWNBOX,
+    TYPE_TEXTBOX,
+    TYPE_VALUEBOX,
+    TYPE_SPINNER
+};
+
 //----------------------------------------------------------------------------------
 // Global Variables Definition
 //----------------------------------------------------------------------------------
@@ -492,7 +508,7 @@ int main(int argc, char *argv[])
     int exportFormatActive = 0;             // ComboBox file type selection
     //char styleNameText[128] = "Unnamed";    // Style name text box
     bool styleNameEditMode = false;         // Style name text box edit mode
-    bool styleChunkChecked = true;          // Select to embed style as a PNG chunk (rGSf)
+    bool styleChunkChecked = true;          // Select to embed style as a PNG chunk (rGSf) - ALWAYS ON!
     //-----------------------------------------------------------------------------------
 
     // GUI: Exit Window
@@ -577,6 +593,107 @@ int main(int argc, char *argv[])
             {
                 strcpy(inFontFileName, droppedFiles.paths[0]);
                 windowFontAtlasState.fontAtlasRegen = true;
+            }
+            else if (IsFileExtension(droppedFiles.paths[0], ".png;qoi"))
+            {
+                // Try to load PNG chunk with style data: rGSf
+                rpng_chunk chunk = rpng_chunk_read(droppedFiles.paths[0], "rGSf");
+                if (chunk.length > 0)
+                {
+                    GuiLoadStyleFromMemory(chunk.data, chunk.length);
+
+                    fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+                    fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
+                    windowFontAtlasState.fontGenSizeValue = fontDrawSizeValue;
+
+                    // Load .rgs custom font in font
+                    customFont = GuiGetFont();
+                    memset(inFontFileName, 0, 512);
+                    customFontLoaded = true;
+
+                    RPNG_FREE(chunk.data);
+                }
+                else
+                {
+                    // Check if png file is the size of style-table before
+                    // trying to load some specific pixel colors from BUTTON column
+                    Image imTable = LoadImage(droppedFiles.paths[0]);
+
+                    if (IsImageValid(imTable) && (imTable.width == 1920) && (imTable.height == 256))
+                    {
+                        // Controls grid width
+                        int controlWidth[13] = {
+                            100,    // LABEL
+                            100,    // BUTTON
+                            100,    // TOGGLE
+                            200,    // CHECKBOX
+                            100,    // SLIDER
+                            100,    // SLIDERBAR
+                            100,    // PROGRESSBAR
+                            200,    // TOGGLESLIDER
+                            140,    // COMBOBOX,
+                            160,    // DROPDOWNBOX
+                            100,    // TEXTBOX
+                            100,    // VALUEBOX
+                            101,    // SPINNER
+                        };
+
+                        // NOTE: Controls color palette is placed in several default positions in the table,
+                        // so it can be directly read from the image, but also available on rGSf chunk
+
+                        // Get BACKGROUND_COLOR and LINE_COLOR
+                        GuiSetStyle(DEFAULT, BACKGROUND_COLOR, ColorToInt(GetImageColor(imTable, 0, 0)));
+                        GuiSetStyle(DEFAULT, LINE_COLOR, ColorToInt(GetImageColor(imTable, 12, 60)));
+
+                        // Get DEFAULT color palette from image
+                        for (int i = 0; i < 12; i++)
+                        {
+                            GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL + i, ColorToInt(GetImageColor(imTable, 12 + i*8, 46)));
+                        }
+
+                        int controlPalOffsetX = 11 + 100; // TABLE_CELL_PADDING
+
+                        // Get control-specific color palette
+                        for (int i = 0; i < 13; i++) //TABLE_CONTROLS_COUNT
+                        {
+                            // Get specific-control color palette, only if different than default
+                            for (int c = 0; c < 12; c++)
+                            {
+                                unsigned int col = ColorToInt(GetImageColor(imTable, controlPalOffsetX + c*4, 34));
+
+                                if (col != GuiGetStyle(DEFAULT, BACKGROUND_COLOR)) // Control-specific color found!
+                                {
+                                    switch (i)
+                                    {
+                                        case TYPE_LABEL:        if (col != GuiGetStyle(LABEL, BORDER_COLOR_NORMAL + c)) GuiSetStyle(LABEL, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_BUTTON:       if (col != GuiGetStyle(BUTTON, BORDER_COLOR_NORMAL + c)) GuiSetStyle(BUTTON, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_TOGGLE:       if (col != GuiGetStyle(TOGGLE, BORDER_COLOR_NORMAL + c)) GuiSetStyle(TOGGLE, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_CHECKBOX:     if (col != GuiGetStyle(CHECKBOX, BORDER_COLOR_NORMAL + c)) GuiSetStyle(CHECKBOX, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_SLIDER:       if (col != GuiGetStyle(SLIDER, BORDER_COLOR_NORMAL + c)) GuiSetStyle(SLIDER, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_SLIDERBAR:    if (col != GuiGetStyle(SLIDER, BORDER_COLOR_NORMAL + c)) GuiSetStyle(SLIDER, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_PROGRESSBAR:  if (col != GuiGetStyle(PROGRESSBAR, BORDER_COLOR_NORMAL + c)) GuiSetStyle(PROGRESSBAR, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_TOGGLESLIDER: if (col != GuiGetStyle(TOGGLE, BORDER_COLOR_NORMAL + c)) GuiSetStyle(TOGGLE, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_COMBOBOX:     if (col != GuiGetStyle(COMBOBOX, BORDER_COLOR_NORMAL + c)) GuiSetStyle(COMBOBOX, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_DROPDOWNBOX:  if (col != GuiGetStyle(DROPDOWNBOX, BORDER_COLOR_NORMAL + c)) GuiSetStyle(DROPDOWNBOX, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_TEXTBOX:      if (col != GuiGetStyle(TEXTBOX, BORDER_COLOR_NORMAL + c)) GuiSetStyle(TEXTBOX, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_VALUEBOX:     if (col != GuiGetStyle(VALUEBOX, BORDER_COLOR_NORMAL + c)) GuiSetStyle(VALUEBOX, BORDER_COLOR_NORMAL + c, col); break;
+                                        case TYPE_SPINNER:      if (col != GuiGetStyle(VALUEBOX, BORDER_COLOR_NORMAL + c)) GuiSetStyle(VALUEBOX, BORDER_COLOR_NORMAL + c, col); break;
+                                        default: break;
+                                    }
+                                }
+                            }
+
+                            controlPalOffsetX += (controlWidth[i] + 2*8 - 1); //TABLE_CELL_PADDING
+                        }
+
+                        // Copy current style and reset backup for changes
+                        memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS *(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
+                        changedPropCounter = 0;
+                        saveChangesRequired = false;
+                    }
+
+                    UnloadImage(imTable);
+                }
             }
             else if (IsFileExtension(droppedFiles.paths[0], ".txt"))
             {
@@ -1196,11 +1313,6 @@ int main(int argc, char *argv[])
                 GuiSetStyle(SLIDER, SLIDER_WIDTH, 16);
 
                 DrawStyleControlsTable(-styleTableRec.x, screenHeight - 264);
-
-                // Draw style palette as small rectangles for easy color reference
-                // NOTE: We have 4 states with 3 color properties per state (BASE, BORDER, TEXT)
-                //GuiLabel((Rectangle){ 12, screenHeight - 234, screenWidth, GuiGetFont().baseSize }, "Color palette (DEFAULT):");
-                //for (int i = 0; i < 12; i++) DrawRectangle(12 + 150 + 8*i, screenHeight - 234, 8, 8, GetColor((unsigned int)GuiGetStyle(0, i)));
             }
             //----------------------------------------------------------------------------------------
 
@@ -1280,7 +1392,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showExportWindow)
             {
-                Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 220 };
+                Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 196 };
                 int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
 
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 24 + 12, 106, 24 }, "Style Name:");
@@ -1294,9 +1406,10 @@ int main(int argc, char *argv[])
                 //if (exportFormatActive != 2) GuiDisable();
                 GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24, 16, 16 }, "Font data compressed", &fontDataCompressedChecked);
                 GuiEnable();
-                if (exportFormatActive != 2) GuiDisable();
-                GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24 + 24, 16, 16 }, "Style embedded as rGSf chunk", &styleChunkChecked);
-                GuiEnable();
+                //if (exportFormatActive != 2) GuiDisable();
+                // NOTE: Always embedding rGSf chunk on PNG table export!
+                //GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24 + 24, 16, 16 }, "Style embedded as rGSf chunk", &styleChunkChecked);
+                //GuiEnable();
 
                 if (result == 1)    // Export button pressed
                 {
@@ -1539,6 +1652,7 @@ int main(int argc, char *argv[])
                             UnloadImage(imStyleTable);
 
                             // Write a custom chunk - rGSf (rGuiStyler file)
+                            // NOTE: Always enabled by default
                             if (styleChunkChecked)
                             {
                                 rpng_chunk chunk = { 0 };
@@ -2367,22 +2481,6 @@ static void DrawStyleControlsTable(int posX, int posY)
 
     #define TABLE_CONTROLS_COUNT    13
 
-    enum TableControlType {
-        TYPE_LABEL = 0,
-        TYPE_BUTTON,
-        TYPE_TOGGLE,
-        TYPE_CHECKBOX,
-        TYPE_SLIDER,
-        TYPE_SLIDERBAR,
-        TYPE_PROGRESSBAR,
-        TYPE_TOGGLESLIDER,
-        TYPE_COMBOBOX,
-        TYPE_DROPDOWNBOX,
-        TYPE_TEXTBOX,
-        TYPE_VALUEBOX,
-        TYPE_SPINNER
-    };
-
     static const char *tableStateName[4] = { "NORMAL", "FOCUSED", "PRESSED", "DISABLED" };
     static const char *tableControlsName[TABLE_CONTROLS_COUNT] = {
         "LABEL",        // LABELBUTTON
@@ -2439,10 +2537,7 @@ static void DrawStyleControlsTable(int posX, int posY)
     rec = (Rectangle){ posX + TABLE_LEFT_PADDING, posY + TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableStateNameWidth, TABLE_CELL_HEIGHT };
 
     // Draw style palette as small rectangles for easy color reference
-    for (int i = 0; i < 12; i++)
-    {
-        DrawRectangle(rec.x + 8*i, rec.y - 14, 8, 8, GetColor((unsigned int)GuiGetStyle(0, i)));
-    }
+    for (int i = 0; i < 12; i++) DrawRectangle(rec.x + 8*i, rec.y - 14, 8, 8, GetColor((unsigned int)GuiGetStyle(0, i)));
 
     for (int i = 0; i < 4; i++)
     {
