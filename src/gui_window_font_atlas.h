@@ -339,13 +339,13 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
 
         // Draw window logic
         //--------------------------------------------------------------------------------------------------
-        state->windowActive = !GuiWindowBox((Rectangle){ state->anchor.x, state->anchor.y, 724, 532 }, "#30# Font Atlas Generation");
+        state->windowActive = !GuiWindowBox((Rectangle){ state->anchor.x, state->anchor.y, 724, 700 }, "#30# Font Atlas Generation");
 
         // White rectangle selection border
-        if (state->selectWhiteRecActive) DrawRectangleLinesEx((Rectangle){ state->anchor.x, state->anchor.y + 64, 724, 532 - 64 }, 4, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED)));
+        if (state->selectWhiteRecActive) DrawRectangleLinesEx((Rectangle){ state->anchor.x, state->anchor.y + 64, 724, 700 - 64 }, 4, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED)));
 
         // Draw font atlas view
-        BeginScissorMode(state->anchor.x + 1, state->anchor.y + 24 + 40, 724 - 2, 532 - 65);
+        BeginScissorMode(state->anchor.x + 1, state->anchor.y + 24 + 40, 724 - 2, 700 - 65);
             DrawRectangleRec(fontAtlasRec, BLACK);
             DrawTexturePro(state->texFont, (Rectangle){ 0, 0, (float)state->texFont.width, (float)state->texFont.height }, fontAtlasRec, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
             DrawRectangleLinesEx(fontAtlasRec, 1.0f, Fade(RED, 0.6f));
@@ -435,10 +435,10 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         //GuiToggle((Rectangle){ state->anchor.x + 360 + 24 + 4, state->anchor.y + 32, 24, 24 }, "#179#", &state->compressRecDataActive);
         //GuiToggle((Rectangle){ state->anchor.x + 360 + 48 + 8, state->anchor.y + 32, 24, 24 }, "#180#", &state->compressGlyphDataActive);
 
-        GuiStatusBar((Rectangle){ state->anchor.x + 0, state->anchor.y + 531, 217, 24 }, TextFormat("File: %s [%s]", GetFileName(inFontFileName), FileExists(inFontFileName)? "LOADED" : "NOT AVAILABLE"));
-        GuiStatusBar((Rectangle){ state->anchor.x + 216, state->anchor.y + 531, 145, 24 }, TextFormat("Codepoints: %i", GuiGetFont().glyphCount));
-        GuiStatusBar((Rectangle){ state->anchor.x + 360, state->anchor.y + 531, 161, 24 }, TextFormat("Atlas Size: %ix%i", state->texFont.width, state->texFont.height));
-        GuiStatusBar((Rectangle){ state->anchor.x + 520, state->anchor.y + 531, 204, 24 }, 
+        GuiStatusBar((Rectangle){ state->anchor.x + 0, state->anchor.y + 700 - 1, 217, 24 }, TextFormat("File: %s [%s]", GetFileName(inFontFileName), FileExists(inFontFileName)? "LOADED" : "NOT AVAILABLE"));
+        GuiStatusBar((Rectangle){ state->anchor.x + 216, state->anchor.y + 700 - 1, 145, 24 }, TextFormat("Codepoints: %i", GuiGetFont().glyphCount));
+        GuiStatusBar((Rectangle){ state->anchor.x + 360, state->anchor.y + 700 - 1, 161, 24 }, TextFormat("Atlas Size: %ix%i", state->texFont.width, state->texFont.height));
+        GuiStatusBar((Rectangle){ state->anchor.x + 520, state->anchor.y + 700 - 1, 204, 24 }, 
             TextFormat("White rec: [%i, %i, %i, %i]", (int)state->fontWhiteRec.x, (int)state->fontWhiteRec.y, (int)state->fontWhiteRec.width, (int)state->fontWhiteRec.height));
 
         //DrawText(TextFormat("Atlas TOP-LEFT: %i, %i", (int)(fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2), (int)(fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2)), 10, 10, 30, RED);
@@ -450,7 +450,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
     {
         fontAtlasScale = 1.0f;
         fontAtlasPosition.x = state->anchor.x + 724/2;
-        fontAtlasPosition.y = state->anchor.y + 532/2;
+        fontAtlasPosition.y = state->anchor.y + 700/2;
         prevFontAtlasPosition = fontAtlasPosition;
 
         prevSelectWhiteRecActive = false; 
