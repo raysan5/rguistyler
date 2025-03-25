@@ -6,7 +6,7 @@ Useful for tools style customization. The best tool companion for [rGuiLayout](h
 
 `rGuiStyler` can be used for free as a [WebAssembly online tool](https://raylibtech.itch.io/rguistyler) and it can also be downloaded as a **standalone tool** for `Windows`, `Linux` and `macOS` with some extra features.
 
-**NOTE: Latest `rGuiStyler 5.0` release is intended to be used with [`raygui 4.0`](https://github.com/raysan5/raygui/releases/tag/4.0) release.**
+**NOTE: Latest `rGuiStyler 6.0` release is intended to be used with [`raygui 4.5+`](https://github.com/raysan5/raygui) release.**
 
 ## Features
 
@@ -21,21 +21,21 @@ Useful for tools style customization. The best tool companion for [rGuiLayout](h
  - Import, configure and preview **style fonts** (`.ttf`/`.otf`)
  - Load custom font charset for the style (Unicode codepoints)
  - Color palette for quick color save/selection
- - **+10 custom style examples** included for reference
+ - **+14 custom style examples** included for reference
  - Command-line support for `.rgs`/`.h`/`.png` batch conversion
- - **Completely portable (single-file, no-dependencies)**
  - **Free and open source** 
 
 ## Screenshot
 
-![rGuiStyler](screenshots/rguistyler_v500_shot01.png)
+![rGuiStyler](screenshots/rguistyler_v600_shot01.png)
  
 ## Usage
 
 The tool is quite intuitive, the expected steps to follow are: 
- 1. Choose the control to edit from first ListView (`DEFAULT` referes to global style for all controls)
- 2. Choose the property to edit from second ListView
- 3. Select a value for that property (color, number...)
+ 1. Choose the control to edit from the Controls ListView (`DEFAULT` referes to global style for all controls)
+ 2. Choose the property to edit from Properties ListView
+ 3. Select a value for that property (color, number...) on Control Property Edit window
+ 4. Font can be loaded and atlas generated automatically
  
 NOTE: Changes are previewed in real time in the same tool! 
 
