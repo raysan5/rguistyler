@@ -121,11 +121,7 @@ static const char *helpLines[] = {
     "-Tool Controls",
     "F5 - Show Style table",
     "F6 - Show Font atlas",
-    "1,2,3,4 - Force controls state",
     "LCTRL + R - Reload style template",
-    "-Tool Visuals",
-    "LEFT | RIGHT - Select style template",
-    "LCTRL + F - Toggle double screen size",
     "-",
     "ESCAPE - Close Window/Exit",
     NULL

@@ -33,6 +33,15 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
+*       6.0  (26-Mar-2025)  Complete redesign of the tool
+*                           ADDED: Styles list view
+*                           ADDED: Fonts resources and list view
+*                           ADDED: Table image palette and loading support 
+*                           ADDED: New styles: Genesis, RLTech
+*                           REDESIGNED: Resizable window, scalable UI elements
+*                           REDESIGNED: Controls properties editor window
+*                           UPDATED: Using raylib 5.6-dev and raygui 4.5-dev
+* 
 *       5.1  (06-Apr-2024)  ADDED: Issue report window
 *                           REMOVED: Sponsors window
 *                           REVIEWED: Main toolbar and help window
@@ -114,10 +123,10 @@
 
 #define TOOL_NAME               "rGuiStyler"
 #define TOOL_SHORT_NAME         "rGS"
-#define TOOL_VERSION            "5.1"
+#define TOOL_VERSION            "6.0"
 #define TOOL_DESCRIPTION        "A simple and easy-to-use raygui styles editor"
 #define TOOL_DESCRIPTION_BREAK  "A simple and easy-to-use raygui\nstyles editor"
-#define TOOL_RELEASE_DATE       "Apr.2024"
+#define TOOL_RELEASE_DATE       "Mar.2025"
 #define TOOL_LOGO_COLOR         0x62bde3ff
 
 #define SUPPORT_COMPRESSED_FONT_ATLAS
@@ -151,7 +160,7 @@
 
 // raygui embedded styles (used as templates)
 // NOTE: Included in the same order as selector
-#define MAX_GUI_STYLES_AVAILABLE    14      // WARNING: Required for styleNames[]
+#define MAX_GUI_STYLES_AVAILABLE    15      // WARNING: Required for styleNames[]
 #include "styles/style_jungle.h"            // raygui style: jungle
 #include "styles/style_candy.h"             // raygui style: candy
 #include "styles/style_lavanda.h"           // raygui style: lavanda
@@ -165,6 +174,7 @@
 #include "styles/style_enefete.h"           // raygui style: enefete
 #include "styles/style_amber.h"             // raygui style: amber
 #include "styles/style_rltech.h"            // raygui style: rltech
+#include "styles/style_genesis.h"           // raygui style: genesis
 
 #define RPNG_IMPLEMENTATION
 #include "external/rpng.h"                  // PNG chunks management
@@ -317,7 +327,53 @@ static const char *styleNames[MAX_GUI_STYLES_AVAILABLE] = {
     "Sunny",
     "Enefete",
     "Amber",
-    "RLTech"
+    "RLTech",
+    "Genesis"
+};
+
+#define MAX_FONT_PATHS 16
+
+// NOTE: Index 0 reserved for default raylib font // Index, Size, Spacing
+static char fontFilePaths[MAX_FONT_PATHS][256] = {
+    "default",                                  // 0,  10, 1 (default)
+    "resources/Cartridge.ttf",                  // 1,  16, 1
+    "resources/hello-world.ttf",                // 2,  16, 1
+    "resources/homespun.ttf",                   // 3,  10, 1
+    "resources/Kyrou7Wide.ttf",                 // 4,  14, 0
+    "resources/Mecha.ttf",                      // 5,  16, 0
+    "resources/PixelIntv.otf",                  // 6,  12, 0
+    "resources/PixelOperator.ttf",              // 7,  16, 0
+    "resources/v5easter.ttf",                   // 8,  15, 0
+    "resources/v5loxical.ttf",                  // 9,  16, 1
+    "resources/Westington.ttf",                 // 10, 15, 0
+    "resources/2a03.ttf",                       // 11, 16, 1
+    "resources/GMSN.ttf",                       // 12, 16, 0
+    "resources/CozetteVector.otf",              // 13, 13, 1
+    "resources/Fairfax.ttf",                    // 14, 12, 0
+    "resources/OwreKynge.ttf"                   // 15, 12, 0
+};
+
+static int fontFileCount = 16;
+static char fontFileNamesList[512] = { 0 };
+
+static int fontBaseSize[MAX_FONT_PATHS] = { 10, 16, 16, 10, 14, 16, 12, 16, 15, 16, 15, 16, 16, 13, 12, 16 };
+static int fontBaseSpacing[MAX_FONT_PATHS] = { 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0 };
+static int defaultStyleFont[MAX_GUI_STYLES_AVAILABLE] = { // Font file index used for every provided style (default)
+    0,      // Light (default)
+    6,      // Jungle
+    8,      // Candy
+    1,      // Lavanda
+    4,      // Cyber
+    5,      // Terminal
+    9,      // Ashes
+    3,      // Bluish
+    7,      // Dark
+    10,     // Cherry
+    12,     // Sunny
+    12,     // Enefete
+    2,      // Amber
+    11,     // RLTech
+    7,      // Genesis
 };
 
 // Default style backup to check changed properties
@@ -328,6 +384,8 @@ static unsigned int currentStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RA
 
 static bool fontEmbeddedChecked = true;         // Select to embed font into style file
 static bool fontDataCompressedChecked = true;   // Export font data compressed (recs and glyphs)
+
+static int styleFontSelected = -1;               // Style font selected on list view (Default: no-font)
 
 static Rectangle fontWhiteRec = { 0 };          // Font white rectangle, required to be updated from window font atlas
 
@@ -398,11 +456,14 @@ int main(int argc, char *argv[])
 
     // GUI usage mode - Initialization
     //--------------------------------------------------------------------------------------
-    const int screenWidth = 748;
-    const int screenHeight = 610 + 200;
+    const int screenWidth = 1812;
+    const int screenHeight = 860;
 
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, TextFormat("%s v%s | %s", toolName, toolVersion, toolDescription));
+    SetWindowMinSize(1812, 810);
     //EnableEventWaiting();
+    MaximizeWindow();
     SetExitKey(0);
 
     // General pourpose variables
@@ -435,7 +496,6 @@ int main(int argc, char *argv[])
     // Init color picker saved colors
     Color colorBoxValue[12] = { 0 };
     for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
-    Vector3 colorHSV = { 0.0f, 0.0f, 0.0f };
 
     // Style table variables
     Rectangle styleTableRec = { 0, 0, 1920, 256 };
@@ -446,12 +506,16 @@ int main(int argc, char *argv[])
     // Style required variables
     bool saveChangesRequired = false; // Flag to notice save changes are required
 
+    int styleListScroll = 0;
+    int controlListScroll = 0;
+    int propertyListScroll = 0;
+    int fontListScroll = 0;
+
     // GUI: Main Layout
     //-----------------------------------------------------------------------------------
-    Vector2 anchorMain = { 0, 0 };
-    Vector2 anchorWindow = { 353, 52 };
-    Vector2 anchorPropEditor = { 363, 92 };
-    Vector2 anchorFontOptions = { 363, 465 };
+    Vector2 anchorMain = { 160, 0 };
+    Vector2 anchorWindow = { 353 + 160, 52 };
+    Vector2 anchorPropEditor = { 363 + 160, 92 };
 
     int currentSelectedControl = -1;
     int currentSelectedProperty = -1;
@@ -463,6 +527,16 @@ int main(int argc, char *argv[])
 
     Color colorPickerValue = RED;
     bool textHexColorEditMode = false;
+
+    int rColorValue = 0;
+    int gColorValue = 0;
+    int bColorValue = 0;
+    //int aColorValue = 0;
+    bool rColorEditMode = false;
+    bool gColorEditMode = false;
+    bool bColorEditMode = false;
+    //bool aColorEditMode = false;
+
     char hexColorText[9] = "00000000";
     int textAlignmentActive = 0;
     bool genFontSizeEditMode = false;
@@ -471,7 +545,7 @@ int main(int argc, char *argv[])
     bool fontSampleEditMode = false;
     char fontSampleText[128] = "sample text";
 
-    bool screenSizeActive = false;
+    //bool screenSizeActive = false;
     bool controlsWindowActive = true;   // Show window: controls
     //-----------------------------------------------------------------------------------
 
@@ -500,6 +574,8 @@ int main(int argc, char *argv[])
     //-----------------------------------------------------------------------------------
     bool showIssueReportWindow = false;
     //-----------------------------------------------------------------------------------
+
+    bool showTableImage = true;
 
     // GUI: Export Window
     //-----------------------------------------------------------------------------------
@@ -546,8 +622,8 @@ int main(int argc, char *argv[])
 
     // Render texture to draw full screen, enables screen scaling
     // NOTE: If screen is scaled, mouse input should be scaled proportionally
-    RenderTexture2D screenTarget = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
-    SetTextureFilter(screenTarget.texture, TEXTURE_FILTER_POINT);
+    //RenderTexture2D screenTarget = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
+    //SetTextureFilter(screenTarget.texture, TEXTURE_FILTER_POINT);
 
     SetTargetFPS(60);       // Set our game desired framerate
     //--------------------------------------------------------------------------------------
@@ -592,6 +668,12 @@ int main(int argc, char *argv[])
             else if (IsFileExtension(droppedFiles.paths[0], ".ttf;.otf"))
             {
                 strcpy(inFontFileName, droppedFiles.paths[0]);
+                if (fontFileCount < MAX_FONT_PATHS)
+                {
+                    strcpy(fontFilePaths[fontFileCount], droppedFiles.paths[0]);
+                    fontFileCount++;
+                }
+
                 windowFontAtlasState.fontAtlasRegen = true;
             }
             else if (IsFileExtension(droppedFiles.paths[0], ".png;qoi"))
@@ -600,18 +682,23 @@ int main(int argc, char *argv[])
                 rpng_chunk chunk = rpng_chunk_read(droppedFiles.paths[0], "rGSf");
                 if (chunk.length > 0)
                 {
-                    GuiLoadStyleFromMemory(chunk.data, chunk.length);
+                    GuiLoadStyleFromMemory((unsigned char *)chunk.data, chunk.length);
+                    RPNG_FREE(chunk.data);
 
+                    // Update guistyler font size
                     fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                     fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
                     windowFontAtlasState.fontGenSizeValue = fontDrawSizeValue;
 
-                    // Load .rgs custom font in font
+                    // Load custom font in font
                     customFont = GuiGetFont();
                     memset(inFontFileName, 0, 512);
                     customFontLoaded = true;
 
-                    RPNG_FREE(chunk.data);
+                    // Copy current style and reset backup for changes
+                    memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
+                    changedPropCounter = 0;
+                    saveChangesRequired = false;
                 }
                 else
                 {
@@ -686,8 +773,18 @@ int main(int argc, char *argv[])
                             controlPalOffsetX += (controlWidth[i] + 2*8 - 1); //TABLE_CELL_PADDING
                         }
 
+                        // Update guistyler font size
+                        fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+                        fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
+                        windowFontAtlasState.fontGenSizeValue = fontDrawSizeValue;
+
+                        // Load custom font in font
+                        customFont = GuiGetFont();
+                        memset(inFontFileName, 0, 512);
+                        customFontLoaded = true;
+
                         // Copy current style and reset backup for changes
-                        memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS *(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
+                        memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
                         changedPropCounter = 0;
                         saveChangesRequired = false;
                     }
@@ -751,7 +848,6 @@ int main(int argc, char *argv[])
                         RL_FREE(codepointsClear);
 
                         windowFontAtlasState.selectedCharset = 2;
-                        windowFontAtlasState.selectedCharset = 2;
                         windowFontAtlasState.fontAtlasRegen = true;
                     }
 
@@ -803,8 +899,8 @@ int main(int argc, char *argv[])
 
 #if defined(PLATFORM_DESKTOP)
         // Toggle screen size (x2) mode
-        if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
-/*
+        //if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
+        /*
         // Save all style file formats for current style (convenience functionality)
         // TODO: Review shortcut and exposure of this function
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
@@ -819,15 +915,15 @@ int main(int argc, char *argv[])
             //fontDataCompressedChecked = false;
 
             // Style binary: style_name.old.rgs (backward compatible)
-            version = 300;
-            SaveStyle(TextFormat("%s/style_%s.old.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
-            version = 400;
+            //version = 300;
+            //SaveStyle(TextFormat("%s/style_%s.old.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
+            //version = 400;
 
             // Style binary: style_name.rgs
             SaveStyle(TextFormat("%s/style_%s.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
 
             // Style text (font required): style_name.txt.rgs
-            SaveStyle(TextFormat("%s/style_%s.txt.rgs", styleNameLower, styleNameLower), STYLE_TEXT);
+            //SaveStyle(TextFormat("%s/style_%s.txt.rgs", styleNameLower, styleNameLower), STYLE_TEXT);
 
             // Style table (with style chunck): style_name.png
             Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
@@ -835,7 +931,7 @@ int main(int argc, char *argv[])
             UnloadImage(imStyleTable);
             // Write a custom chunk - rGSf (rGuiStyler file)
             rpng_chunk chunk = { 0 };
-            memcpy(chunk.type, "rGSf", 4);  // Chunk type FOURCC
+            memcpy(chunk.type, "rGSf", 4); // Chunk type FOURCC
             chunk.data = SaveStyleToMemory(&chunk.length);
             rpng_chunk_write(TextFormat("%s/style_%s.png", styleNameLower, styleNameLower), chunk);
             RPNG_FREE(chunk.data);
@@ -844,7 +940,7 @@ int main(int argc, char *argv[])
             // Select LABEL, BORDER_COLOR_FOCUSED -> Update required?
             TakeScreenshot(TextFormat("%s/screenshot.png", styleNameLower));
         }
-*/
+        */
 #endif
         // New style file, previous in/out files registeres are reseted
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
@@ -912,7 +1008,6 @@ int main(int argc, char *argv[])
                 if (windowHelpState.windowActive) windowHelpState.windowActive = false;
                 else if (windowAboutState.windowActive) windowAboutState.windowActive = false;
                 else if (showIssueReportWindow) showIssueReportWindow = false;
-                else if (windowFontAtlasState.windowActive) windowFontAtlasState.windowActive = false;
                 else if (showExportWindow) showExportWindow = false;
             #if defined(PLATFORM_DESKTOP)
                 else if (changedPropCounter > 0) showExitWindow = !showExitWindow;
@@ -925,10 +1020,11 @@ int main(int argc, char *argv[])
             }
 
             // Select desired state for visualization
-            if (IsKeyPressed(KEY_ONE)) mainToolbarState.propsStateActive = 0;
-            else if (IsKeyPressed(KEY_TWO)) mainToolbarState.propsStateActive = 1;
-            else if (IsKeyPressed(KEY_THREE)) mainToolbarState.propsStateActive = 2;
-            else if (IsKeyPressed(KEY_FOUR)) mainToolbarState.propsStateActive = 3;
+            // WARNING: Issues when editing text or color boxes
+            //if (IsKeyPressed(KEY_ONE)) mainToolbarState.propsStateActive = 0;
+            //else if (IsKeyPressed(KEY_TWO)) mainToolbarState.propsStateActive = 1;
+            //else if (IsKeyPressed(KEY_THREE)) mainToolbarState.propsStateActive = 2;
+            //else if (IsKeyPressed(KEY_FOUR)) mainToolbarState.propsStateActive = 3;
 
             // Reset to current style template
             if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_R)) || mainToolbarState.btnReloadStylePressed)
@@ -1034,30 +1130,35 @@ int main(int argc, char *argv[])
                 case 11: GuiLoadStyleEnefete(); break;
                 case 12: GuiLoadStyleAmber(); break;
                 case 13: GuiLoadStyleRltech(); break;
+                case 14: GuiLoadStyleGenesis(); break;
                 default: break;
             }
 
             // Current style backup (used to track changes)
-            memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS *(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)*sizeof(int));
-
-            customFont = GuiGetFont();
-            customFontLoaded = true;
-            windowFontAtlasState.fontGenSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
-            fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
-            fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
-
-            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
-
-            changedPropCounter = 0;
-            saveChangesRequired = false;
+            memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)*sizeof(int));
 
             mainToolbarState.prevVisualStyleActive = mainToolbarState.visualStyleActive;
 
-            windowFontAtlasState.fontWhiteRec = GetShapesTextureRectangle();
+            // Update color palette with new style DEFAULT colors
+            for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
 
-            // WARNING: Make sure styleNames[] size matches number of gui styles!
+            // Variables required to reset
+            changedPropCounter = 0;
+            saveChangesRequired = false;
             memset(currentStyleName, 0, 64);
             strcpy(currentStyleName, styleNames[mainToolbarState.visualStyleActive]);
+
+            // Font atlas parameters update
+            customFont = GuiGetFont();
+            customFontLoaded = true;
+            windowFontAtlasState.fontGenSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+            windowFontAtlasState.fontWhiteRec = GetShapesTextureRectangle();
+            fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
+            fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
+
+            // Reset list view font selected
+            memset(inFontFileName, 0, 512);
+            styleFontSelected = -1;
         }
 
         fontWhiteRec = windowFontAtlasState.fontWhiteRec;   // Register fontWhiteRec from fontAtlas window
@@ -1081,7 +1182,7 @@ int main(int argc, char *argv[])
 
         GuiSetStyle(DEFAULT, TEXT_SIZE, fontDrawSizeValue);
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
-        GuiSetStyle(DEFAULT, TEXT_LINE_SPACING, (int)(1.5f*fontDrawSizeValue));     // TODO: Expose property?
+        GuiSetStyle(DEFAULT, TEXT_LINE_SPACING, (int)(1.5f*fontDrawSizeValue));
 
         // Controls selection on list view logic
         //----------------------------------------------------------------------------------
@@ -1135,8 +1236,6 @@ int main(int argc, char *argv[])
         //----------------------------------------------------------------------------------
         if (!textHexColorEditMode) sprintf(hexColorText, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
 
-        colorHSV = ColorToHSV(colorPickerValue);
-
         // Color selection cursor show/hide logic
         Rectangle colorPickerRec = { anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 };
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePos, colorPickerRec)) selectingColor = true;
@@ -1146,7 +1245,7 @@ int main(int argc, char *argv[])
             ShowCursor();
         }
 
-        if (!windowFontAtlasState.windowActive && selectingColor)
+        if (selectingColor)
         {
             HideCursor();
             if (mousePos.x < colorPickerRec.x) SetMousePosition(colorPickerRec.x, mousePos.y);
@@ -1157,16 +1256,9 @@ int main(int argc, char *argv[])
         }
         //----------------------------------------------------------------------------------
 
-        // Font image atals logic
+        // Screen scale logic (x2) - Not needed anymore
         //----------------------------------------------------------------------------------
-        if (windowFontAtlasState.windowActive)
-        {
-            windowFontAtlasState.texFont = customFont.texture;
-        }
-        //----------------------------------------------------------------------------------
-
-        // Screen scale logic (x2)
-        //----------------------------------------------------------------------------------
+        /*
         if (screenSizeActive)
         {
             // Screen size x2
@@ -1185,13 +1277,13 @@ int main(int argc, char *argv[])
                 SetMouseScale(1.0f, 1.0f);
             }
         }
+        */
         //----------------------------------------------------------------------------------
 
         // WARNING: Some windows should lock the main screen controls when shown
         if (mainToolbarState.propsStateEditMode ||
             windowHelpState.windowActive ||
             windowAboutState.windowActive ||
-            windowFontAtlasState.windowActive ||
             showExitWindow ||
             showExportWindow ||
             showIssueReportWindow ||
@@ -1203,7 +1295,7 @@ int main(int argc, char *argv[])
         // Draw
         //----------------------------------------------------------------------------------
         // Render all screen to texture (for scaling)
-        BeginTextureMode(screenTarget);
+        BeginDrawing();
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
             // GUI: Main screen controls
@@ -1214,17 +1306,30 @@ int main(int argc, char *argv[])
             // In case a custom gui state is selected for review, we reset the selected property
             if (mainToolbarState.propsStateActive != STATE_NORMAL) currentSelectedProperty = -1;
 
-            // List views
-            GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 148, 520 }, TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), NULL, &currentSelectedControl);
-            if (currentSelectedControl != DEFAULT) GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, NULL, &currentSelectedProperty, NULL);
-            else GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, 520 }, guiPropsDefaultText, 14, NULL, &currentSelectedProperty, NULL);
+            // Styles list view
+            int prevVisualStyle = mainToolbarState.visualStyleActive;
+            GuiListView((Rectangle){ 12, anchorMain.y + 52, 148, GetScreenHeight() - 256 - 48 },
+                "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete;Amber;RLTech;Genesis", 
+                &styleListScroll, &mainToolbarState.visualStyleActive);
+            if (mainToolbarState.visualStyleActive == -1) mainToolbarState.visualStyleActive = prevVisualStyle;
+
+            // Controls list view
+            GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 148, GetScreenHeight() - 256 - 48 }, 
+                TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), &controlListScroll, &currentSelectedControl);
+            
+            // Properties list view
+            if (currentSelectedControl != DEFAULT) GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 }, 
+                guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, &propertyListScroll, &currentSelectedProperty, NULL);
+            else GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 }, 
+                guiPropsDefaultText, 14, &propertyListScroll, &currentSelectedProperty, NULL);
 
             // Controls window
             if (controlsWindowActive)
             {
-                controlsWindowActive = !GuiWindowBox((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 520 }, "#198#Sample raygui controls");
+                Rectangle controlsWindowRec = (Rectangle){ anchorWindow.x, anchorWindow.y, 385, GetScreenHeight() - 256 - 48 };
+                controlsWindowActive = !GuiWindowBox(controlsWindowRec, "#198#Control properties editor");
 
-                GuiGroupBox((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 0, 365, 357 }, "Property Editor");
+                GuiGroupBox((Rectangle){ anchorPropEditor.x, anchorPropEditor.y, controlsWindowRec.width - 20, controlsWindowRec.height - 24 - 28 }, "Property Editor");
 
                 //if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
                 //if (currentSelectedControl == DEFAULT) GuiDisable();
@@ -1234,9 +1339,11 @@ int main(int argc, char *argv[])
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 //if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
-                GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 35, 365, 15 }, NULL);
-                GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 }, NULL, &colorPickerValue);
+                int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 200;
+                GuiLine((Rectangle){ anchorPropEditor.x, anchorPropEditor.y + 35, 365, 15 }, NULL);
+                GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 320, colorPickerHeight }, NULL, &colorPickerValue);
 
+                /*
                 GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 80, 20 }, TextFormat("R:  %03i", colorPickerValue.r));
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 80, 20 }, TextFormat("G:  %03i", colorPickerValue.g));
@@ -1245,51 +1352,145 @@ int main(int argc, char *argv[])
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 130, 80, 20 }, TextFormat("H:  %.0f", colorHSV.x));
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 80, 20 }, TextFormat("S:  %.0f%%", colorHSV.y*100));
                 GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 160, 80, 20 }, TextFormat("V:  %.0f%%", colorHSV.z*100));
+                */
+                rColorValue = (int)colorPickerValue.r;
+                gColorValue = (int)colorPickerValue.g;
+                bColorValue = (int)colorPickerValue.b;
+                GuiSetStyle(VALUEBOX, SPINNER_BUTTON_WIDTH, 18);
+                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12, anchorPropEditor.y + 55 + colorPickerHeight + 12, 86, 24 }, NULL, &rColorValue, 0, 255, rColorEditMode)) rColorEditMode = !rColorEditMode;
+                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12 + 90, anchorPropEditor.y + 55 + colorPickerHeight + 12, 86, 24 }, NULL, &gColorValue, 0, 255, gColorEditMode)) gColorEditMode = !gColorEditMode;
+                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12 + 180, anchorPropEditor.y + 55 + colorPickerHeight + 12, 86, 24 }, NULL, &bColorValue, 0, 255, bColorEditMode)) bColorEditMode = !bColorEditMode;
+                if (rColorValue != (int)colorPickerValue.r) colorPickerValue.r = (char)rColorValue;
+                if (gColorValue != (int)colorPickerValue.g) colorPickerValue.g = (char)gColorValue;
+                if (bColorValue != (int)colorPickerValue.b) colorPickerValue.b = (char)bColorValue;
+                GuiSetStyle(VALUEBOX, SPINNER_BUTTON_WIDTH, 24); // Default value
 
-                if (GuiTextBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 275, 60, 20 }, hexColorText, 9, textHexColorEditMode))
+                if (GuiTextBox((Rectangle){ anchorPropEditor.x + 12 + 274, anchorPropEditor.y + 55 + colorPickerHeight + 12, 70, 24 }, hexColorText, 9, textHexColorEditMode))
                 {
                     textHexColorEditMode = !textHexColorEditMode;
                     colorPickerValue = GetColor((int)strtoul(hexColorText, NULL, 16));
                 }
 
                 // Draw colors selector palette
-                for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorPropEditor.x + 295 + 20*(i%3), anchorPropEditor.y + 190 + 20*(i/3), 20, 20 }, &colorPickerValue, colorBoxValue[i]);
-                DrawRectangleLinesEx((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 190, 60, 80 }, 2, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL)));
+                GuiLabel((Rectangle){ anchorPropEditor.x + 12, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 40, 320, 20 }, "#25#PALETTE:");
+                for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorPropEditor.x + 12 + 80 + 22*i, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 40, 20, 20 }, &colorPickerValue, colorBoxValue[i]);
 
-                GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 300, 365, 15 }, NULL);
+                GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 36, 365, 12 }, NULL);
 
                 if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
                 GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
-                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 320, 104, 24 }, "Text Alignment:");
+                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 104, 24 }, "Text Alignment:");
                 GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 120, anchorPropEditor.y + 320, 76, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &textAlignmentActive);
+                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 120, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 76, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &textAlignmentActive);
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
-
-                // Font options
-                GuiGroupBox((Rectangle){ anchorFontOptions.x + 0, anchorFontOptions.y + 0, 365, 90 }, "Text Drawing Options");
-                if (GuiButton((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 16, 60, 24 }, "#30#Font")) windowFontAtlasState.windowActive = true;
-
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 110, anchorFontOptions.y + 16, 92, 24 }, "Size: ", &fontDrawSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
-                if (GuiSpinner((Rectangle){ anchorFontOptions.x + 262, anchorFontOptions.y + 16, 92, 24 }, "Spacing: ", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
-
-                if (GuiTextBox((Rectangle){ anchorFontOptions.x + 10, anchorFontOptions.y + 52, 345, 28 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
             }
             else
             {
-                GuiStatusBar((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 24 }, "#198#Sample raygui controls");
+                GuiStatusBar((Rectangle){ anchorWindow.x + 0, anchorWindow.y + 0, 385, 24 }, "#198#Control properties editor");
                 GuiSetStyle(BUTTON, BORDER_WIDTH, 1);
                 if (GuiButton((Rectangle){ anchorWindow.x + 385 - 16 - 5, anchorWindow.y + 3, 18, 18 }, "#53#")) controlsWindowActive = true;
                 GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
             }
             //---------------------------------------------------------------------------------------------------------
 
-            // GUI: Show style table image (if active and reloaded)
+            // GUI: Font Atlas Window
             //----------------------------------------------------------------------------------------
-            //if (mainToolbarState.viewStyleTableActive && 
-            //    (mainToolbarState.prevViewStyleTableActive == mainToolbarState.viewStyleTableActive))
+            // Fonts list view: get available fonts from the list
+            int textOffset = 0;
+            TextAppend(fontFileNamesList, "default", &textOffset);
+            for (int i = 1; i < fontFileCount; i++) TextAppend(fontFileNamesList, TextFormat(";%s", GetFileNameWithoutExt(fontFilePaths[i])), &textOffset);
+            // Font list view
+            int prevStyleFontIndex = styleFontSelected;
+            GuiStatusBar((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8, anchorMain.y + 52, 160, 24 }, "#31#Font");
+            GuiListView((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8, anchorMain.y + 52 + 23, 160, GetScreenHeight() - 256 - 72 },
+                fontFileNamesList, &fontListScroll, &styleFontSelected);
+            if ((styleFontSelected == -1) && (prevStyleFontIndex != -1)) styleFontSelected = prevStyleFontIndex; // WARNING: Avoid disabling font selected
+
+            // It could happen that the style already contains the font atlas
+            // but it has not been generated at that moment, in that case it could
+            // be useful to mark the default font used for that style
+            if (styleFontSelected == -1)
+            {
+                int index = defaultStyleFont[mainToolbarState.visualStyleActive];
+
+                DrawRectangleLinesEx((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8 + 3, 
+                    anchorMain.y + 52 + 23 + index*(GuiGetStyle(LISTVIEW, LIST_ITEMS_HEIGHT) + GuiGetStyle(LISTVIEW, LIST_ITEMS_SPACING)) + 3,
+                    160 - 6, GuiGetStyle(LISTVIEW, LIST_ITEMS_HEIGHT) },
+                    1.0f, Fade(GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)), 0.5f));
+            }
+            
+            if (styleFontSelected != prevStyleFontIndex) // Selected new style font
+            {
+                // Update style font to new selected one
+                // Use default pixel-perfect size for the font selected and spacing,
+                // recalculate font atlas, set drawing font size
+                if (styleFontSelected == 0)
+                {
+                    // Reset to default font
+                    memset(inFontFileName, 0, 512);
+                    windowFontAtlasState.fontGenSizeValue = 10;
+                    GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
+                    GuiSetStyle(DEFAULT, TEXT_SPACING, 1);
+                }
+                else
+                {
+                    // Set new font filepath for loading
+                    strcpy(inFontFileName, fontFilePaths[styleFontSelected]);
+
+                    windowFontAtlasState.selectedCharset = 1;
+                    windowFontAtlasState.fontGenSizeValue = fontBaseSize[styleFontSelected];
+                    fontSpacingValue = fontBaseSpacing[styleFontSelected];
+                    GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
+                }
+
+                fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
+
+                windowFontAtlasState.fontAtlasRegen = true;
+            }
+
+            // Font atlas generation panel
+            if (windowFontAtlasState.windowActive)
+            {
+                windowFontAtlasState.texFont = customFont.texture;
+                int prevFontSize = windowFontAtlasState.fontGenSizeValue;
+                windowFontAtlasState.bounds.height = GetScreenHeight() - 256 - 48;
+
+                GuiWindowFontAtlas(&windowFontAtlasState);
+
+                if (windowFontAtlasState.fontGenSizeValue != prevFontSize)
+                {
+                    fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
+                }
+
+                if (windowFontAtlasState.btnLoadFontPressed) showLoadFontDialog = true;
+                if (windowFontAtlasState.btnLoadCharsetPressed) showLoadCharsetDialog = true;
+                if (windowFontAtlasState.btnSaveFontAtlasPressed) showSaveFontAtlasDialog = true;
+
+                Rectangle rec = windowFontAtlasState.bounds;
+                GuiLine((Rectangle){ rec.x, rec.y + rec.height - 68 - 24, rec.width, 8 }, NULL);
+
+                // Text drawing options
+                GuiGroupBox((Rectangle){ rec.x + 10, rec.y + rec.height - 68, rec.width - 20, 56 }, "Text Drawing Options");
+                if (GuiSpinner((Rectangle){ rec.x + 88, rec.y + rec.height - 68 + 16, 100, 24 }, "Font Size: ", &fontDrawSizeValue, 8, 32, genFontSizeEditMode)) genFontSizeEditMode = !genFontSizeEditMode;
+                if (GuiSpinner((Rectangle){ rec.x + 254, rec.y + rec.height - 68 + 16, 100, 24 }, "Spacing: ", &fontSpacingValue, -4, 8, fontSpacingEditMode)) fontSpacingEditMode = !fontSpacingEditMode;
+                if (GuiTextBox((Rectangle){ rec.x + 368, rec.y + rec.height - 68 + 14, rec.width - 368 - 20, 28 }, fontSampleText, 128, fontSampleEditMode)) fontSampleEditMode = !fontSampleEditMode;
+
+            }
+            else
+            {
+                GuiStatusBar((Rectangle){ windowFontAtlasState.bounds.x, windowFontAtlasState.bounds.y, windowFontAtlasState.bounds.width, 24 }, "#30#Font Atlas Generation");
+                GuiSetStyle(BUTTON, BORDER_WIDTH, 1);
+                if (GuiButton((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width - 16 - 5, windowFontAtlasState.bounds.y + 3, 18, 18 }, "#53#")) windowFontAtlasState.windowActive = true;
+                GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
+            }
+            //----------------------------------------------------------------------------------------
+
+            // GUI: Show style table image
+            //----------------------------------------------------------------------------------------
+            if (showTableImage)
             {
                 // Style table panning with mouse logic
-                if (CheckCollisionPointRec(GetMousePosition(), (Rectangle){ 0, screenHeight - styleTableRec.height - 28, GetScreenWidth(), styleTableRec.height }))
+                if (CheckCollisionPointRec(GetMousePosition(), (Rectangle){ 0, GetScreenHeight() - styleTableRec.height - 28, GetScreenWidth(), styleTableRec.height }))
                 {
                     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
                     {
@@ -1308,22 +1509,32 @@ int main(int argc, char *argv[])
                     if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) styleTablePanningMode = false;
                 }
 
-                GuiSetStyle(SLIDER, SLIDER_WIDTH, 128);
-                GuiSlider((Rectangle){ 0, screenHeight - 24 - 12 + 1, screenWidth, 12 }, NULL, NULL, &styleTableRec.x, 0.0f, (float)styleTableRec.width - screenWidth);
+                // Calculate the slider bar width proportional to the image panel size and viewing part
+                GuiSetStyle(SLIDER, SLIDER_WIDTH, (int)(((float)GetScreenWidth()/1920.0f)*GetScreenWidth()));
+                GuiSlider((Rectangle){ 0, GetScreenHeight() - 24 - 12 + 1, GetScreenWidth(), 12 }, NULL, NULL, &styleTableRec.x, 0.0f, (float)styleTableRec.width - GetScreenWidth());
                 GuiSetStyle(SLIDER, SLIDER_WIDTH, 16);
 
-                DrawStyleControlsTable(-styleTableRec.x, screenHeight - 264);
+                DrawStyleControlsTable(-styleTableRec.x, GetScreenHeight() - 264);
             }
             //----------------------------------------------------------------------------------------
 
             // GUI: Status bar
             //----------------------------------------------------------------------------------------
-            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 60, 24 }, "Name:"); //(changedPropCounter > 0)? currentStyleName : styleNames[mainToolbarState.visualStyleActive]));
-            GuiStatusBar((Rectangle){159, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
+            GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
+            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 170, 24 }, "Style Name:"); //(changedPropCounter > 0)? currentStyleName : styleNames[mainToolbarState.visualStyleActive]));
+            GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
+            GuiStatusBar((Rectangle){ 320 - 2, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
 
-            if (GuiTextBox((Rectangle){ 60 - 1, GetScreenHeight() - 24, 101, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
+            if (GuiTextBox((Rectangle){ 170 - 1, GetScreenHeight() - 24, 150, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
-            GuiStatusBar((Rectangle){ 348, GetScreenHeight() - 24, 400, 24 }, TextFormat("FONT: %i codepoints | %ix%i pixels", GuiGetFont().glyphCount, GuiGetFont().texture.width, GuiGetFont().texture.height));
+            GuiStatusBar((Rectangle){ 320 + 190 - 3, GetScreenHeight() - 24, GetScreenWidth() - 880 - 530 + 7, 24 }, NULL);
+
+            GuiStatusBar((Rectangle){ GetScreenWidth() - 900 + 3, GetScreenHeight() - 24, 320, 24 }, TextFormat("Font File: %s [%s]", GetFileName(inFontFileName), FileExists(inFontFileName)? "LOADED" : "NOT AVAILABLE"));
+            GuiStatusBar((Rectangle){ GetScreenWidth() - 580 + 2, GetScreenHeight() - 24, 160, 24 }, TextFormat("Codepoints: %i", GuiGetFont().glyphCount));
+            GuiStatusBar((Rectangle){ GetScreenWidth() - 420 + 1, GetScreenHeight() - 24, 180, 24 }, TextFormat("Atlas Size: %ix%i", customFont.texture.width, customFont.texture.height));
+            GuiStatusBar((Rectangle){ GetScreenWidth() - 240, GetScreenHeight() - 24, 240, 24 }, 
+                TextFormat("Font white rec: [%i, %i, %i, %i]", (int)windowFontAtlasState.fontWhiteRec.x, (int)windowFontAtlasState.fontWhiteRec.y, (int)windowFontAtlasState.fontWhiteRec.width, (int)windowFontAtlasState.fontWhiteRec.height));
+            GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
             //----------------------------------------------------------------------------------------
 
             // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
@@ -1341,33 +1552,17 @@ int main(int argc, char *argv[])
             // Set default NORMAL state for all controls not in main screen
             GuiSetState(STATE_NORMAL);
 
-            // GUI: Font Atlas Window
-            //----------------------------------------------------------------------------------------
-            int prevFontSize = windowFontAtlasState.fontGenSizeValue;
-
-            GuiWindowFontAtlas(&windowFontAtlasState);
-
-            if (windowFontAtlasState.fontGenSizeValue != prevFontSize)
-            {
-                fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
-            }
-
-            if (windowFontAtlasState.btnLoadFontPressed) showLoadFontDialog = true;
-            if (windowFontAtlasState.btnLoadCharsetPressed) showLoadCharsetDialog = true;
-            if (windowFontAtlasState.btnSaveFontAtlasPressed) showSaveFontAtlasDialog = true;
-            //----------------------------------------------------------------------------------------
-
             // GUI: Help Window
             //----------------------------------------------------------------------------------------
-            windowHelpState.windowBounds.x = (float)screenWidth/2 - windowHelpState.windowBounds.width/2;
-            windowHelpState.windowBounds.y = (float)screenHeight/2 - windowHelpState.windowBounds.height/2;
+            windowHelpState.windowBounds.x = (float)GetScreenWidth()/2 - windowHelpState.windowBounds.width/2;
+            windowHelpState.windowBounds.y = (float)GetScreenHeight()/2 - windowHelpState.windowBounds.height/2;
             GuiWindowHelp(&windowHelpState);
             //----------------------------------------------------------------------------------------
 
             // GUI: About Window
             //----------------------------------------------------------------------------------------
-            windowAboutState.windowBounds.x = (float)screenWidth/2 - windowAboutState.windowBounds.width/2;
-            windowAboutState.windowBounds.y = (float)screenHeight/2 - windowAboutState.windowBounds.height/2;
+            windowAboutState.windowBounds.x = (float)GetScreenWidth()/2 - windowAboutState.windowBounds.width/2;
+            windowAboutState.windowBounds.y = (float)GetScreenHeight()/2 - windowAboutState.windowBounds.height/2;
             GuiWindowAbout(&windowAboutState);
             //----------------------------------------------------------------------------------------
 
@@ -1392,7 +1587,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showExportWindow)
             {
-                Rectangle messageBox = { (float)screenWidth/2 - 248/2, (float)screenHeight/2 - 150, 248, 196 };
+                Rectangle messageBox = { (float)GetScreenWidth()/2 - 248/2, (float)GetScreenHeight()/2 - 150, 248, 196 };
                 int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
 
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 24 + 12, 106, 24 }, "Style Name:");
@@ -1424,7 +1619,7 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showExitWindow)
             {
-                int result = GuiMessageBox((Rectangle){ (float)screenWidth/2 - 125, (float)screenHeight/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
+                int result = GuiMessageBox((Rectangle){ (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
 
                 if ((result == 0) || (result == 2)) showExitWindow = false;
                 else if (result == 1) closeWindow = true;
@@ -1559,7 +1754,7 @@ int main(int argc, char *argv[])
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
-                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 30, 280, 112 }, "#2#Save raygui style file...", NULL, "#2#Save", outFileName, 512, NULL);
+                int result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 30, 280, 112 }, "#2#Save raygui style file...", NULL, "#2#Save", outFileName, 512, NULL);
 #else
                 int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
 #endif
@@ -1595,7 +1790,7 @@ int main(int argc, char *argv[])
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
-                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 60, 280, 112 }, "#7#Export raygui style file...", NULL, "#7#Export", outFileName, 512, NULL);
+                int result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 60, 280, 112 }, "#7#Export raygui style file...", NULL, "#7#Export", outFileName, 512, NULL);
 #else
                 if (outFileName[0] == '\0') strcpy(outFileName, "style");   // Check for empty name
 
@@ -1684,7 +1879,7 @@ int main(int argc, char *argv[])
             {
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save font atlas image...", outFileName, "Ok;Cancel", NULL);
-                int result = GuiTextInputBox((Rectangle){ screenWidth/2 - 280/2, screenHeight/2 - 112/2 - 30, 280, 112 }, "#2#Save font atlas image...", NULL, "#2#Save", outFileName, 512, NULL);
+                int result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 30, 280, 112 }, "#2#Save font atlas image...", NULL, "#2#Save", outFileName, 512, NULL);
 #else
                 int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save font atlas image...", outFileName, "*.png", "Image File (*.png)");
 #endif
@@ -1711,8 +1906,9 @@ int main(int argc, char *argv[])
             }
             //----------------------------------------------------------------------------------------
 
-        EndTextureMode();
+        EndDrawing();
 
+        /*
         BeginDrawing();
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
@@ -1721,6 +1917,7 @@ int main(int argc, char *argv[])
             else DrawTextureRec(screenTarget.texture, (Rectangle){ 0, 0, (float)screenTarget.texture.width, -(float)screenTarget.texture.height }, (Vector2){ 0, 0 }, WHITE);
 
         EndDrawing();
+        */
         //----------------------------------------------------------------------------------
     }
     // De-Initialization
@@ -2517,11 +2714,9 @@ static void DrawStyleControlsTable(int posX, int posY)
 
     int tableStateNameWidth = 100;   // First column with state name width
 
-    int tableWidth = 0;
-    int tableHeight = 256;
-
-    tableWidth = TABLE_LEFT_PADDING*2 + tableStateNameWidth;
-    for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += ((controlWidth[i] + TABLE_CELL_PADDING*2) - 1);
+    //int tableHeight = 256;
+    //int tableWidth = TABLE_LEFT_PADDING*2 + tableStateNameWidth;
+    //for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += ((controlWidth[i] + TABLE_CELL_PADDING*2) - 1);
 
     // Controls required variables
     int dropdownActive = 0;

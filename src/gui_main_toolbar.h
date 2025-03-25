@@ -73,7 +73,6 @@ typedef struct {
     bool btnUserPressed;
 
     // Custom variables
-    // TODO.
 
 } GuiMainToolbarState;
 
@@ -157,9 +156,6 @@ GuiMainToolbarState InitGuiMainToolbar(void)
     state.btnAboutPressed = false;
     state.btnIssuePressed = false;
     state.btnUserPressed = false;
-    
-    // Custom variables
-    // TODO.
 
     // Enable tooltips by default
     GuiEnableTooltip();
@@ -169,10 +165,8 @@ GuiMainToolbarState InitGuiMainToolbar(void)
 
 void GuiMainToolbar(GuiMainToolbarState *state)
 {
-    int screenWidth = 748;  // WARNING: Screen width is hardcoded to avoid issues on screen scaling!
-
     // Toolbar panels
-    state->anchorRight.x = (float)screenWidth - 104;            // Update right-anchor panel
+    state->anchorRight.x = (float)GetScreenWidth() - 104;       // Update right-anchor panel
     state->anchorVisuals.x = state->anchorRight.x - 220 + 1;    // Update right-anchor panel
 
     GuiPanel((Rectangle){ state->anchorFile.x, state->anchorFile.y, 160, 40 }, NULL);
@@ -204,24 +198,24 @@ void GuiMainToolbar(GuiMainToolbarState *state)
     //GuiSetTooltip("Show style table image (F5)");
     //GuiToggle((Rectangle){ state->anchorTools.x + 14, 8, 24, 24 }, "#101#", &state->viewStyleTableActive);
     GuiSetTooltip("Show font atlas window (F6)");
-    state->btnFontAtlasPressed = GuiButton((Rectangle){ state->anchorTools.x + 14, 8, 52, 24 }, "#30#");
+    //state->btnFontAtlasPressed = GuiButton((Rectangle){ state->anchorTools.x + 14, 8, 52, 24 }, "#30#");
 
     // Visuals options
     GuiLabel((Rectangle){ state->anchorVisuals.x + 10, state->anchorVisuals.y + 8, 60, 24 }, "Style:");
     GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 40);
     GuiSetTooltip("Select base style template");
-    GuiComboBox((Rectangle){ state->anchorVisuals.x + 8 + 48, state->anchorVisuals.y + 8, 120, 24 }, "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete;Amber;RLTech", &state->visualStyleActive);
+    GuiComboBox((Rectangle){ state->anchorVisuals.x + 8 + 48, state->anchorVisuals.y + 8, 120, 24 }, "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete;Amber;RLTech;Genesis", &state->visualStyleActive);
     GuiSetStyle(COMBOBOX, COMBO_BUTTON_WIDTH, 32);
     GuiSetTooltip("Reload current style template (LCTRL+R)");
     state->btnReloadStylePressed = GuiButton((Rectangle){ state->anchorVisuals.x + 8 + 48 + 120 + 8, state->anchorVisuals.y + 8, 24, 24 }, "#76#");
 
     // Info options
     GuiSetTooltip("Show help window (F1)");
-    state->btnHelpPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 72 - 8, state->anchorRight.y + 8, 24, 24 }, "#221#"); 
+    state->btnHelpPressed = GuiButton((Rectangle){ (float)GetScreenWidth() - 12 - 72 - 8, state->anchorRight.y + 8, 24, 24 }, "#221#"); 
     GuiSetTooltip("Show info window (F2)");
-    state->btnAboutPressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 48 - 4, state->anchorRight.y + 8, 24, 24 }, "#222#");
+    state->btnAboutPressed = GuiButton((Rectangle){ (float)GetScreenWidth() - 12 - 48 - 4, state->anchorRight.y + 8, 24, 24 }, "#222#");
     GuiSetTooltip("Report an issue (F3)");
-    state->btnIssuePressed = GuiButton((Rectangle){ state->anchorRight.x + (screenWidth - state->anchorRight.x) - 12 - 24, state->anchorRight.y + 8, 24, 24 }, "#220#");
+    state->btnIssuePressed = GuiButton((Rectangle){ (float)GetScreenWidth() - 12 - 24, state->anchorRight.y + 8, 24, 24 }, "#220#");
 
     GuiSetTooltip(NULL);
 }
