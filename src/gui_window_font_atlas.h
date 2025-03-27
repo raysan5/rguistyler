@@ -28,6 +28,15 @@
 #ifndef GUI_WINDOW_FONT_ATLAS_H
 #define GUI_WINDOW_FONT_ATLAS_H
 
+typedef struct TextureView {
+    Texture2D texture;
+    Vector2 position;
+    Vector2 prevPosition;
+    Vector2 panOffset;
+    float scale;
+    bool panning;
+} TextureView;
+
 typedef struct {
     Rectangle bounds;
     
@@ -52,7 +61,6 @@ typedef struct {
 
     // Custom state variables (depend on development software)
     // NOTE: This variables should be added manually if required
-    Texture2D texFont;
     Rectangle fontWhiteRec;
 
     int *externalCodepointList;        // External charset codepoints loaded from UTF-8 file
@@ -105,12 +113,9 @@ static const char *charsetBasic = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK
 // Default charset: ISO-8859-15 (213 codepoints)
 static const char *charsetDefault = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~¡¢£€¥Š§š©ª«¬®¯°±²³Žµ¶·ž¹º»ŒœŸ¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ";
 
+static TextureView fontAtlasView = { 0 };
 static Rectangle fontAtlasRec = { 0 };
-static Vector2 fontAtlasPosition = { 0 };
-static Vector2 prevFontAtlasPosition = { 0 };
-static Vector2 fontAtlasOffset = { 0 };
-static float fontAtlasScale = 1.0f;
-static bool panningMode = false;
+
 static Rectangle fontWhiteRecScreen = { 0 };
 static Vector2 fontWhiteRecStartPos = { 0 };
 static bool prevSelectWhiteRecActive = false;
@@ -128,7 +133,8 @@ static int codepointListCount = 0;          // Custom codepoint list count
 //----------------------------------------------------------------------------------
 // Internal Module Functions Definition
 //----------------------------------------------------------------------------------
-//...
+// Scale/zoom texture view to target point (mouse)
+static void ScaleTextureView(TextureView *view, float scaleFactor, Vector2 targetPoint);
 
 //----------------------------------------------------------------------------------
 // Module Functions Definition
@@ -156,7 +162,6 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
     state.compressGlyphDataActive = true;
 
     // Custom variables initialization
-    state.texFont = (Texture2D){ 0 };
     state.fontWhiteRec = GetShapesTextureRectangle();
     state.selectedCharset = 0;
     state.prevSelectedCharset = 0;
@@ -168,13 +173,18 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
     state.fontAtlasRegen = false;
 
     // Init global variables
-    // TODO: Consider screen resizing to reposition font atlas
-    fontAtlasPosition.x = state.bounds.x + state.bounds.width/2;
-    fontAtlasPosition.y = state.bounds.y + state.bounds.height/2;
+    fontAtlasView.texture = GuiGetFont().texture;
+    fontAtlasView.scale = 1.0f;
+    fontAtlasView.position.x = state.bounds.x + state.bounds.width/2 - fontAtlasView.texture.width*fontAtlasView.scale/2;
+    fontAtlasView.position.y = state.bounds.y + state.bounds.height/2 - fontAtlasView.texture.height*fontAtlasView.scale/2;
+    fontAtlasView.prevPosition = fontAtlasView.position;
 
-    fontAtlasRec = (Rectangle){ fontAtlasPosition.x - state.texFont.width*fontAtlasScale/2,
-        fontAtlasPosition.y - state.texFont.height*fontAtlasScale/2,
-        state.texFont.width*fontAtlasScale, state.texFont.height*fontAtlasScale };
+    fontAtlasRec = (Rectangle){ 
+        fontAtlasView.position.x, 
+        fontAtlasView.position.y,
+        fontAtlasView.texture.width*fontAtlasView.scale, 
+        fontAtlasView.texture.height*fontAtlasView.scale 
+    };
 
     return state;
 }
@@ -208,10 +218,10 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
 
         if (!prevSelectWhiteRecActive && state->selectWhiteRecActive)
         {
-            fontWhiteRecScreen.x = fontAtlasRec.x + state->fontWhiteRec.x*fontAtlasScale;
-            fontWhiteRecScreen.y = fontAtlasRec.y + state->fontWhiteRec.y*fontAtlasScale,
-                fontWhiteRecScreen.width = state->fontWhiteRec.width*fontAtlasScale;
-            fontWhiteRecScreen.height = state->fontWhiteRec.height*fontAtlasScale;
+            fontWhiteRecScreen.x = fontAtlasRec.x + state->fontWhiteRec.x*fontAtlasView.scale;
+            fontWhiteRecScreen.y = fontAtlasRec.y + state->fontWhiteRec.y*fontAtlasView.scale,
+                fontWhiteRecScreen.width = state->fontWhiteRec.width*fontAtlasView.scale;
+            fontWhiteRecScreen.height = state->fontWhiteRec.height*fontAtlasView.scale;
         }
 
         if (state->selectWhiteRecActive && CheckCollisionPointRec(mousePosition, (Rectangle){ state->bounds.x, state->bounds.y + 64, state->bounds.width, state->bounds.height - 64 }))
@@ -242,10 +252,11 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
                 }
             }
 
-            state->fontWhiteRec.x = (fontWhiteRecScreen.x - fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2)/fontAtlasScale + state->texFont.width;
-            state->fontWhiteRec.y = (fontWhiteRecScreen.y - fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2)/fontAtlasScale + state->texFont.height;
-            state->fontWhiteRec.width = fontWhiteRecScreen.width/fontAtlasScale;
-            state->fontWhiteRec.height = fontWhiteRecScreen.height/fontAtlasScale;
+            // Get final rectangle from selection
+            state->fontWhiteRec.x = (fontWhiteRecScreen.x - fontAtlasView.position.x)/fontAtlasView.scale;
+            state->fontWhiteRec.y = (fontWhiteRecScreen.y - fontAtlasView.position.y)/fontAtlasView.scale;
+            state->fontWhiteRec.width = fontWhiteRecScreen.width/fontAtlasView.scale;
+            state->fontWhiteRec.height = fontWhiteRecScreen.height/fontAtlasView.scale;
             if (state->fontWhiteRec.x < 0) state->fontWhiteRec.x = 0;
             if (state->fontWhiteRec.y < 0) state->fontWhiteRec.y = 0;
 
@@ -260,46 +271,48 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
             if ((state->fontWhiteRec.width <= 0) || (state->fontWhiteRec.height <= 0)) state->fontWhiteRec = (Rectangle){ 0 };
 
             // Only zoom atlas when mouse over
-            // TODO: Zoom to mouse position, instead of center of atlas
-            if (CheckCollisionPointRec(GetMousePosition(), state->bounds))
+            // NOTE: Zoom to mouse position, instead of center of atlas
+            if (CheckCollisionPointRec(mousePosition, state->bounds))
             {
-                fontAtlasScale += GetMouseWheelMove();
-                if (fontAtlasScale < 1.0f) fontAtlasScale = 1.0f;
-                else if (fontAtlasScale > 16.0f) fontAtlasScale = 16.0f;
-            }
-
-            // Calculate font atlas rectangle (considering transformations)
-            fontAtlasRec = (Rectangle){ fontAtlasPosition.x - state->texFont.width*fontAtlasScale/2,
-                fontAtlasPosition.y - state->texFont.height*fontAtlasScale/2,
-                state->texFont.width*fontAtlasScale, state->texFont.height*fontAtlasScale };
-
-            // Font atlas panning with mouse logic
-            if (CheckCollisionPointRec(GetMousePosition(), fontAtlasRec))
-            {
-                if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                // Scale/zoom atlas texture
+                float wheelDelta = GetMouseWheelMove();
+                if ((int)wheelDelta != 0)
                 {
-                    panningMode = true;
-                    fontAtlasOffset = GetMousePosition();
-                    prevFontAtlasPosition = fontAtlasPosition;
-                }
-            }
-            if (panningMode)
-            {
-                if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
-                {
-                    fontAtlasPosition.x = prevFontAtlasPosition.x + (GetMouseX() - fontAtlasOffset.x);
-                    fontAtlasPosition.y = prevFontAtlasPosition.y + (GetMouseY() - fontAtlasOffset.y);
+                    float scaleFactor = wheelDelta*0.5f;
+                    if (IsKeyDown(KEY_LEFT_SHIFT)) scaleFactor = wheelDelta;
+
+                    ScaleTextureView(&fontAtlasView, scaleFactor, mousePosition);
                 }
 
-                if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) panningMode = false;
+                // Font atlas panning with mouse logic
+                if (CheckCollisionPointRec(mousePosition, fontAtlasRec))
+                {
+                    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+                    {
+                        fontAtlasView.panning = true;
+                        fontAtlasView.panOffset = mousePosition;
+                        fontAtlasView.prevPosition = fontAtlasView.position;
+                    }
+                }
+                if (fontAtlasView.panning)
+                {
+                    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT))
+                    {
+                        fontAtlasView.position.x = fontAtlasView.prevPosition.x + ((mousePosition.x - fontAtlasView.panOffset.x));
+                        fontAtlasView.position.y = fontAtlasView.prevPosition.y + ((mousePosition.y - fontAtlasView.panOffset.y));
+                    }
+
+                    if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) fontAtlasView.panning = false;
+                }
             }
 
             if (IsKeyPressed(KEY_F) || IsWindowResized())
             {
-                fontAtlasScale = 1.0f;
-                fontAtlasPosition.x = state->bounds.x + state->bounds.width/2;
-                fontAtlasPosition.y = state->bounds.y + state->bounds.height/2;
-                prevFontAtlasPosition = fontAtlasPosition;
+                // Reset font atlas view position and scale
+                fontAtlasView.scale = 1.0f;
+                fontAtlasView.position.x = state->bounds.x + state->bounds.width/2 - fontAtlasView.texture.width*fontAtlasView.scale/2;
+                fontAtlasView.position.y = state->bounds.y + state->bounds.height/2 - fontAtlasView.texture.height*fontAtlasView.scale/2;
+                fontAtlasView.prevPosition = fontAtlasView.position;
 
                 prevSelectWhiteRecActive = false; 
                 state->selectWhiteRecActive = false;
@@ -326,6 +339,14 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
             }
         }
 
+        // Calculate font atlas rectangle (considering transformations)
+        fontAtlasRec = (Rectangle){ 
+            fontAtlasView.position.x, 
+            fontAtlasView.position.y,
+            fontAtlasView.texture.width*fontAtlasView.scale, 
+            fontAtlasView.texture.height*fontAtlasView.scale 
+        };
+
         // Reload font and generate new atlas at new size when required
         if (state->fontAtlasRegen)
         {
@@ -339,6 +360,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
                     if (customFontLoaded) UnloadFont(customFont);   // Unload previously loaded font
                     customFont = tempFont;
                     GuiSetFont(customFont);
+                    fontAtlasView.texture = customFont.texture;
 
                     // NOTE: Generated fonts have a white rectangle at the bottom-right corner by default, 
                     // 3x3 pixels, to be used for shapes rectangle
@@ -354,6 +376,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
                 if (customFontLoaded) UnloadFont(customFont);
                 customFont = GetFontDefault();
                 GuiSetFont(customFont);
+                fontAtlasView.texture = customFont.texture;
                 
                 Rectangle whiteRec = customFont.recs[95];
                 state->fontWhiteRec = (Rectangle){ whiteRec.x + 2, whiteRec.y + 2, 1, 1 };
@@ -380,13 +403,15 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         // White rectangle selection border
         if (state->selectWhiteRecActive)
         {
-            DrawRectangleLinesEx((Rectangle){ state->bounds.x, state->bounds.y + 64, state->bounds.width, state->bounds.height - 64 }, 4, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED)));
+            DrawRectangleLinesEx((Rectangle){ state->bounds.x, state->bounds.y + 64, state->bounds.width, state->bounds.height - 64 - 68 - 20 }, 4, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_PRESSED)));
         }
 
         // Draw font atlas view
         BeginScissorMode(state->bounds.x + 1, state->bounds.y + 24 + 40, state->bounds.width - 2, state->bounds.height - 65 - 68 - 18);
             DrawRectangleRec(fontAtlasRec, BLACK);
-            DrawTexturePro(state->texFont, (Rectangle){ 0, 0, (float)state->texFont.width, (float)state->texFont.height }, fontAtlasRec, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
+            DrawTexturePro(fontAtlasView.texture, 
+                (Rectangle){ 0, 0, (float)fontAtlasView.texture.width, (float)fontAtlasView.texture.height }, 
+                fontAtlasRec, (Vector2){ 0.0f, 0.0f }, 0.0f, WHITE);
             DrawRectangleLinesEx(fontAtlasRec, 1.0f, Fade(RED, 0.6f));
 
             if (state->selectWhiteRecActive)
@@ -404,9 +429,9 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
             else
             {
                 DrawRectangleRec((Rectangle){ 
-                    fontAtlasRec.x + state->fontWhiteRec.x*fontAtlasScale, 
-                    fontAtlasRec.y + state->fontWhiteRec.y*fontAtlasScale,
-                    state->fontWhiteRec.width*fontAtlasScale, state->fontWhiteRec.height*fontAtlasScale }, 
+                    fontAtlasRec.x + state->fontWhiteRec.x*fontAtlasView.scale, 
+                    fontAtlasRec.y + state->fontWhiteRec.y*fontAtlasView.scale,
+                    state->fontWhiteRec.width*fontAtlasView.scale, state->fontWhiteRec.height*fontAtlasView.scale }, 
                     GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)));
             }
         EndScissorMode();
@@ -455,7 +480,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         if (GuiButton((Rectangle){ state->bounds.x + state->bounds.width - 176 + 82, state->bounds.y + 32, 24, 24 }, "#84#"))
         {
             // SOLUTION: Always add a white rectangle at the bottom-right corner, 3x3 pixels -> Added by raylib LoadFontEx()
-            state->fontWhiteRec = (Rectangle){ customFont.texture.width - 2, customFont.texture.height - 2, 1, 1 };
+            state->fontWhiteRec = (Rectangle){ fontAtlasView.texture.width - 2, fontAtlasView.texture.height - 2, 1, 1 };
         }
         GuiSetTooltip("Clear shapes rectangle");
         if (GuiButton((Rectangle){ state->bounds.x + state->bounds.width - 176 + 82 + 24 + 4, state->bounds.y + 32, 24, 24 }, "#79#"))
@@ -478,16 +503,49 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
     }
     else
     {
-        fontAtlasScale = 1.0f;
-        fontAtlasPosition.x = state->bounds.x + state->bounds.width/2;
-        fontAtlasPosition.y = state->bounds.y + state->bounds.height/2;
-        prevFontAtlasPosition = fontAtlasPosition;
+        // Reset font atlas view position and scale
+        fontAtlasView.scale = 1.0f;
+        fontAtlasView.position.x = state->bounds.x + state->bounds.width/2 - fontAtlasView.texture.width*fontAtlasView.scale/2;
+        fontAtlasView.position.y = state->bounds.y + state->bounds.height/2 - fontAtlasView.texture.height*fontAtlasView.scale/2;
+        fontAtlasView.prevPosition = fontAtlasView.position;
 
         prevSelectWhiteRecActive = false; 
         state->selectWhiteRecActive = false;
 
         prevFontGenSizeValue = state->fontGenSizeValue;
     }
+}
+
+// Scale/zoom texture view to target point (mouse)
+static void ScaleTextureView(TextureView *view, float scaleFactor, Vector2 targetPoint)
+{
+    float prevWidth = (float)view->texture.width*view->scale;
+    float prevHeight = (float)view->texture.height*view->scale;
+
+    // Update scale by mouse factor
+    view->scale += scaleFactor;
+
+    if (view->scale < 1.0f) view->scale = 1.0f;
+    else if (view->scale > 20.0f) view->scale = 20.0f;
+
+    // Calculate the new width and height
+    float newWidth = (float)view->texture.width*view->scale;
+    float newHeight = (float)view->texture.height*view->scale;
+
+    // Calculate the change in width and height
+    float deltaWidth = newWidth - prevWidth;
+    float deltaHeight = newHeight - prevHeight;
+
+    // Calculate the relative position of the point within the rectangle
+    float relativeX = (targetPoint.x - view->position.x)/prevWidth;
+    float relativeY = (targetPoint.y - view->position.y)/prevHeight;
+
+    // Update position as required
+    view->position.x -= deltaWidth*relativeX;
+    view->position.x = floorf(view->position.x);
+    view->position.y -= deltaHeight*relativeY;
+    view->position.y = floorf(view->position.y);
+    view->prevPosition = view->position;
 }
 
 #endif // GUI_WINDOW_FONT_ATLAS_IMPLEMENTATION

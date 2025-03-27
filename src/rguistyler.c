@@ -1156,6 +1156,12 @@ int main(int argc, char *argv[])
             fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
 
+            // Reset font atlas view position and scale
+            fontAtlasView.scale = 1.0f;
+            fontAtlasView.position.x = windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width/2 - customFont.texture.width*fontAtlasView.scale/2;
+            fontAtlasView.position.y = windowFontAtlasState.bounds.y + windowFontAtlasState.bounds.height/2 - customFont.texture.height*fontAtlasView.scale/2;
+            fontAtlasView.prevPosition = fontAtlasView.position;
+
             // Reset list view font selected
             memset(inFontFileName, 0, 512);
             styleFontSelected = -1;
@@ -1451,7 +1457,7 @@ int main(int argc, char *argv[])
             // Font atlas generation panel
             if (windowFontAtlasState.windowActive)
             {
-                windowFontAtlasState.texFont = customFont.texture;
+                fontAtlasView.texture = customFont.texture;
                 int prevFontSize = windowFontAtlasState.fontGenSizeValue;
                 windowFontAtlasState.bounds.height = GetScreenHeight() - 256 - 48;
 
@@ -1890,7 +1896,7 @@ int main(int argc, char *argv[])
                     if (outFileName[0] == '\0') strcpy(outFileName, "style_font.png");   // Check for empty name
                     if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
 
-                    Image image = LoadImageFromTexture(windowFontAtlasState.texFont);
+                    Image image = LoadImageFromTexture(fontAtlasView.texture);
                     ExportImage(image, outFileName);
                     UnloadImage(image);
 
