@@ -61,17 +61,9 @@ jobs:
         cp ${{ env.PROJECT_NAME }}/README.md ${{ env.PROJECT_RELEASE_PATH }}
         cp ${{ env.PROJECT_NAME }}/LICENSE ${{ env.PROJECT_RELEASE_PATH }}
         mkdir ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_jungle.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_candy.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_bluish.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_cherry.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_ashes.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_cyber.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_lavanda.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_terminal.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_dark.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_sunny.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp ${{ env.PROJECT_NAME }}/styles/style_enefete.rgs ${{ env.PROJECT_RELEASE_PATH }}/styles
+        mkdir ${{ env.PROJECT_RELEASE_PATH }}/resources
+        cp -r ${{ env.PROJECT_NAME }}/styles ${{ env.PROJECT_RELEASE_PATH }}/styles
+        cp -r ${{ env.PROJECT_NAME }}/resources ${{ env.PROJECT_RELEASE_PATH }}/resources
         ls ${{ env.PROJECT_RELEASE_PATH }}
         7z a ./${{ env.PROJECT_RELEASE_PATH }}.zip ./${{ env.PROJECT_RELEASE_PATH }}
 

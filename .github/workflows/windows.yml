@@ -60,17 +60,9 @@ jobs:
         copy /Y ${{ env.PROJECT_NAME }}\README.md ${{ env.PROJECT_RELEASE_PATH }}\README.md
         copy /Y ${{ env.PROJECT_NAME }}\LICENSE ${{ env.PROJECT_RELEASE_PATH }}\LICENSE
         mkdir ${{ env.PROJECT_RELEASE_PATH }}\styles
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_jungle.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_jungle.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_candy.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_candy.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_bluish.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_bluish.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_cherry.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_cherry.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_ashes.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_ashes.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_cyber.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_cyber.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_lavanda.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_lavanda.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_terminal.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_terminal.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_dark.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_dark.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_sunny.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_sunny.rgs
-        copy /Y ${{ env.PROJECT_NAME }}\styles\style_enefete.rgs ${{ env.PROJECT_RELEASE_PATH }}\styles\style_enefete.rgs
+        mkdir ${{ env.PROJECT_RELEASE_PATH }}\resources
+        robocopy "${{ env.PROJECT_NAME }}\styles" "${{ env.PROJECT_RELEASE_PATH }}\styles" /E
+        robocopy "${{ env.PROJECT_NAME }}\resources" "${{ env.PROJECT_RELEASE_PATH }}\resources" /E
         dir ${{ env.PROJECT_RELEASE_PATH }}
         7z a .\${{ env.PROJECT_RELEASE_PATH }}.zip .\${{ env.PROJECT_RELEASE_PATH }}
       shell: cmd
