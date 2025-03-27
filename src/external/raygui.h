@@ -3375,7 +3375,7 @@ int GuiProgressBar(Rectangle bounds, const char *textLeft, const char *textRight
     if (value == NULL) value = &temp;
 
     // Progress bar
-    Rectangle progress = { bounds.x + GuiGetStyle(PROGRESSBAR, BORDER_WIDTH) + GuiGetStyle(PROGRESSBAR, PROGRESS_PADDING),
+    Rectangle progress = { bounds.x + GuiGetStyle(PROGRESSBAR, BORDER_WIDTH),
                            bounds.y + GuiGetStyle(PROGRESSBAR, BORDER_WIDTH) + GuiGetStyle(PROGRESSBAR, PROGRESS_PADDING), 0,
                            bounds.height - GuiGetStyle(PROGRESSBAR, BORDER_WIDTH) - 2*GuiGetStyle(PROGRESSBAR, PROGRESS_PADDING) -1 };
 
@@ -3414,7 +3414,6 @@ int GuiProgressBar(Rectangle bounds, const char *textLeft, const char *textRight
         }
 
         // Draw slider internal progress bar (depends on state)
-        progress.width -= 2*GuiGetStyle(PROGRESSBAR, PROGRESS_PADDING);
         GuiDrawRectangle(progress, 0, BLANK, GetColor(GuiGetStyle(PROGRESSBAR, BASE_COLOR_PRESSED)));
     }
 
@@ -4444,8 +4443,8 @@ void GuiLoadStyleDefault(void)
     {
         // Unload previous font texture
         UnloadTexture(guiFont.texture);
-        RL_FREE(guiFont.recs);
-        RL_FREE(guiFont.glyphs);
+        RAYGUI_FREE(guiFont.recs);
+        RAYGUI_FREE(guiFont.glyphs);
         guiFont.recs = NULL;
         guiFont.glyphs = NULL;
 
@@ -4562,7 +4561,7 @@ char **GuiLoadIcons(const char *fileName, bool loadIconsName)
             else fseek(rgiFile, iconCount*RAYGUI_ICON_MAX_NAME_LENGTH, SEEK_CUR);
 
             // Read icons data directly over internal icons array
-            fread(guiIconsPtr, sizeof(unsigned int), iconCount*(iconSize*iconSize/32), rgiFile);
+            fread(guiIconsPtr, sizeof(unsigned int), (int)iconCount*((int)iconSize*(int)iconSize/32), rgiFile);
         }
 
         fclose(rgiFile);
@@ -4612,7 +4611,7 @@ char **GuiLoadIconsFromMemory(const unsigned char *fileData, int dataSize, bool 
             fileDataPtr += iconCount*RAYGUI_ICON_MAX_NAME_LENGTH;
         }
 
-        int iconDataSize = iconCount*(iconSize*iconSize/32)*sizeof(unsigned int);
+        int iconDataSize = iconCount*((int)iconSize*(int)iconSize/32)*(int)sizeof(unsigned int);
         guiIconsPtr = (unsigned int *)RAYGUI_MALLOC(iconDataSize);
 
         memcpy(guiIconsPtr, fileDataPtr, iconDataSize);
