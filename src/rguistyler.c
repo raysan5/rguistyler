@@ -896,13 +896,10 @@ int main(int argc, char *argv[])
             if (styleCounter > 7) styleCounter = 0;
         }
 #endif
-
+/*
 #if defined(PLATFORM_DESKTOP)
-        // Toggle screen size (x2) mode
-        //if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_F)) screenSizeActive = !screenSizeActive;
-        /*
-        // Save all style file formats for current style (convenience functionality)
-        // TODO: Review shortcut and exposure of this function
+        // Save all style file formats for current style
+        // NOTE: This is a convenience feature to export raygui styles requried files
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
         {
             char styleNameLower[64] = { 0 };
@@ -912,7 +909,7 @@ int main(int argc, char *argv[])
             // Style header: style_name.h
             ExportStyleAsCode(TextFormat("%s/style_%s.h", styleNameLower, styleNameLower), currentStyleName);
 
-            //fontDataCompressedChecked = false;
+            //fontDataCompressedChecked = true;
 
             // Style binary: style_name.old.rgs (backward compatible)
             //version = 300;
@@ -940,8 +937,8 @@ int main(int argc, char *argv[])
             // Select LABEL, BORDER_COLOR_FOCUSED -> Update required?
             TakeScreenshot(TextFormat("%s/screenshot.png", styleNameLower));
         }
-        */
 #endif
+*/
         // New style file, previous in/out files registeres are reseted
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
         {
