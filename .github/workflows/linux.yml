@@ -63,7 +63,7 @@ jobs:
         mkdir ${{ env.PROJECT_RELEASE_PATH }}/styles
         mkdir ${{ env.PROJECT_RELEASE_PATH }}/resources
         cp -r ${{ env.PROJECT_NAME }}/styles ${{ env.PROJECT_RELEASE_PATH }}/styles
-        cp -r ${{ env.PROJECT_NAME }}/resources ${{ env.PROJECT_RELEASE_PATH }}/resources
+        cp -r ${{ env.PROJECT_NAME }}/src/resources ${{ env.PROJECT_RELEASE_PATH }}/resources
         ls ${{ env.PROJECT_RELEASE_PATH }}
         7z a ./${{ env.PROJECT_RELEASE_PATH }}.zip ./${{ env.PROJECT_RELEASE_PATH }}
 
