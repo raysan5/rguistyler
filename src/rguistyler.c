@@ -36,12 +36,12 @@
 *       6.0  (26-Mar-2025)  Complete redesign of the tool
 *                           ADDED: Styles list view
 *                           ADDED: Fonts resources and list view
-*                           ADDED: Table image palette and loading support 
+*                           ADDED: Table image palette and loading support
 *                           ADDED: New styles: Genesis, RLTech
 *                           REDESIGNED: Resizable window, scalable UI elements
 *                           REDESIGNED: Controls properties editor window
 *                           UPDATED: Using raylib 5.6-dev and raygui 4.5-dev
-* 
+*
 *       5.1  (06-Apr-2024)  ADDED: Issue report window
 *                           REMOVED: Sponsors window
 *                           REVIEWED: Main toolbar and help window
@@ -78,8 +78,8 @@
 *   DEPENDENCIES:
 *       raylib 5.5-dev          - Windowing/input management and drawing
 *       raygui 4.5-dev          - Immediate-mode GUI controls with custom styling and icons
-*       rpng 1.1                - PNG chunks management
-*       tinyfiledialogs 3.18    - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
+*       rpng 1.5                - PNG chunks management
+*       tinyfiledialogs 3.19.1  - Open/save file dialogs, it requires linkage with comdlg32 and ole32 libs
 *
 *   BUILDING:
 *     - Windows (MinGW-w64):
@@ -1312,18 +1312,18 @@ int main(int argc, char *argv[])
             // Styles list view
             int prevVisualStyle = mainToolbarState.visualStyleActive;
             GuiListView((Rectangle){ 12, anchorMain.y + 52, 148, GetScreenHeight() - 256 - 48 },
-                "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete;Amber;RLTech;Genesis", 
+                "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete;Amber;RLTech;Genesis",
                 &styleListScroll, &mainToolbarState.visualStyleActive);
             if (mainToolbarState.visualStyleActive == -1) mainToolbarState.visualStyleActive = prevVisualStyle;
 
             // Controls list view
-            GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 148, GetScreenHeight() - 256 - 48 }, 
+            GuiListView((Rectangle){ anchorMain.x + 10, anchorMain.y + 52, 148, GetScreenHeight() - 256 - 48 },
                 TextJoin(guiControlText, RAYGUI_MAX_CONTROLS, ";"), &controlListScroll, &currentSelectedControl);
-            
+
             // Properties list view
-            if (currentSelectedControl != DEFAULT) GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 }, 
+            if (currentSelectedControl != DEFAULT) GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 },
                 guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, &propertyListScroll, &currentSelectedProperty, NULL);
-            else GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 }, 
+            else GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 },
                 guiPropsDefaultText, 14, &propertyListScroll, &currentSelectedProperty, NULL);
 
             // Controls window
@@ -1416,12 +1416,12 @@ int main(int argc, char *argv[])
             {
                 int index = defaultStyleFont[mainToolbarState.visualStyleActive];
 
-                DrawRectangleLinesEx((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8 + 3, 
+                DrawRectangleLinesEx((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8 + 3,
                     anchorMain.y + 52 + 23 + index*(GuiGetStyle(LISTVIEW, LIST_ITEMS_HEIGHT) + GuiGetStyle(LISTVIEW, LIST_ITEMS_SPACING)) + 3,
                     160 - 6, GuiGetStyle(LISTVIEW, LIST_ITEMS_HEIGHT) },
                     1.0f, Fade(GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)), 0.5f));
             }
-            
+
             if (styleFontSelected != prevStyleFontIndex) // Selected new style font
             {
                 // Update style font to new selected one
@@ -1535,7 +1535,7 @@ int main(int argc, char *argv[])
             GuiStatusBar((Rectangle){ GetScreenWidth() - 900 + 3, GetScreenHeight() - 24, 320, 24 }, TextFormat("Font File: %s [%s]", GetFileName(inFontFileName), FileExists(inFontFileName)? "LOADED" : "NOT AVAILABLE"));
             GuiStatusBar((Rectangle){ GetScreenWidth() - 580 + 2, GetScreenHeight() - 24, 160, 24 }, TextFormat("Codepoints: %i", GuiGetFont().glyphCount));
             GuiStatusBar((Rectangle){ GetScreenWidth() - 420 + 1, GetScreenHeight() - 24, 180, 24 }, TextFormat("Atlas Size: %ix%i", customFont.texture.width, customFont.texture.height));
-            GuiStatusBar((Rectangle){ GetScreenWidth() - 240, GetScreenHeight() - 24, 240, 24 }, 
+            GuiStatusBar((Rectangle){ GetScreenWidth() - 240, GetScreenHeight() - 24, 240, 24 },
                 TextFormat("Font white rec: [%i, %i, %i, %i]", (int)windowFontAtlasState.fontWhiteRec.x, (int)windowFontAtlasState.fontWhiteRec.y, (int)windowFontAtlasState.fontWhiteRec.width, (int)windowFontAtlasState.fontWhiteRec.height));
             GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
             //----------------------------------------------------------------------------------------
@@ -1843,7 +1843,7 @@ int main(int argc, char *argv[])
                         {
                             // Check for valid extension and make sure it is
                             if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".png")) strcat(outFileName, ".png\0");
-                            
+
                             // Export table image
                             Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
                             ExportImage(imStyleTable, outFileName);
