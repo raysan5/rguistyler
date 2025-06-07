@@ -1237,7 +1237,7 @@ int main(int argc, char *argv[])
 
         // Color selection logic (text box and color picker)
         //----------------------------------------------------------------------------------
-        if (!textHexColorEditMode) sprintf(hexColorText, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
+        if (!textHexColorEditMode) snprintf(hexColorText, 9, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
 
         // Color selection cursor show/hide logic
         Rectangle colorPickerRec = { anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 };
