@@ -180,7 +180,7 @@
 #include "external/rpng.h"                  // PNG chunks management
 
 // Standard C libraries
-#include <stdlib.h>                         // Required for: malloc(), free()
+#include <stdlib.h>                         // Required for: calloc(), free()
 #include <string.h>                         // Required for: strcmp(), memcpy()
 #include <stdio.h>                          // Required for: fopen(), fclose(), fread()...
 
@@ -2234,7 +2234,7 @@ static char *SaveStyleToMemory(int *size)
             if (fontDataCompressedChecked)
             {
                 // NOTE: We only want to save some fields from GlyphInfo struct
-                int *glyphsData = (int *)RL_MALLOC(customFont.glyphCount*4*sizeof(int));
+                int *glyphsData = (int *)RL_CALLOC(customFont.glyphCount*4, sizeof(int));
 
                 for (int i = 0; i < customFont.glyphCount; i++)
                 {
@@ -2632,12 +2632,12 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             */
             fprintf(txtFile, "    // Copy char recs data from global fontRecs\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
-            fprintf(txtFile, "    font.recs = (Rectangle *)RAYGUI_MALLOC(font.glyphCount*sizeof(Rectangle));\n");
+            fprintf(txtFile, "    font.recs = (Rectangle *)RAYGUI_CALLOC(font.glyphCount, sizeof(Rectangle));\n");
             fprintf(txtFile, "    memcpy(font.recs, %sFontRecs, font.glyphCount*sizeof(Rectangle));\n\n", styleNameLower);
 
             fprintf(txtFile, "    // Copy font char info data from global fontChars\n");
             fprintf(txtFile, "    // NOTE: Required to avoid issues if trying to free font\n");
-            fprintf(txtFile, "    font.glyphs = (GlyphInfo *)RAYGUI_MALLOC(font.glyphCount*sizeof(GlyphInfo));\n");
+            fprintf(txtFile, "    font.glyphs = (GlyphInfo *)RAYGUI_CALLOC(font.glyphCount, sizeof(GlyphInfo));\n");
             fprintf(txtFile, "    memcpy(font.glyphs, %sFontGlyphs, font.glyphCount*sizeof(GlyphInfo));\n\n", styleNameLower);
 
             fprintf(txtFile, "    GuiSetFont(font);\n\n");
