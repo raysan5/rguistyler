@@ -899,7 +899,7 @@ int main(int argc, char *argv[])
 /*
 #if defined(PLATFORM_DESKTOP)
         // Save all style file formats for current style
-        // NOTE: This is a convenience feature to export raygui styles requried files
+        // NOTE: This is a convenience feature to export raygui styles required files
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
         {
             char styleNameLower[64] = { 0 };
