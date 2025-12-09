@@ -2336,7 +2336,7 @@ static int SaveStyle(const char *fileName, int format)
         // 56+4*N  | 4       | int        | Image width
         // 60+4*N  | 4       | int        | Image height
         // 64+4*N  | 4       | int        | Image format
-        // 68+4*N  | imSize  | *          | Image data (comp or uncomp)
+        // 68+4*N  | imSize  | byte       | Image data (comp or uncomp)
 
         // Custom Font Data : Recs (32 bytes*glyphCount)
         // NOTE: Font recs data can be compressed (DEFLATE)
