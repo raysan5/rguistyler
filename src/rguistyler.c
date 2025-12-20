@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
         GuiLoadStyle(inFileName);
         SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
         inputFileLoaded = true;
-        strcpy(currentStyleName, GetFileNameWithoutExt(inFileName));
+        strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 256 - 1);
     }
     else
     {
@@ -875,7 +875,7 @@ int main(int argc, char *argv[])
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
             SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
-            strcpy(currentStyleName, GetFileNameWithoutExt(inFileName));
+            strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 256 - 1);
 
             genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
