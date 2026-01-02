@@ -33,7 +33,7 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       6.0  (26-Mar-2025)  Complete redesign of the tool
+*       6.0  (26-Mar-2026)  Complete redesign of the tool
 *                           ADDED: Styles list view
 *                           ADDED: Fonts resources and list view
 *                           ADDED: Table image palette and loading support
@@ -102,7 +102,7 @@
 *
 *   LICENSE: zlib/libpng
 *
-*   Copyright (c) 2015-2025 raylib technologies (@raylibtech) / Ramon Santamaria (@raysan5)
+*   Copyright (c) 2015-2026 raylib technologies (@raylibtech) / Ramon Santamaria (@raysan5)
 *
 *   This software is provided "as-is", without any express or implied warranty. In no event
 *   will the authors be held liable for any damages arising from the use of this software.
@@ -1946,7 +1946,7 @@ static void ShowCommandLineInfo(void)
     printf("// more info and bugs-report: github.com/raylibtech/rtools                      //\n");
     printf("// feedback and support:      ray[at]raylibtech.com                             //\n");
     printf("//                                                                              //\n");
-    printf("// Copyright (c) 2017-2025 raylib technologies (@raylibtech)                    //\n");
+    printf("// Copyright (c) 2017-2026 raylib technologies (@raylibtech)                    //\n");
     printf("//                                                                              //\n");
     printf("//////////////////////////////////////////////////////////////////////////////////\n\n");
 
@@ -2483,7 +2483,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "// more info and bugs-report:  github.com/raysan5/raygui                        //\n");
         fprintf(txtFile, "// feedback and support:       ray[at]raylibtech.com                            //\n");
         fprintf(txtFile, "//                                                                              //\n");
-        fprintf(txtFile, "// Copyright (c) 2020-2025 raylib technologies (@raylibtech)                    //\n");
+        fprintf(txtFile, "// Copyright (c) 2020-2026 raylib technologies (@raylibtech)                    //\n");
         fprintf(txtFile, "//                                                                              //\n");
         fprintf(txtFile, "//////////////////////////////////////////////////////////////////////////////////\n\n");
 

@@ -55,4 +55,4 @@ Once the desired style has been created, press the `Export Style` button to save
 
 In any case, consider some donation to help the author keep working on software for games development.
 
-*Copyright (c) 2017-2025 raylib technologies ([@raylibtech](https://github.com/raylibtech)) / Ramon Santamaria ([@raysan5](https://github.com/raysan5))*
+*Copyright (c) 2017-2026 raylib technologies ([@raylibtech](https://github.com/raylibtech)) / Ramon Santamaria ([@raysan5](https://github.com/raysan5))*
