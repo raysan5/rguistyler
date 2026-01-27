@@ -1306,7 +1306,7 @@ int main(int argc, char *argv[])
             // Set custom gui state if selected
             GuiSetState(mainToolbarState.propsStateActive);
 
-            // In case a custom gui state is selected for review, we reset the selected property
+            // In case a custom gui state is selected for review, reset the selected property
             if (mainToolbarState.propsStateActive != STATE_NORMAL) currentSelectedProperty = -1;
 
             // Styles list view
@@ -1540,10 +1540,10 @@ int main(int argc, char *argv[])
             GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
             //----------------------------------------------------------------------------------------
 
-            // NOTE: If some overlap window is open and main window is locked, we draw a background rectangle
+            // NOTE: If some overlap window is open and main window is locked, draw a background rectangle
             if (GuiIsLocked()) DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)), 0.85f));
 
-            // WARNING: Before drawing the windows, we unlock them
+            // WARNING: Before drawing the windows, unlock them
             GuiUnlock();
 
             // GUI: Main toolbar panel
@@ -2233,7 +2233,7 @@ static char *SaveStyleToMemory(int *size)
 
             if (fontDataCompressedChecked)
             {
-                // NOTE: We only want to save some fields from GlyphInfo struct
+                // NOTE: Only saving some fields from GlyphInfo struct
                 int *glyphsData = (int *)RL_CALLOC(customFont.glyphCount*4, sizeof(int));
 
                 for (int i = 0; i < customFont.glyphCount; i++)
@@ -2742,7 +2742,7 @@ static void DrawStyleControlsTable(int posX, int posY)
 
         // Draw style rectangle
         GuiSetState(i); GuiLabelButton((Rectangle){ rec.x + 28, rec.y, rec.width, rec.height }, tableStateName[i]);
-        rec.y += TABLE_CELL_HEIGHT - 1;             // NOTE: We add/remove 1px to draw lines overlapped!
+        rec.y += TABLE_CELL_HEIGHT - 1; // NOTE: Add/remove 1px to draw lines overlapped!
     }
     //----------------------------------------------------------------------------------------
 
