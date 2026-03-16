@@ -2568,7 +2568,7 @@ static int SaveStyle(const char *fileName, int format)
                 {
                     // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
                     if (j < RAYGUI_MAX_PROPS_BASE) fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", j, GuiGetStyle(0, j), guiProps[j]);
-                    else  fprintf(rgsFile, "p 00 %02i 0x%08x    %s \n", j, GuiGetStyle(0, j), guiPropsDefaultExtended[j - RAYGUI_MAX_PROPS_BASE]);
+                    else  fprintf(rgsFile, "p 00 %02i 0x%08x    %s \n", j, GuiGetStyle(0, j), guiPropsDefaultExtended[j - RAYGUI_MAX_PROPS_BASE].name);
                 }
             }
 
@@ -2642,7 +2642,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         {
             if (defaultStyle[i] != GuiGetStyle(0, i))
             {
-                if (i < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiProps[i]);
+                if (i < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiProps[i].name);
                 else fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsExtText[i - RAYGUI_MAX_PROPS_BASE]);
             }
         }
@@ -2654,7 +2654,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             {
                 if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
                 {
-                    if (j < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiProps[j]);
+                    if (j < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiProps[j].name);
                     else fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], TextFormat("EXTENDED%02i", j - RAYGUI_MAX_PROPS_BASE + 1));
                 }
             }
