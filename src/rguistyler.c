@@ -1497,7 +1497,7 @@ int main(int argc, char *argv[])
                 styleTableRec.width = (GetScreenWidth() > 1920)? (float)GetScreenWidth() : 1920.0f;
 
                 // Style table panning with mouse logic
-                if (CheckCollisionPointRec(GetMousePosition(), (Rectangle){ 0, GetScreenHeight() - styleTableRec.height - 28, GetScreenWidth(), styleTableRec.height }))
+                if ((styleTableRec.width > GetScreenWidth()) && CheckCollisionPointRec(GetMousePosition(), (Rectangle){ 0, GetScreenHeight() - styleTableRec.height - 28, GetScreenWidth(), styleTableRec.height }))
                 {
                     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
                     {
@@ -1506,6 +1506,7 @@ int main(int argc, char *argv[])
                         prevStyleTablePositionX = styleTableRec.x;
                     }
                 }
+
                 if (styleTablePanningMode)
                 {
                     if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) styleTableRec.x = prevStyleTablePositionX - (GetMouseX() - styleTableOffsetX);
@@ -1517,9 +1518,13 @@ int main(int argc, char *argv[])
                 }
 
                 // Calculate the slider bar width proportional to the image panel size and viewing part
-                GuiSetStyle(SLIDER, SLIDER_WIDTH, (int)(((float)GetScreenWidth()/styleTableRec.width)*GetScreenWidth()));
-                GuiSlider((Rectangle){ 0, GetScreenHeight() - 24 - 12 + 1, GetScreenWidth(), 12 }, NULL, NULL, &styleTableRec.x, 0.0f, (styleTableRec.width > GetScreenWidth())? (styleTableRec.width - GetScreenWidth()) : 0.0f);
-                GuiSetStyle(SLIDER, SLIDER_WIDTH, 16);
+                if (styleTableRec.width > GetScreenWidth())
+                {
+                    GuiSetStyle(SLIDER, SLIDER_WIDTH, (int)(((float)GetScreenWidth()/styleTableRec.width)*GetScreenWidth()));
+                    GuiSlider((Rectangle){ 0, GetScreenHeight() - 24 - 12 + 1, GetScreenWidth(), 12 }, NULL, NULL, &styleTableRec.x, 0.0f, styleTableRec.width - GetScreenWidth());
+                    GuiSetStyle(SLIDER, SLIDER_WIDTH, 16);
+                }
+                else styleTableRec.x = 0.0f;
 
                 DrawStyleControlsTable((int)-styleTableRec.x, GetScreenHeight() - 264, (int)styleTableRec.width);
             }
