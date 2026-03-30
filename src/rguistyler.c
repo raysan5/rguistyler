@@ -739,7 +739,7 @@ int main(int argc, char *argv[])
                             GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL + i, ColorToInt(GetImageColor(imTable, 12 + i*8, 46)));
                         }
 
-                        int controlPalOffsetX = 11 + 100; // TABLE_CELL_PADDING
+                        int controlPalOffsetX = 11 + 100; 
 
                         // Get control-specific color palette
                         for (int i = 0; i < 13; i++) //TABLE_CONTROLS_COUNT
@@ -771,7 +771,7 @@ int main(int argc, char *argv[])
                                 }
                             }
 
-                            controlPalOffsetX += (controlWidth[i] + 2*8 - 1); //TABLE_CELL_PADDING
+                            controlPalOffsetX += (controlWidth[i] + 2*8 - 1);
                         }
 
                         // Update guistyler font size
@@ -2760,7 +2760,7 @@ static void DrawStyleControlsTable(int posX, int posY, int width)
     // Draw basic controls
     for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
     {
-        rec = (Rectangle){ posX + offsetWidth - i - 1, posY + TABLE_TOP_PADDING + 20, (controlWidth[i] + TABLE_CELL_PADDING*2), TABLE_CELL_HEIGHT/2 + 1 };
+        rec = (Rectangle){ posX + offsetWidth - i - 1, posY + tableTopPadding + 20, (controlWidth[i] + tableCellPadding*2), tableCellHeight/2 + 1 };
 
         // Draw grid lines: control name
         GuiGroupBox(rec, NULL);
@@ -2810,12 +2810,12 @@ static void DrawStyleControlsTable(int posX, int posY, int width)
             switch (i)
             {
                 case TYPE_LABEL: GuiLabelButton((Rectangle){ rec.x, rec.y, controlWidth[i], 40 }, "#10#Label"); break;
-                case TYPE_BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#2#Button"); break;
+                case TYPE_BUTTON: GuiButton((Rectangle){ rec.x + rec.width/2 - (float)controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#2#Button"); break;
                 case TYPE_TOGGLE: GuiToggle((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#39#Toggle", &tempBool); break;
                 case TYPE_CHECKBOX:
                 {
                     GuiCheckBox((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "NoCheck", &tempBool);
-                    DrawRectangle((int)rec.x + (int)rec.width/2, (int)rec.y, 1, tableCellHeight, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+                    DrawRectangle(rec.x + rec.width/2, rec.y, 1, tableCellHeight, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                     tempBool = true;
                     GuiCheckBox((Rectangle){ rec.x + rec.width/2 + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "Checked", &tempBool);
                 } break;
@@ -2832,7 +2832,7 @@ static void DrawStyleControlsTable(int posX, int posY, int width)
                 {
                     GuiSetStyle(SLIDER, SLIDER_PADDING, 2);
                     GuiToggleSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, (float)controlWidth[i]/2 - tableCellPadding, 24 }, "#87#OFF;#83#ON", &tempInt);
-                    DrawRectangle((int)rec.x + (int)rec.width/2, (int)rec.y, 1, tableCellHeight, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+                    DrawRectangle(rec.x + rec.width/2, rec.y, 1, tableCellHeight, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                     tempInt = 1;
                     GuiToggleSlider((Rectangle){ rec.x + rec.width/2 + tableCellPadding, rec.y + rec.height/2 - 24/2, (float)controlWidth[i]/2 - tableCellPadding, 24 }, "#87#OFF;#83#ON", &tempInt);
                     GuiSetStyle(SLIDER, SLIDER_PADDING, 1);
