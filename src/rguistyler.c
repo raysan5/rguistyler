@@ -177,6 +177,7 @@
 #include "styles/style_genesis.h"           // raygui style: genesis
 
 #define RPNG_IMPLEMENTATION
+#define RPNG_DEFLATE_IMPLEMENTATION
 #include "external/rpng.h"                  // PNG chunks management
 
 // Standard C libraries
@@ -239,7 +240,7 @@ static const char *toolDescription = TOOL_DESCRIPTION;
 
 // Controls name text
 // NOTE: Some styles are shared by multiple controls
-static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
+static const char *guiControlText[RAYGUI_MAX_CONTROLS] = {
     "DEFAULT",
     "LABEL",        // LABELBUTTON
     "BUTTON",
@@ -411,7 +412,7 @@ static int SaveStyle(const char *fileName, int format);     // Save style binary
 static char *SaveStyleToMemory(int *size);                  // Save style to memory buffer
 static void ExportStyleAsCode(const char *fileName, const char *styleName); // Export gui style as properties array
 
-static void DrawStyleControlsTable(int posX, int posY);     // Draw style controls table
+static void DrawStyleControlsTable(int posX, int posY, int width);     // Draw style controls table
 static Image GenImageStyleControlsTable(int width, int height, const char *styleName); // Generate controls table image
 
 // Auxiliar functions
@@ -1492,6 +1493,9 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showTableImage)
             {
+                // Update style table width to fill the screen if it's bigger than base width (1920)
+                styleTableRec.width = (GetScreenWidth() > 1920)? (float)GetScreenWidth() : 1920.0f;
+
                 // Style table panning with mouse logic
                 if (CheckCollisionPointRec(GetMousePosition(), (Rectangle){ 0, GetScreenHeight() - styleTableRec.height - 28, GetScreenWidth(), styleTableRec.height }))
                 {
@@ -1513,11 +1517,11 @@ int main(int argc, char *argv[])
                 }
 
                 // Calculate the slider bar width proportional to the image panel size and viewing part
-                GuiSetStyle(SLIDER, SLIDER_WIDTH, (int)(((float)GetScreenWidth()/1920.0f)*GetScreenWidth()));
-                GuiSlider((Rectangle){ 0, GetScreenHeight() - 24 - 12 + 1, GetScreenWidth(), 12 }, NULL, NULL, &styleTableRec.x, 0.0f, (float)styleTableRec.width - GetScreenWidth());
+                GuiSetStyle(SLIDER, SLIDER_WIDTH, (int)(((float)GetScreenWidth()/styleTableRec.width)*GetScreenWidth()));
+                GuiSlider((Rectangle){ 0, GetScreenHeight() - 24 - 12 + 1, GetScreenWidth(), 12 }, NULL, NULL, &styleTableRec.x, 0.0f, (styleTableRec.width > GetScreenWidth())? (styleTableRec.width - GetScreenWidth()) : 0.0f);
                 GuiSetStyle(SLIDER, SLIDER_WIDTH, 16);
 
-                DrawStyleControlsTable(-styleTableRec.x, GetScreenHeight() - 264);
+                DrawStyleControlsTable((int)-styleTableRec.x, GetScreenHeight() - 264, (int)styleTableRec.width);
             }
             //----------------------------------------------------------------------------------------
 
@@ -2670,13 +2674,16 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 }
 
 // Draw style controls table
-static void DrawStyleControlsTable(int posX, int posY)
+static void DrawStyleControlsTable(int posX, int posY, int width)
 {
-    #define TABLE_LEFT_PADDING      12
-    #define TABLE_TOP_PADDING       20
+    float scale = 1.0f;
+    if (width > 1920) scale = (float)(width - 195)/1725.0f;
 
-    #define TABLE_CELL_HEIGHT       40
-    #define TABLE_CELL_PADDING       8          // Control padding inside cell
+    int tableLeftPadding = (int)(12*scale);
+    int tableTopPadding = 20;
+
+    int tableCellHeight = 40;
+    int tableCellPadding = 8;          // Control padding inside cell
 
     #define TABLE_CONTROLS_COUNT    13
 
@@ -2699,26 +2706,26 @@ static void DrawStyleControlsTable(int posX, int posY)
 
     // Controls grid width
     int controlWidth[TABLE_CONTROLS_COUNT] = {
-        100,    // LABEL
-        100,    // BUTTON
-        100,    // TOGGLE
-        200,    // CHECKBOX
-        100,    // SLIDER
-        100,    // SLIDERBAR
-        100,    // PROGRESSBAR
-        200,    // TOGGLESLIDER
-        140,    // COMBOBOX,
-        160,    // DROPDOWNBOX
-        100,    // TEXTBOX
-        100,    // VALUEBOX
-        101,    // SPINNER
+        (int)(100*scale),    // LABEL
+        (int)(100*scale),    // BUTTON
+        (int)(100*scale),    // TOGGLE
+        (int)(200*scale),    // CHECKBOX
+        (int)(100*scale),    // SLIDER
+        (int)(100*scale),    // SLIDERBAR
+        (int)(100*scale),    // PROGRESSBAR
+        (int)(200*scale),    // TOGGLESLIDER
+        (int)(140*scale),    // COMBOBOX,
+        (int)(160*scale),    // DROPDOWNBOX
+        (int)(100*scale),    // TEXTBOX
+        (int)(100*scale),    // VALUEBOX
+        (int)(101*scale),    // SPINNER
     };
 
-    int tableStateNameWidth = 100;   // First column with state name width
+    int tableStateNameWidth = (int)(100*scale);   // First column with state name width
 
     //int tableHeight = 256;
-    //int tableWidth = TABLE_LEFT_PADDING*2 + tableStateNameWidth;
-    //for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += ((controlWidth[i] + TABLE_CELL_PADDING*2) - 1);
+    //int tableWidth = tableLeftPadding*2 + tableStateNameWidth;
+    //for (int i = 0; i < TABLE_CONTROLS_COUNT; i++) tableWidth += ((controlWidth[i] + tableCellPadding*2) - 1);
 
     // Controls required variables
     int dropdownActive = 0;
@@ -2731,7 +2738,7 @@ static void DrawStyleControlsTable(int posX, int posY)
 
     // Draw left column
     //----------------------------------------------------------------------------------------
-    rec = (Rectangle){ posX + TABLE_LEFT_PADDING, posY + TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableStateNameWidth, TABLE_CELL_HEIGHT };
+    rec = (Rectangle){ posX + tableLeftPadding, posY + tableTopPadding + tableCellHeight/2 + 20, (float)tableStateNameWidth, (float)tableCellHeight };
 
     // Draw style palette as small rectangles for easy color reference
     for (int i = 0; i < 12; i++) DrawRectangle(rec.x + 8*i, rec.y - 14, 8, 8, GetColor((unsigned int)GuiGetStyle(0, i)));
@@ -2742,13 +2749,13 @@ static void DrawStyleControlsTable(int posX, int posY)
 
         // Draw style rectangle
         GuiSetState(i); GuiLabelButton((Rectangle){ rec.x + 28, rec.y, rec.width, rec.height }, tableStateName[i]);
-        rec.y += TABLE_CELL_HEIGHT - 1; // NOTE: Add/remove 1px to draw lines overlapped!
+        rec.y += tableCellHeight - 1; // NOTE: Add/remove 1px to draw lines overlapped!
     }
     //----------------------------------------------------------------------------------------
 
     GuiSetState(STATE_NORMAL);
 
-    int offsetWidth = TABLE_LEFT_PADDING + tableStateNameWidth;
+    int offsetWidth = tableLeftPadding + tableStateNameWidth;
 
     // Draw basic controls
     for (int i = 0; i < TABLE_CONTROLS_COUNT; i++)
@@ -2783,8 +2790,8 @@ static void DrawStyleControlsTable(int posX, int posY)
             }
         }
 
-        rec.y += TABLE_CELL_HEIGHT/2;
-        rec.height = TABLE_CELL_HEIGHT;
+        rec.y += tableCellHeight/2;
+        rec.height = (float)tableCellHeight;
 
         float tempFloat = 40.0f;
 
@@ -2808,7 +2815,7 @@ static void DrawStyleControlsTable(int posX, int posY)
                 case TYPE_CHECKBOX:
                 {
                     GuiCheckBox((Rectangle){ rec.x + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "NoCheck", &tempBool);
-                    DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+                    DrawRectangle((int)rec.x + (int)rec.width/2, (int)rec.y, 1, tableCellHeight, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                     tempBool = true;
                     GuiCheckBox((Rectangle){ rec.x + rec.width/2 + 10, rec.y + rec.height/2 - 15/2, 15, 15 }, "Checked", &tempBool);
                 } break;
@@ -2824,10 +2831,10 @@ static void DrawStyleControlsTable(int posX, int posY)
                 case TYPE_TOGGLESLIDER:
                 {
                     GuiSetStyle(SLIDER, SLIDER_PADDING, 2);
-                    GuiToggleSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i]/2 - TABLE_CELL_PADDING, 24 }, "#87#OFF;#83#ON", &tempInt);
-                    DrawRectangle(rec.x + rec.width/2, rec.y, 1, TABLE_CELL_HEIGHT, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
+                    GuiToggleSlider((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, (float)controlWidth[i]/2 - tableCellPadding, 24 }, "#87#OFF;#83#ON", &tempInt);
+                    DrawRectangle((int)rec.x + (int)rec.width/2, (int)rec.y, 1, tableCellHeight, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
                     tempInt = 1;
-                    GuiToggleSlider((Rectangle){ rec.x + rec.width/2 + TABLE_CELL_PADDING, rec.y + rec.height/2 - 24/2, controlWidth[i]/2 - TABLE_CELL_PADDING, 24 }, "#87#OFF;#83#ON", &tempInt);
+                    GuiToggleSlider((Rectangle){ rec.x + rec.width/2 + tableCellPadding, rec.y + rec.height/2 - 24/2, (float)controlWidth[i]/2 - tableCellPadding, 24 }, "#87#OFF;#83#ON", &tempInt);
                     GuiSetStyle(SLIDER, SLIDER_PADDING, 1);
                 } break;
                 case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#40#ComboBox;ComboBox", 0); break;
@@ -2839,12 +2846,12 @@ static void DrawStyleControlsTable(int posX, int posY)
             }
             GuiSetState(STATE_NORMAL);
 
-            rec.y += TABLE_CELL_HEIGHT - 1;
+            rec.y += tableCellHeight - 1;
         }
 
         GuiSetStyle(LABEL, TEXT_ALIGNMENT, labelTextAlignment);
 
-        offsetWidth += (controlWidth[i] + TABLE_CELL_PADDING*2);
+        offsetWidth += (controlWidth[i] + tableCellPadding*2);
     }
 
     // Reset required styling properties
@@ -2861,16 +2868,19 @@ static Image GenImageStyleControlsTable(int width, int height, const char *style
     BeginTextureMode(target);
 
         ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+        float scale = 1.0f;
+        if (width > 1920) scale = (float)width/1920.0f;
+        int tableLeftPadding = (int)(12*scale);
 
         // Draw style title
-        GuiLabel((Rectangle){ TABLE_LEFT_PADDING, 15, 200, 20 }, TextFormat("raygui style: %s", styleName));
+        GuiLabel((Rectangle){ tableLeftPadding, 15, 200, 20 }, TextFormat("raygui style: %s", styleName));
 
-        DrawStyleControlsTable(0, 0);
+        DrawStyleControlsTable(0, 0, width);
 
         // Draw copyright and software info (bottom-right)
-        GuiLabel((Rectangle){ TABLE_LEFT_PADDING, height - 26, 400, 10 }, "raygui style table automatically generated with rGuiStyler");
+        GuiLabel((Rectangle){ tableLeftPadding, height - 26, 400, 10 }, "raygui style table automatically generated with rGuiStyler");
         GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
-        GuiLabel((Rectangle){ width - 400 - TABLE_LEFT_PADDING, height - 26, 400, 10 }, "rGuiStyler created by raylib technologies (@raylibtech)");
+        GuiLabel((Rectangle){ width - 400 - tableLeftPadding, height - 26, 400, 10 }, "rGuiStyler created by raylib technologies (@raylibtech)");
         GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
 
     EndTextureMode();
