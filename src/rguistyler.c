@@ -1126,7 +1126,7 @@ int main(int argc, char *argv[])
                 case 10: GuiLoadStyleSunny(); break;
                 case 11: GuiLoadStyleEnefete(); break;
                 case 12: GuiLoadStyleAmber(); break;
-                case 13: GuiLoadStyleRltech(); break;
+                case 13: GuiLoadStyleRLTech(); break;
                 case 14: GuiLoadStyleGenesis(); break;
                 default: break;
             }
@@ -1574,7 +1574,7 @@ int main(int argc, char *argv[])
             {
                 Rectangle messageBox = { (float)GetScreenWidth()/2 - 300/2, (float)GetScreenHeight()/2 - 190/2 - 20, 300, 190 };
                 int result = GuiMessageBox(messageBox, "#220#Report Issue",
-                    "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub");
+                    "Do you want to report any issue or\nfeature request for this program?\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub");
 
                 if (result == 1)    // Report issue pressed
                 {

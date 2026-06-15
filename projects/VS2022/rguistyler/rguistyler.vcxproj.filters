@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\..\src\rguistyler.c" />
+    <ClCompile Include="..\..\..\src\external\tinyfiledialogs.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\src\gui_file_dialogs.h" />
+    <ClInclude Include="..\..\..\src\gui_main_toolbar.h" />
+    <ClInclude Include="..\..\..\src\gui_window_about.h" />
+    <ClInclude Include="..\..\..\src\gui_window_font_atlas.h" />
+    <ClInclude Include="..\..\..\src\gui_window_help.h" />
+    <ClInclude Include="..\..\..\src\styles\style_candy.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_cherry.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_cyber.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_dark.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_enefete.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_genesis.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_jungle.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_lavanda.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_rltech.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_sunny.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_terminal.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_amber.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_ashes.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_bluish.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\..\..\src\rguistyler.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="styles">
+      <UniqueIdentifier>{a6df07a8-9620-4d5a-9887-296ecd64c1e5}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
