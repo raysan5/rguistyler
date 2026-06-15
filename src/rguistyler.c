@@ -260,7 +260,7 @@ static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
 
 // Controls properties name text (common to all controls)
 // NOTE: +2 extra: Background color and Line color
-static const char *guiPropsText[RAYGUI_MAX_PROPS_BASE] = {
+static char *guiPropsText[RAYGUI_MAX_PROPS_BASE] = {
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "TEXT_COLOR_NORMAL",
@@ -282,7 +282,7 @@ static const char *guiPropsText[RAYGUI_MAX_PROPS_BASE] = {
 // DEFAULT control properties name text
 // NOTE: This list removes some of the common properties for all controls (BORDER_WIDTH, TEXT_PADDING, TEXT_ALIGNMENT)
 // to force individual set of those ones and it also adds some DEFAULT extended properties for convenience (BACKGROUND_COLOR, LINE_COLOR)
-static const char *guiPropsDefaultText[14] = {
+static char *guiPropsDefaultText[14] = {
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "TEXT_COLOR_NORMAL",
