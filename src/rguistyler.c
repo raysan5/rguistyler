@@ -1345,7 +1345,6 @@ int main(int argc, char *argv[])
                 propertyValue = (int)propValueFloat;
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 32, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
 
-                if ()
                 // Color property editor
                 int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 200;
                 GuiLine((Rectangle){ anchorPropEditor.x, anchorPropEditor.y + 35, 365, 15 }, NULL);
