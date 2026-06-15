@@ -282,7 +282,7 @@ static char *guiPropsText[RAYGUI_MAX_PROPS_BASE] = {
 // DEFAULT control properties name text
 // NOTE: This list removes some of the common properties for all controls (BORDER_WIDTH, TEXT_PADDING, TEXT_ALIGNMENT)
 // to force individual set of those ones and it also adds some DEFAULT extended properties for convenience (BACKGROUND_COLOR, LINE_COLOR)
-static char *guiPropsDefaultText[14] = {
+static char *guiPropsDefaultText[16] = {
     "BORDER_COLOR_NORMAL",
     "BASE_COLOR_NORMAL",
     "TEXT_COLOR_NORMAL",
@@ -297,8 +297,10 @@ static char *guiPropsDefaultText[14] = {
     "TEXT_COLOR_DISABLED",
 
     // Additional extended properties for DEFAULT control
-    "BACKGROUND_COLOR",          // DEFAULT extended property
-    "LINE_COLOR"                 // DEFAULT extended property
+    "BACKGROUND_COLOR",
+    "LINE_COLOR",
+    "TEXT_LINE_SPACING",
+    "TEXT_ALIGNMENT_VERTICAL",
 };
 
 static const char *guiPropsDefaultExtendedText[8] = {
@@ -1201,8 +1203,9 @@ int main(int argc, char *argv[])
                 if (currentSelectedControl == DEFAULT)
                 {
                     if (currentSelectedProperty <= TEXT_COLOR_DISABLED) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, currentSelectedProperty));
-                    else if (currentSelectedProperty == 13) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, LINE_COLOR));
                     else if (currentSelectedProperty == 12) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, BACKGROUND_COLOR));
+                    else if (currentSelectedProperty == 13) colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, LINE_COLOR));
+                    else if (currentSelectedProperty == 14) propertyValue = GuiGetStyle(currentSelectedControl, TEXT_LINE_SPACING);
                 }
                 else
                 {
@@ -1219,8 +1222,9 @@ int main(int argc, char *argv[])
             {
                 // Update special default extended properties: BACKGROUND_COLOR and LINE_COLOR
                 if (currentSelectedProperty <= TEXT_COLOR_DISABLED) GuiSetStyle(currentSelectedControl, currentSelectedProperty, ColorToInt(colorPickerValue));
-                else if (currentSelectedProperty == 13) GuiSetStyle(currentSelectedControl, LINE_COLOR, ColorToInt(colorPickerValue));
                 else if (currentSelectedProperty == 12) GuiSetStyle(currentSelectedControl, BACKGROUND_COLOR, ColorToInt(colorPickerValue));
+                else if (currentSelectedProperty == 13) GuiSetStyle(currentSelectedControl, LINE_COLOR, ColorToInt(colorPickerValue));
+                else if (currentSelectedProperty == 14) GuiSetStyle(currentSelectedControl, TEXT_LINE_SPACING, propertyValue);
             }
             else
             {
@@ -1324,7 +1328,7 @@ int main(int argc, char *argv[])
             if (currentSelectedControl != DEFAULT) GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 },
                 guiPropsText, RAYGUI_MAX_PROPS_BASE - 1, &propertyListScroll, &currentSelectedProperty, NULL);
             else GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 },
-                guiPropsDefaultText, 14, &propertyListScroll, &currentSelectedProperty, NULL);
+                guiPropsDefaultText, 16, &propertyListScroll, &currentSelectedProperty, NULL);
 
             // Controls window
             if (controlsWindowActive)
@@ -1337,9 +1341,9 @@ int main(int argc, char *argv[])
                 //if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
                 //if (currentSelectedControl == DEFAULT) GuiDisable();
                 float propValueFloat = (float)propertyValue;
-                GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propValueFloat, 0, 20);
+                GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propValueFloat, 0, 32);
                 propertyValue = (int)propValueFloat;
-                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 8, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
+                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 32, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 //if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
                 int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 200;
