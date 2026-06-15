@@ -251,7 +251,7 @@ static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
     "DROPDOWNBOX",
     "TEXTBOX",      // TEXTBOXMULTI
     "VALUEBOX",
-    "CONTROL11",
+    "TABBAR",
     "LISTVIEW",
     "COLORPICKER",
     "SCROLLBAR",
@@ -273,6 +273,7 @@ static char *guiPropsText[RAYGUI_MAX_PROPS_BASE] = {
     "BORDER_COLOR_DISABLED",
     "BASE_COLOR_DISABLED",
     "TEXT_COLOR_DISABLED",
+
     "BORDER_WIDTH",
     "TEXT_PADDING",
     "TEXT_ALIGNMENT",
@@ -1330,7 +1331,7 @@ int main(int argc, char *argv[])
             else GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 },
                 guiPropsDefaultText, 16, &propertyListScroll, &currentSelectedProperty, NULL);
 
-            // Controls window
+            // Controls properties editor window
             if (controlsWindowActive)
             {
                 Rectangle controlsWindowRec = (Rectangle){ anchorWindow.x, anchorWindow.y, 385, GetScreenHeight() - 256 - 48 };
@@ -1338,28 +1339,18 @@ int main(int argc, char *argv[])
 
                 GuiGroupBox((Rectangle){ anchorPropEditor.x, anchorPropEditor.y, controlsWindowRec.width - 20, controlsWindowRec.height - 24 - 28 }, "Property Editor");
 
-                //if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_PADDING) && (currentSelectedProperty != BORDER_WIDTH)) GuiDisable();
-                //if (currentSelectedControl == DEFAULT) GuiDisable();
+                // Value property editor
                 float propValueFloat = (float)propertyValue;
                 GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propValueFloat, 0, 32);
                 propertyValue = (int)propValueFloat;
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 32, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-                //if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
+                if ()
+                // Color property editor
                 int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 200;
                 GuiLine((Rectangle){ anchorPropEditor.x, anchorPropEditor.y + 35, 365, 15 }, NULL);
                 GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 320, colorPickerHeight }, NULL, &colorPickerValue);
 
-                /*
-                GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 60, 60, 55 }, "RGBA");
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 65, 80, 20 }, TextFormat("R:  %03i", colorPickerValue.r));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 80, 80, 20 }, TextFormat("G:  %03i", colorPickerValue.g));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 95, 80, 20 }, TextFormat("B:  %03i", colorPickerValue.b));
-                GuiGroupBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 125, 60, 55 }, "HSV");
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 130, 80, 20 }, TextFormat("H:  %.0f", colorHSV.x));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 145, 80, 20 }, TextFormat("S:  %.0f%%", colorHSV.y*100));
-                GuiLabel((Rectangle){ anchorPropEditor.x + 300, anchorPropEditor.y + 160, 80, 20 }, TextFormat("V:  %.0f%%", colorHSV.z*100));
-                */
                 rColorValue = (int)colorPickerValue.r;
                 gColorValue = (int)colorPickerValue.g;
                 bColorValue = (int)colorPickerValue.b;
@@ -1372,18 +1363,20 @@ int main(int argc, char *argv[])
                 if (bColorValue != (int)colorPickerValue.b) colorPickerValue.b = (char)bColorValue;
                 GuiSetStyle(VALUEBOX, SPINNER_BUTTON_WIDTH, 24); // Default value
 
+                // Color hex editor
                 if (GuiTextBox((Rectangle){ anchorPropEditor.x + 12 + 274, anchorPropEditor.y + 55 + colorPickerHeight + 12, 70, 24 }, hexColorText, 9, textHexColorEditMode))
                 {
                     textHexColorEditMode = !textHexColorEditMode;
                     colorPickerValue = GetColor((int)strtoul(hexColorText, NULL, 16));
                 }
 
-                // Draw colors selector palette
+                // Colors selector palette
                 GuiLabel((Rectangle){ anchorPropEditor.x + 12, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 40, 320, 20 }, "#25#PALETTE:");
                 for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorPropEditor.x + 12 + 80 + 22*i, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 40, 20, 20 }, &colorPickerValue, colorBoxValue[i]);
 
                 GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 36, 365, 12 }, NULL);
 
+                // Specific property editing: TEXT_ALIGNMENT
                 if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
                 GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 104, 24 }, "Text Alignment:");
