@@ -488,7 +488,7 @@ static void DrawStyleControlsTable(int posX, int posY);     // Draw style contro
 static Image GenImageStyleControlsTable(int width, int height, const char *styleName); // Generate controls table image
 
 // Auxiliar functions
-static int StyleChangesCounter(unsigned int *refStyle);     // Count changed properties in current style (comparing to ref style)
+static int StyleChangesCounter(unsigned int *refStyle, unsigned int *style); // Count style changed properties (comparing to ref style)
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color); // Gui color box
 
 static int CopyControlProps(PropertyDesc src[], const char *names[], int types[], int count); // Copy controls data, used on BuildControlPropsText()
@@ -546,11 +546,11 @@ int main(int argc, char *argv[])
     Vector2 mousePos = { 0.0f, 0.0f };
     int frameCounter = 0;
 
-    int changedPropCounter = 0;
     bool obtainProperty = false;
     bool selectingColor = false;
 
     // Default light style backup (used to track global changes on export)
+    GuiGetStyle(0, 0); // WARNING: Make sure default style is lazy initialized!
     memcpy(defaultStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED)*sizeof(int));
 
     // Load file if provided (drag & drop over executable)
@@ -740,7 +740,6 @@ int main(int argc, char *argv[])
 
                 // Reset current style backup for changes tracking
                 memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
-                changedPropCounter = 0;
                 saveChangesRequired = false;
             }
             else if (IsFileExtension(droppedFiles.paths[0], ".ttf;.otf"))
@@ -776,7 +775,6 @@ int main(int argc, char *argv[])
 
                     // Reset current style backup for changes tracking
                     memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
-                    changedPropCounter = 0;
                     saveChangesRequired = false;
                 }
                 else
@@ -864,7 +862,6 @@ int main(int argc, char *argv[])
 
                         // Reset current style backup for changes tracking
                         memcpy(currentStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
-                        changedPropCounter = 0;
                         saveChangesRequired = false;
                     }
 
@@ -1086,7 +1083,7 @@ int main(int argc, char *argv[])
                 else if (showIssueReportWindow) showIssueReportWindow = false;
                 else if (showExportWindow) showExportWindow = false;
             #if defined(PLATFORM_DESKTOP)
-                else if (changedPropCounter > 0) showExitWindow = !showExitWindow;
+                else if (saveChangesRequired) showExitWindow = !showExitWindow;
                 else closeWindow = true;
             #else
                 else if (showLoadStyleDialog) showLoadStyleDialog = false;
@@ -1220,7 +1217,6 @@ int main(int argc, char *argv[])
             for (int i = 0; i < 12; i++) colorBoxValue[i] = GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_NORMAL + i));
 
             // Variables required to reset
-            changedPropCounter = 0;
             saveChangesRequired = false;
             memset(currentStyleName, 0, 64);
             strcpy(currentStyleName, styleNames[mainToolbarState.visualStyleActive]);
@@ -1258,8 +1254,7 @@ int main(int argc, char *argv[])
         mousePos = GetMousePosition();      // Get mouse position each frame
 
         // Check for changed properties
-        changedPropCounter = StyleChangesCounter(currentStyle);
-        if (changedPropCounter > 0) saveChangesRequired = true;
+        if (StyleChangesCounter(guiStyle, currentStyle) > 0) saveChangesRequired = true;
 
         // NOTE: Font reloading inside windowFontAtlas
 
@@ -1518,7 +1513,7 @@ int main(int argc, char *argv[])
             {
                 fontAtlasView.texture = customFont.texture;
                 int prevFontSize = windowFontAtlasState.fontGenSizeValue;
-                windowFontAtlasState.bounds.height = GetScreenHeight() - 256 - 48;
+                windowFontAtlasState.bounds.height = (float)GetScreenHeight() - 256 - 48;
 
                 GuiWindowFontAtlas(&windowFontAtlasState);
 
@@ -1588,10 +1583,12 @@ int main(int argc, char *argv[])
 
             // GUI: Status bar
             //----------------------------------------------------------------------------------------
+            // WARNING: Required to check before setting any style!
+            int styleChanges = StyleChangesCounter(guiStyle, currentStyle);
             GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
-            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 170, 24 }, "Style Name:"); //(changedPropCounter > 0)? currentStyleName : styleNames[mainToolbarState.visualStyleActive]));
+            GuiStatusBar((Rectangle){ 0, GetScreenHeight() - 24, 170, 24 }, "Style Name:");
             GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
-            GuiStatusBar((Rectangle){ 320 - 2, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", changedPropCounter));
+            GuiStatusBar((Rectangle){ 320 - 2, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", styleChanges));
 
             if (GuiTextBox((Rectangle){ 170 - 1, GetScreenHeight() - 24, 150, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
@@ -2146,7 +2143,7 @@ static char *SaveStyleToMemory(int *size)
     char signature[5] = "rGS ";
     short version = GUI_STYLE_RGS_VERSION;
     short reserved = 0;
-    int changedPropCounter = StyleChangesCounter(defaultStyle);
+    int changedPropCounter = StyleChangesCounter(guiStyle, defaultStyle);
 
     memcpy(buffer, signature, 4);
     memcpy(buffer + 4, &version, sizeof(short));
@@ -2178,7 +2175,8 @@ static char *SaveStyleToMemory(int *size)
     {
         for (int j = 0; j < RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED; j++)
         {
-            if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+            if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && 
+                (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
             {
                 controlId = (short)i;
                 propertyId = (short)j;
@@ -2503,7 +2501,8 @@ static int SaveStyle(const char *fileName, int format)
                 for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
                 {
                     // Check all properties that have changed in comparison to default style and add custom style sets for those properties
-                    if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+                    if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && 
+                        (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
                     {
                         // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
                         fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < RAYGUI_MAX_PROPS_BASE)? guiProps[j].name : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
@@ -2556,7 +2555,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         strcpy(styleNameLower, TextToLower(styleName));
 
         // Export only properties that change from default style
-        fprintf(txtFile, "#define %s_STYLE_PROPS_COUNT  %i\n\n", TextToUpper(styleName), StyleChangesCounter(defaultStyle));
+        fprintf(txtFile, "#define %s_STYLE_PROPS_COUNT  %i\n\n", TextToUpper(styleName), StyleChangesCounter(guiStyle, defaultStyle));
 
         // Write byte data as hexadecimal text
         fprintf(txtFile, "// Custom style name: %s\n", styleName);
@@ -2567,20 +2566,24 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         {
             if (defaultStyle[i] != GuiGetStyle(0, i))
             {
-                if (i < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiProps[i].name);
+                if (i < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s\n", i, GuiGetStyle(DEFAULT, i), guiProps[i].name);
                 else fprintf(txtFile, "    { 0, %i, (int)0x%08x },    // DEFAULT_%s \n", i, GuiGetStyle(DEFAULT, i), guiPropsExtText[i - RAYGUI_MAX_PROPS_BASE]);
             }
         }
 
         // Add to count all properties that have changed in comparison to default style
-        for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
+        for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++) 
         {
-            for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
+            for (int j = 0; j < RAYGUI_MAX_PROPS_BASE; j++)
             {
-                if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
+                if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) 
+                    && (GuiGetStyle(0, j) != GuiGetStyle(i, j)))
+
+                    // TODO: BASE properties should be checked against DEFAULT but not EXTENDED
+                    //&& ((j < RAYGUI_MAX_PROPS_BASE) && (GuiGetStyle(i, j) != defaultStyle[j])))
                 {
-                    if (j < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], guiProps[j].name);
-                    else fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], TextFormat("EXTENDED%02i", j - RAYGUI_MAX_PROPS_BASE + 1));
+                    if (j < RAYGUI_MAX_PROPS_BASE) fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s\n", i, j, GuiGetStyle(i, j), guiControlText[i], guiProps[j].name);
+                    else fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s\n", i, j, GuiGetStyle(i, j), guiControlText[i], TextFormat("EXTENDED%02i", j - RAYGUI_MAX_PROPS_BASE + 1));
                 }
             }
         }
@@ -2954,19 +2957,21 @@ static Image GenImageStyleControlsTable(int width, int height, const char *style
 
 // Count changed properties in current style (raygui internal guiStyle) vs refStyle
 // WARNING: refStyle must be a valid raygui style data array (expected size)
-static int StyleChangesCounter(unsigned int *refStyle)
+static int StyleChangesCounter(unsigned int *refStyle, unsigned int *style)
 {
     int changes = 0;
 
-    // Count all properties that have changed from reference style
-    for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++) if (refStyle[i] != GuiGetStyle(0, i)) changes++;
+    // Count all DEFAULT properties that have changed from reference style
+    for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++) 
+        if (style[i] != refStyle[i]) changes++;
 
-    // Add to count all properties that have changed in comparison to default style
+    // Count all Controls properties that have changed from reference style
     for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
     {
         for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
         {
-            if ((refStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && (GuiGetStyle(i, j) !=  GuiGetStyle(0, j))) changes++;
+            if (style[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != 
+                refStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j]) changes++;
         }
     }
 
@@ -3013,7 +3018,7 @@ static void BuildControlPropsText(int currentSelectedControl)
     {
         case DEFAULT:
         {
-            guiControlPropsDefaultSize = 12;
+            guiControlPropsDefaultSize = 15;
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
             guiControlPropsTextSize += CopyControlProps(guiPropsDefaultExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 7);
         } break;
