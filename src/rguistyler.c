@@ -35,7 +35,7 @@
 *   VERSIONS HISTORY:
 *       6.5  (xx-Jun-2026)  Redesigned properties management to consider per control properties
 *                           UPDATED: Using raylib 6.1-dev and raygui 5.0-dev
-* 
+*
 *       6.0  (27-Mar-2025)  Complete redesign of the tool
 *                           ADDED: Styles list view
 *                           ADDED: Fonts resources and list view
@@ -1288,7 +1288,7 @@ int main(int argc, char *argv[])
             }
             else
             {
-                switch (propertyType) 
+                switch (propertyType)
                 {
                     case PROPERTY_INT: GuiSetStyle(currentSelectedControl, property, propertyValue); break;
                     case PROPERTY_COLOR: GuiSetStyle(currentSelectedControl, property, ColorToInt(colorPickerValue)); break;
@@ -1405,7 +1405,7 @@ int main(int argc, char *argv[])
                 GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propValueFloat, 0, 32);
                 propertyValue = (int)propValueFloat;
                 if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 32, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
-       
+
                 // Color property editor
                 int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 200;
                 GuiLine((Rectangle){ anchorPropEditor.x, anchorPropEditor.y + 35, 365, 15 }, NULL);
@@ -2175,7 +2175,7 @@ static char *SaveStyleToMemory(int *size)
     {
         for (int j = 0; j < RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED; j++)
         {
-            if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && 
+            if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) &&
                 (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
             {
                 controlId = (short)i;
@@ -2501,7 +2501,7 @@ static int SaveStyle(const char *fileName, int format)
                 for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
                 {
                     // Check all properties that have changed in comparison to default style and add custom style sets for those properties
-                    if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) && 
+                    if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) &&
                         (GuiGetStyle(i, j) !=  GuiGetStyle(0, j)))
                     {
                         // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
@@ -2572,11 +2572,11 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         }
 
         // Add to count all properties that have changed in comparison to default style
-        for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++) 
+        for (int i = 1; i < RAYGUI_MAX_CONTROLS; i++)
         {
             for (int j = 0; j < RAYGUI_MAX_PROPS_BASE; j++)
             {
-                if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) 
+                if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j))
                     && (GuiGetStyle(0, j) != GuiGetStyle(i, j)))
 
                     // TODO: BASE properties should be checked against DEFAULT but not EXTENDED
@@ -2962,7 +2962,7 @@ static int StyleChangesCounter(unsigned int *refStyle, unsigned int *style)
     int changes = 0;
 
     // Count all DEFAULT properties that have changed from reference style
-    for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++) 
+    for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++)
         if (style[i] != refStyle[i]) changes++;
 
     // Count all Controls properties that have changed from reference style
@@ -2970,7 +2970,7 @@ static int StyleChangesCounter(unsigned int *refStyle, unsigned int *style)
     {
         for (int j = 0; j < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); j++)
         {
-            if (style[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != 
+            if (style[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] !=
                 refStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j]) changes++;
         }
     }
@@ -3092,7 +3092,7 @@ static void BuildControlPropsText(int currentSelectedControl)
         case STATUSBAR:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-        
+
         } break;
         default: break;
     }
