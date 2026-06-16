@@ -563,24 +563,24 @@ typedef enum {
 // NOTE: Up to 16 controls supported or 32 controls (v500)
 typedef enum {
     // Default -> populates to all controls when set
-    DEFAULT = 0,
+    DEFAULT         = 0,
 
     // Basic controls
-    LABEL,          // Used also for: LABELBUTTON
-    BUTTON,
-    TOGGLE,         // Used also for: TOGGLEGROUP
-    SLIDER,         // Used also for: SLIDERBAR, TOGGLESLIDER
-    PROGRESSBAR,
-    CHECKBOX,
-    COMBOBOX,
-    DROPDOWNBOX,
-    TEXTBOX,        // Used also for: TEXTBOXMULTI
-    VALUEBOX,
-    TABBAR,
-    LISTVIEW,
-    COLORPICKER,
-    SCROLLBAR,
-    STATUSBAR
+    LABEL           = 1,        // Used also for: LABELBUTTON
+    BUTTON          = 2,
+    TOGGLE          = 3,        // Used also for: TOGGLEGROUP
+    SLIDER          = 4,        // Used also for: SLIDERBAR, TOGGLESLIDER
+    PROGRESSBAR     = 5,
+    CHECKBOX        = 6,
+    COMBOBOX        = 7,
+    DROPDOWNBOX     = 8,
+    TEXTBOX         = 9,        // Used also for: TEXTBOXMULTI
+    VALUEBOX        = 10,
+    TABBAR          = 11,
+    LISTVIEW        = 12,
+    COLORPICKER     = 13,
+    SCROLLBAR       = 14,
+    STATUSBAR       = 15
     // NOTE: More controls can be added if required
 } GuiControl;
 
