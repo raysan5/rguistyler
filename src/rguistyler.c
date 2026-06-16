@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   rGuiStyler v5.1 - A simple and easy-to-use raygui styles editor
+*   rGuiStyler v6.0 - A simple and easy-to-use raygui styles editor
 *
 *   FEATURES:
 *       - Global and control specific styles edition
@@ -33,7 +33,10 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       6.0  (26-Mar-2026)  Complete redesign of the tool
+*       6.5  (xx-Jun-2026)  Redesigned properties management to consider per control properties
+*                           UPDATED: Using raylib 6.1-dev and raygui 5.0-dev
+* 
+*       6.0  (27-Mar-2025)  Complete redesign of the tool
 *                           ADDED: Styles list view
 *                           ADDED: Fonts resources and list view
 *                           ADDED: Table image palette and loading support
