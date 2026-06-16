@@ -30,12 +30,12 @@ static const GuiStyleProp amberStyleProps[AMBER_STYLE_PROPS_COUNT] = {
     { 0, 16, (int)0x00000010 },    // DEFAULT_TEXT_SIZE 
     { 0, 18, (int)0xef922aff },    // DEFAULT_LINE_COLOR 
     { 0, 19, (int)0x333333ff },    // DEFAULT_BACKGROUND_COLOR 
-    { 0, 20, (int)0x00000018 },    // DEFAULT_TEXT_LINE_SPACING 
+    { 0, 20, (int)0x00000008 },    // DEFAULT_TEXT_LINE_SPACING 
     { 1, 8, (int)0xe7e0d4ff },    // LABEL_TEXT_COLOR_PRESSED 
     { 4, 8, (int)0xf1cf9dff },    // SLIDER_TEXT_COLOR_PRESSED 
 };
 
-// WARNING: This style uses a custom font: "" (size: 16, spacing: 1)
+// WARNING: This style uses a custom font: "hello-world.ttf" (size: 16, spacing: 1)
 
 #define AMBER_STYLE_FONT_ATLAS_COMP_SIZE 2605
 
