@@ -364,7 +364,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
 
                     // NOTE: Generated fonts have a white rectangle at the bottom-right corner by default, 
                     // 3x3 pixels, to be used for shapes rectangle
-                    state->fontWhiteRec = (Rectangle){ customFont.texture.width - 2, customFont.texture.height - 2, 1, 1 };
+                    state->fontWhiteRec = (Rectangle){ (float)customFont.texture.width - 2, (float)customFont.texture.height - 2, 1, 1 };
 
                     customFontLoaded = true;
                 }
@@ -470,7 +470,7 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
         GuiSetTooltip("Select charset");
         GuiLabel((Rectangle){ state->bounds.x + 350, state->bounds.y + 32, 60, 24 }, "Charset: ");
         int comboBoxWidth = state->bounds.width - 350 - 60 - 196;
-        GuiComboBox((Rectangle){ state->bounds.x + 348 + 56, state->bounds.y + 32, comboBoxWidth, 24 }, (state->externalCodepointList != NULL)? "Basic;ISO-8859-15;Custom" : "Basic;ISO-8859-15", &state->selectedCharset);
+        GuiComboBox((Rectangle){ state->bounds.x + 348 + 56, state->bounds.y + 32, (float)comboBoxWidth, 24 }, (state->externalCodepointList != NULL)? "Basic;ISO-8859-15;Custom" : "Basic;ISO-8859-15", &state->selectedCharset);
         GuiEnable();
 
         DrawLine(state->bounds.x + state->bounds.width - 188, state->bounds.y + 24, state->bounds.x + state->bounds.width - 188, state->bounds.y + 24 + 40, GetColor(GuiGetStyle(DEFAULT, LINE_COLOR)));
