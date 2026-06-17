@@ -236,7 +236,7 @@ enum TableControlType {
 enum PropertyType {
     PROPERTY_INT = 0,
     PROPERTY_COLOR,
-    PROPERTY_ALIGNEMENT,
+    PROPERTY_ALIGNMENT,
 };
 
 // Property description
@@ -295,7 +295,7 @@ static PropertyDesc guiProps[] = {
     { "TEXT_COLOR_DISABLED", PROPERTY_COLOR },
     { "BORDER_WIDTH", PROPERTY_INT },
     { "TEXT_PADDING", PROPERTY_INT },
-    { "TEXT_ALIGNMENT", PROPERTY_ALIGNEMENT },
+    { "TEXT_ALIGNMENT", PROPERTY_ALIGNMENT },
 };
 
 // Default extended properties
@@ -305,7 +305,7 @@ static PropertyDesc guiPropsDefaultExtended[] = {
     { "LINE_COLOR", PROPERTY_COLOR },
     { "BACKGROUND_COLOR", PROPERTY_COLOR },
     { "TEXT_LINE_SPACING", PROPERTY_INT },
-    { "TEXT_ALIGNMENT_VERTICAL", PROPERTY_ALIGNEMENT },
+    { "TEXT_ALIGNMENT_VERTICAL", PROPERTY_ALIGNMENT },
     { "TEXT_WRAP_MODE", PROPERTY_INT },
 };
 
@@ -624,7 +624,6 @@ int main(int argc, char *argv[])
     bool fontSampleEditMode = false;
     char fontSampleText[128] = "sample text";
 
-    //bool screenSizeActive = false;
     bool controlsWindowActive = true;   // Show window: controls
     //-----------------------------------------------------------------------------------
 
@@ -1257,8 +1256,8 @@ int main(int argc, char *argv[])
         // Check for changed properties
         if (CountStyleChangesDefault() > 0) saveChangesRequired = true;
 
+        // Update font style properties if changed
         // NOTE: Font reloading inside windowFontAtlas
-
         GuiSetStyle(DEFAULT, TEXT_SIZE, fontDrawSizeValue);
         GuiSetStyle(DEFAULT, TEXT_SPACING, fontSpacingValue);
 
@@ -1281,7 +1280,7 @@ int main(int argc, char *argv[])
                 {
                     case PROPERTY_INT: propertyValue = GuiGetStyle(currentSelectedControl, property); break;
                     case PROPERTY_COLOR: colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, property)); break;
-                    case PROPERTY_ALIGNEMENT: textAlignmentActive = GuiGetStyle(currentSelectedControl, property); break;
+                    case PROPERTY_ALIGNMENT: textAlignmentActive = GuiGetStyle(currentSelectedControl, property); break;
                     default: break;
                 }
 
@@ -1293,7 +1292,7 @@ int main(int argc, char *argv[])
                 {
                     case PROPERTY_INT: GuiSetStyle(currentSelectedControl, property, propertyValue); break;
                     case PROPERTY_COLOR: GuiSetStyle(currentSelectedControl, property, ColorToInt(colorPickerValue)); break;
-                    case PROPERTY_ALIGNEMENT: GuiSetStyle(currentSelectedControl, property, textAlignmentActive); break;
+                    case PROPERTY_ALIGNMENT: GuiSetStyle(currentSelectedControl, property, textAlignmentActive); break;
                     default: break;
                 }
             }
@@ -1325,30 +1324,6 @@ int main(int argc, char *argv[])
             if (mousePos.y < colorPickerRec.y) SetMousePosition(mousePos.x, colorPickerRec.y);
             else if (mousePos.y > colorPickerRec.y + colorPickerRec.height) SetMousePosition(mousePos.x, colorPickerRec.y + colorPickerRec.height);
         }
-        //----------------------------------------------------------------------------------
-
-        // Screen scale logic (x2) - Not needed anymore
-        //----------------------------------------------------------------------------------
-        /*
-        if (screenSizeActive)
-        {
-            // Screen size x2
-            if (GetScreenWidth() < screenWidth*2)
-            {
-                SetWindowSize(screenWidth*2, screenHeight*2);
-                SetMouseScale(0.5f, 0.5f);
-            }
-        }
-        else
-        {
-            // Screen size x1
-            if (screenWidth*2 >= GetScreenWidth())
-            {
-                SetWindowSize(screenWidth, screenHeight);
-                SetMouseScale(1.0f, 1.0f);
-            }
-        }
-        */
         //----------------------------------------------------------------------------------
 
         // WARNING: Some windows should lock the main screen controls when shown
@@ -1972,17 +1947,6 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
 
         EndDrawing();
-
-        /*
-        BeginDrawing();
-            ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
-
-            // Draw render texture to screen (scaled if required)
-            if (screenSizeActive) DrawTexturePro(screenTarget.texture, (Rectangle){ 0, 0, (float)screenTarget.texture.width, -(float)screenTarget.texture.height }, (Rectangle){ 0, 0, (float)screenTarget.texture.width*2, (float)screenTarget.texture.height*2 }, (Vector2){ 0, 0 }, 0.0f, WHITE);
-            else DrawTextureRec(screenTarget.texture, (Rectangle){ 0, 0, (float)screenTarget.texture.width, -(float)screenTarget.texture.height }, (Vector2){ 0, 0 }, WHITE);
-
-        EndDrawing();
-        */
         //----------------------------------------------------------------------------------
     }
     // De-Initialization
@@ -2178,20 +2142,25 @@ static char *SaveStyleToMemory(int *size)
     {
         for (int j = 0; j < RAYGUI_MAX_PROPS_BASE; j++)
         {
-            // NOTE: Consider changed properties and also changes from default style DEFAULT set
-            if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) &&
-                (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j]))
+            // NOTE: Check Control property different than default (light) style
+            if (GuiGetStyle(i, j) != defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j])
             {
-                controlId = (short)i;
-                propertyId = (short)j;
-                propertyValue = GuiGetStyle(i, j);
+                // Check property is different than its DEFAULT alternative ||
+                // property different than default (light) style DEFAULT alternative
+                if ((GuiGetStyle(i, j) != GuiGetStyle(0, j)) ||
+                    (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j]))
+                {
+                    controlId = (short)i;
+                    propertyId = (short)j;
+                    propertyValue = GuiGetStyle(i, j);
 
-                memcpy(buffer + dataSize, &controlId, sizeof(short));
-                memcpy(buffer + dataSize + 2, &propertyId, sizeof(short));
-                memcpy(buffer + dataSize + 4, &propertyValue, sizeof(int));
-                dataSize += 8;
+                    memcpy(buffer + dataSize, &controlId, sizeof(short));
+                    memcpy(buffer + dataSize + 2, &propertyId, sizeof(short));
+                    memcpy(buffer + dataSize + 4, &propertyValue, sizeof(int));
+                    dataSize += 8;
 
-                changedPropCounter++;
+                    changedPropCounter++;
+                }
             }
         }
 
@@ -2527,12 +2496,17 @@ static int SaveStyle(const char *fileName, int format)
             {
                 for (int j = 0; j < RAYGUI_MAX_PROPS_BASE; j++)
                 {
-                    // NOTE: Consider changed properties and also changes from default style DEFAULT set
-                    if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) &&
-                        (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j]))
+                    // NOTE: Check Control property different than default (light) style
+                    if (GuiGetStyle(i, j) != defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j])
                     {
-                        // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                        fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < RAYGUI_MAX_PROPS_BASE)? guiProps[j].name : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
+                        // Check property is different than its DEFAULT alternative ||
+                        // property different than default (light) style DEFAULT alternative
+                        if ((GuiGetStyle(i, j) != GuiGetStyle(0, j)) ||
+                            (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j]))
+                        {
+                            // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
+                            fprintf(rgsFile, "p %02i %02i 0x%08x    %s_%s \n", i, j, GuiGetStyle(i, j), guiControlText[i], (j < RAYGUI_MAX_PROPS_BASE)? guiProps[j].name : TextFormat("EXT%02i", (j - RAYGUI_MAX_PROPS_BASE)));
+                        }
                     }
                 }
 
@@ -2598,7 +2572,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         fprintf(txtFile, "// Custom style name: %s\n", styleName);
         fprintf(txtFile, "static const GuiStyleProp %sStyleProps[%s_STYLE_PROPS_COUNT] = {\n", styleNameLower, TextToUpper(styleName));
 
-        // Write all properties that have changed in default style
+        // Write all properties that have changed in default (light) style
         for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++)
         {
             if (defaultStyle[i] != GuiGetStyle(0, i))
@@ -2613,11 +2587,16 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
         {
             for (int j = 0; j < RAYGUI_MAX_PROPS_BASE; j++)
             {
-                // NOTE: Consider changed properties and also changes from default style DEFAULT set
-                if ((defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != GuiGetStyle(i, j)) &&
-                    (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j]))
+                // NOTE: Check Control property different than default (light) style
+                if (GuiGetStyle(i, j) != defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j])
                 {
-                    fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s\n", i, j, GuiGetStyle(i, j), guiControlText[i], guiProps[j].name);
+                    // Check property is different than its DEFAULT alternative ||
+                    // property different than default (light) style DEFAULT alternative
+                    if ((GuiGetStyle(i, j) != GuiGetStyle(0, j)) ||
+                        (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j]))
+                    {
+                        fprintf(txtFile, "    { %i, %i, (int)0x%08x },    // %s_%s\n", i, j, GuiGetStyle(i, j), guiControlText[i], guiProps[j].name);
+                    }
                 }
             }
 
@@ -2635,6 +2614,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
         if (customFontLoaded)
         {
+            // TODO: Find font name for style if defined in .h include and available in list
             fprintf(txtFile, "// WARNING: This style uses a custom font: \"%s\" (size: %i, spacing: %i)\n\n",
                     GetFileName(inFontFileName), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
         }
@@ -3011,8 +2991,10 @@ static int CountStyleChangesDefault(void)
         for (int j = 0; j < RAYGUI_MAX_PROPS_BASE; j++)
         {
             // NOTE: Consider changed properties and also changes from default style DEFAULT set
-            if ((guiStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j]) &&
-                (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j])) changes++;
+            if (((guiStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j]) &&
+                (guiStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != guiStyle[j])) ||
+                ((guiStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j]) &&
+                (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j]))) changes++;
         }
 
         // NOTE: Extended properties are not shared beetween controls, they are unique, even DEFAULT ones
@@ -3040,9 +3022,14 @@ static int CountStyleChanges(unsigned int *style, unsigned int *refStyle)
     {
         for (int j = 0; j < RAYGUI_MAX_PROPS_BASE; j++)
         {
-            // NOTE: Consider changed properties and also changes from reference style set
-            if ((style[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != refStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j]) &&
-                (refStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != refStyle[j])) changes++;
+            // NOTE: Check Control property different than default (light) style
+            if (GuiGetStyle(i, j) != defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j])
+            {
+                // Check property is different than its DEFAULT alternative ||
+                // property different than default (light) style DEFAULT alternative
+                if ((GuiGetStyle(i, j) != GuiGetStyle(0, j)) ||
+                    (defaultStyle[i*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED) + j] != defaultStyle[j])) changes++;
+            }
         }
 
         // NOTE: Extended properties are not shared beetween controls, they are unique, even DEFAULT ones
