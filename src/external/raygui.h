@@ -1,6 +1,6 @@
 /*******************************************************************************************
 *
-*   raygui v5.0-dev - A simple and easy-to-use immediate-mode gui library
+*   raygui v5.0 - A simple and easy-to-use immediate-mode gui library
 *
 *   DESCRIPTION:
 *       raygui is a tools-dev-focused immediate-mode-gui library based on raylib but also
@@ -141,17 +141,18 @@
 *           Draw text bounds rectangles for debug
 *
 *   VERSIONS HISTORY:
-*       5.0 (xx-May-2026) ADDED: Support up to 32 controls (v500)
+*       5.0 (xx-Jun-2026) ADDED: TABBAR control: GuiTabBar()
 *                         ADDED: Support up to 512 icons (v500)
 *                         ADDED: guiControlExclusiveMode and guiControlExclusiveRec for exclusive modes
-*                         ADDED: GuiValueBoxFloat()
+*                         ADDED: Altrnative VALUEBOX: GuiValueBoxFloat()
 *                         ADDED: GuiDropdonwBox() properties: DROPDOWN_ARROW_HIDDEN, DROPDOWN_ROLL_UP
 *                         ADDED: GuiListView() property: LIST_ITEMS_BORDER_WIDTH
-*                         ADDED: GuiLoadIconsFromMemory()
-*                         ADDED: Multiple new icons
+*                         ADDED: GuiLoadIconsFromMemory(), used by GuiLoadIcons()
 *                         ADDED: Macros for inputs customization, raylib decoupling
 *                         REMOVED: GuiSpinner() from controls list, using BUTTON + VALUEBOX properties
 *                         REMOVED: GuiSliderPro(), functionality was redundant
+*                         REMOVED: TextSplit() raylib function requirement on RAYGUI_STANDALONE
+*                         REVIEWED: GuiLoadIconsFromMemory(), fixed memory issues
 *                         REVIEWED: Controls using text labels to use LABEL properties
 *                         REVIEWED: Replaced sprintf() by snprintf() for more safety
 *                         REVIEWED: GuiTabBar(), close tab with mouse middle button
@@ -166,6 +167,7 @@
 *                         REVIEWED: GuiProgressBar(), improved borders computing
 *                         REVIEWED: GuiTextBox(), multiple improvements: autocursor and more
 *                         REVIEWED: Functions descriptions, removed wrong return value reference
+*                         REDESIGNED: GuiToggleGroup() to process rows/cols with no need for GuiTextSplit()
 *                         REDESIGNED: GuiColorPanel(), improved HSV <-> RGBA convertion
 *                         REDESIGNED: WARNING: TEXT_LINE_SPACING does not consider text height, only lines spacing
 *
@@ -274,7 +276,7 @@
 *       0.8 (27-Aug-2015) Initial release. Implemented by Kevin Gato, Daniel Nicolás and Ramon Santamaria
 *
 *   DEPENDENCIES:
-*       raylib 5.6-dev  - Inputs reading (keyboard/mouse), shapes drawing, font loading and text drawing
+*       raylib 6.1-dev  - Inputs reading (keyboard/mouse), shapes drawing, font loading and text drawing
 *
 *   STANDALONE MODE:
 *       By default raygui depends on raylib mostly for the inputs and the drawing functionality but that dependency can be disabled
@@ -1549,7 +1551,6 @@ static Color GetColor(int hexValue);                // Returns a Color struct fr
 static int ColorToInt(Color color);                 // Returns hexadecimal value for a Color
 static bool CheckCollisionPointRec(Vector2 point, Rectangle rec);   // Check if point is inside rectangle
 static const char *TextFormat(const char *text, ...);               // Formatting of text with variables to 'embed'
-static char **TextSplit(const char *text, char delimiter, int *count);    // Split text into multiple strings
 static int TextToInteger(const char *text);         // Get integer value from text
 static float TextToFloat(const char *text);         // Get float value from text
 
@@ -1810,7 +1811,7 @@ int GuiTabBar(Rectangle bounds, char **text, int count, int *active)
     //GuiState state = guiState;
 
     int tabItemsWidth = GuiGetStyle(TABBAR, TAB_ITEMS_WIDTH);
-    Rectangle tabBounds = { bounds.x, bounds.y, tabItemsWidth, bounds.height };
+    Rectangle tabBounds = { bounds.x, bounds.y, (float)tabItemsWidth, bounds.height };
 
     if (*active < 0) *active = 0;
     else if (*active > count - 1) *active = count - 1;
@@ -2179,20 +2180,20 @@ int GuiToggleGroup(Rectangle bounds, const char *text, int *active)
 {
     int result = 0;
 
-    #if !defined(RAYGUI_TOGGLEGROUP_ITEM_MAX_TEXT_SIZE)
-        #define RAYGUI_TOGGLEGROUP_ITEM_MAX_TEXT_SIZE       256
+    #if !defined(RAYGUI_TOGGLEGROUP_MAX_ITEM_TEXT_SIZE)
+        #define RAYGUI_TOGGLEGROUP_MAX_ITEM_TEXT_SIZE       256
     #endif
 
     // One toggle group item text
-    static char itemText[RAYGUI_TOGGLEGROUP_ITEM_MAX_TEXT_SIZE] = { 0 };
-    memset(itemText, 0, RAYGUI_TOGGLEGROUP_ITEM_MAX_TEXT_SIZE);
+    static char itemText[RAYGUI_TOGGLEGROUP_MAX_ITEM_TEXT_SIZE] = { 0 };
+    memset(itemText, 0, RAYGUI_TOGGLEGROUP_MAX_ITEM_TEXT_SIZE);
 
     int temp = 0;
     if (active == NULL) active = &temp;
 
     bool toggle = false;    // Required for individual toggles
 
-    char *textPtr = text;
+    const char *textPtr = text;
     bool itemReady = false;
     float initBoundsX = bounds.x;
     float initBoundsY = bounds.y;
@@ -2262,8 +2263,6 @@ int GuiToggleSlider(Rectangle bounds, const char *text, int *active)
 
     int temp = 0;
     if (active == NULL) active = &temp;
-
-    //bool toggle = false;    // Required for individual toggles
 
     // Get substrings items from text (items pointers)
     int itemCount = 0;
@@ -3119,7 +3118,6 @@ int GuiSpinner(Rectangle bounds, const char *text, int *value, int minValue, int
 }
 
 // Value Box control, updates input text with numbers
-// NOTE: Requires static variables: frameCounter
 int GuiValueBox(Rectangle bounds, const char *text, int *value, int minValue, int maxValue, bool editMode)
 {
     #if !defined(RAYGUI_VALUEBOX_MAX_CHARS)
@@ -3260,7 +3258,6 @@ int GuiValueBox(Rectangle bounds, const char *text, int *value, int minValue, in
 }
 
 // Floating point Value Box control, updates input val_str with numbers
-// NOTE: Requires static variables: frameCounter
 int GuiValueBoxFloat(Rectangle bounds, const char *text, char *textValue, float *value, bool editMode)
 {
     #if !defined(RAYGUI_VALUEBOX_MAX_CHARS)
@@ -4947,7 +4944,7 @@ char **GuiLoadIcons(const char *fileName, bool loadIconsName)
         {
             fileData = (unsigned char *)RL_CALLOC(size, sizeof(unsigned char));
             // WARNING: File can be partially loaded but ignoring it for simplicity
-            dataSize = fread(fileData, sizeof(unsigned char), size, rgiFile);
+            dataSize = (int)fread(fileData, sizeof(unsigned char), size, rgiFile);
 
             guiIconsName = GuiLoadIconsFromMemory(fileData, dataSize, loadIconsName);
         }
@@ -5036,13 +5033,14 @@ void GuiSetIconScale(int scale)
     if (scale >= 1) guiIconScale = scale;
 }
 
-#endif      // !RAYGUI_NO_ICONS
-
-// Get text width considering gui style and icon size (if required)
-int GuiGetTextWidth(const char *text)
+// Get the width of a single line of gui text (stops at '\n' or '\0'),
+// considering the gui font/style and an optional icon marker '#NNN#' at
+// the start. Icon detection matches GetTextIcon(): 1..3 digits, skip past
+// the closing '#'.
+static int GetLineWidth(const char *text)
 {
-    #if !defined(ICON_TEXT_PADDING)
-        #define ICON_TEXT_PADDING   4
+    #if !defined(RAYGUI_ICON_TEXT_PADDING)
+        #define RAYGUI_ICON_TEXT_PADDING   4
     #endif
 
     Vector2 textSize = { 0 };
@@ -5050,16 +5048,12 @@ int GuiGetTextWidth(const char *text)
 
     if ((text != NULL) && (text[0] != '\0'))
     {
+        // Icon marker: '#' + 1..3 digits + '#' (matches GetTextIcon())
         if (text[0] == '#')
         {
-            for (int i = 1; (i < 5) && (text[i] != '\0'); i++)
-            {
-                if (text[i] == '#')
-                {
-                    if (TextToInteger(&text[1]) < RAYGUI_ICON_MAX_ICONS) textIconOffset = i;
-                    break;
-                }
-            }
+            int pos = 1;
+            while ((pos < 4) && (text[pos] >= '0') && (text[pos] <= '9')) pos++;
+            if (text[pos] == '#') textIconOffset = pos + 1;
         }
 
         text += textIconOffset;
@@ -5067,10 +5061,10 @@ int GuiGetTextWidth(const char *text)
         // Make sure guiFont is set, GuiGetStyle() initializes it lazynessly
         float fontSize = (float)GuiGetStyle(DEFAULT, TEXT_SIZE);
 
-        // Custom MeasureText() implementation
+        // Custom MeasureText() implementation -- single line only
         if ((guiFont.texture.id > 0) && (text != NULL))
         {
-            // Get size in bytes of text, considering end of line and line break
+            // Get size in bytes of the line, considering end of line and line break
             int size = 0;
             for (int i = 0; i < MAX_LINE_BUFFER_SIZE; i++)
             {
@@ -5094,11 +5088,39 @@ int GuiGetTextWidth(const char *text)
             }
         }
 
-        if (textIconOffset > 0) textSize.x += (RAYGUI_ICON_SIZE + ICON_TEXT_PADDING);
+        if (textIconOffset > 0) textSize.x += (RAYGUI_ICON_SIZE + RAYGUI_ICON_TEXT_PADDING);
     }
 
     return (int)textSize.x;
 }
+
+// Get text width considering gui style and icon size (if required).
+// For multi-line text (containing '\n'), returns the width of the widest line.
+int GuiGetTextWidth(const char *text)
+{
+    if (text == NULL) return 0;
+
+    int maxWidth = 0;
+    const char *linePtr = text;
+
+    while ((linePtr[0] != '\0') && ((linePtr - text) < MAX_LINE_BUFFER_SIZE))
+    {
+        int lineWidth = GetLineWidth(linePtr);
+        if (lineWidth > maxWidth) maxWidth = lineWidth;
+
+        // Skip to the next '\n' (or end of string/buffer)
+        while ((linePtr[0] != '\0') && (linePtr[0] != '\n') && ((linePtr - text) < MAX_LINE_BUFFER_SIZE))
+        {
+            linePtr++;
+        }
+        // Advance past the '\n' delimiter to the start of the next line
+        if (linePtr[0] == '\n') linePtr++;
+    }
+
+    return maxWidth;
+}
+
+#endif      // !RAYGUI_NO_ICONS
 
 //----------------------------------------------------------------------------------
 // Module Internal Functions Definition
@@ -5232,8 +5254,8 @@ static void GuiDrawText(const char *text, Rectangle textBounds, int alignment, C
 {
     #define TEXT_VALIGN_PIXEL_OFFSET(h)  ((int)h%2)     // Vertical alignment for pixel perfect
 
-    #if !defined(ICON_TEXT_PADDING)
-        #define ICON_TEXT_PADDING   4
+    #if !defined(RAYGUI_ICON_TEXT_PADDING)
+        #define RAYGUI_ICON_TEXT_PADDING   4
     #endif
 
     if ((text == NULL) || (text[0] == '\0')) return;    // Security check
@@ -5269,9 +5291,9 @@ static void GuiDrawText(const char *text, Rectangle textBounds, int alignment, C
         Vector2 textBoundsPosition = { textBounds.x, textBounds.y };
         float textBoundsWidthOffset = 0.0f;
 
-        // NOTE: Get text size after icon has been processed
-        // WARNING: GuiGetTextWidth() also processes text icon to get width! -> Really needed?
-        int textSizeX = GuiGetTextWidth(lines[i]);
+        // NOTE: Icon was already stripped above by GetTextIcon(); GetLineWidth()
+        // takes no icon path here and returns only the glyph width of this line.
+        int textSizeX = GetLineWidth(lines[i]);
 
         // If text requires an icon, add size to measure
         if (iconId >= 0)
@@ -5280,7 +5302,7 @@ static void GuiDrawText(const char *text, Rectangle textBounds, int alignment, C
 
             // WARNING: If only icon provided, text could be pointing to EOF character: '\0'
 #if !defined(RAYGUI_NO_ICONS)
-            if ((lines[i] != NULL) && (lines[i][0] != '\0')) textSizeX += ICON_TEXT_PADDING;
+            if ((lines[i] != NULL) && (lines[i][0] != '\0')) textSizeX += RAYGUI_ICON_TEXT_PADDING;
 #endif
         }
 
@@ -5317,8 +5339,8 @@ static void GuiDrawText(const char *text, Rectangle textBounds, int alignment, C
         {
             // NOTE: Considering icon height, probably different than text size
             GuiDrawIcon(iconId, (int)textBoundsPosition.x, (int)(textBounds.y + textBounds.height/2 - RAYGUI_ICON_SIZE*guiIconScale/2 + TEXT_VALIGN_PIXEL_OFFSET(textBounds.height)), guiIconScale, tint);
-            textBoundsPosition.x += (float)(RAYGUI_ICON_SIZE*guiIconScale + ICON_TEXT_PADDING);
-            textBoundsWidthOffset = (float)(RAYGUI_ICON_SIZE*guiIconScale + ICON_TEXT_PADDING);
+            textBoundsPosition.x += (float)(RAYGUI_ICON_SIZE*guiIconScale + RAYGUI_ICON_TEXT_PADDING);
+            textBoundsWidthOffset = (float)(RAYGUI_ICON_SIZE*guiIconScale + RAYGUI_ICON_TEXT_PADDING);
         }
 #endif
         // Get size in bytes of text,
@@ -5498,7 +5520,7 @@ static void GuiTooltip(Rectangle controlRec)
 }
 
 // Split controls text into multiple strings
-// Also check for multiple columns (required by GuiToggleGroup())
+// NOTE: Re-used by GuiToggleSlider(), GuiComboBox(), GuiDropdownBox(), GuiListView(), GuiMessageBox(), GuiInputBox()
 static char **GuiTextSplit(const char *text, char delimiter, int *count)
 {
     // NOTE: Current implementation returns a copy of the provided string with '\0' (string end delimiter)
@@ -5512,15 +5534,15 @@ static char **GuiTextSplit(const char *text, char delimiter, int *count)
         #define RAYGUI_TEXTSPLIT_MAX_ITEMS          128
     #endif
     #if !defined(RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE)
-        #define RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE     1024
+        #define RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE     1024     // WARNING: Max expected size for all concat items
     #endif
 
-    static char *result[RAYGUI_TEXTSPLIT_MAX_ITEMS] = { NULL }; // String pointers array (points to buffer data)
+    static char *itemPtrs[RAYGUI_TEXTSPLIT_MAX_ITEMS] = { 0 }; // String pointers array (points to buffer data)
     static char buffer[RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE] = { 0 }; // Buffer data (text input copy with '\0' added)
     memset(buffer, 0, RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE);
 
-    result[0] = buffer;
-    int counter = 1;
+    itemPtrs[0] = buffer;
+    int itemCounter = 1;
 
     // Count how many substrings text contains and point to every one of them
     for (int i = 0; i < RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE; i++)
@@ -5529,16 +5551,16 @@ static char **GuiTextSplit(const char *text, char delimiter, int *count)
         if (buffer[i] == '\0') break;
         else if ((buffer[i] == delimiter) || (buffer[i] == '\n'))
         {
-            result[counter] = buffer + i + 1;
-            buffer[i] = '\0';   // Set an end of string at this point
+            itemPtrs[itemCounter] = buffer + i + 1;
+            buffer[i] = '\0'; // Set terminator for current item
 
-            counter++;
-            if (counter >= RAYGUI_TEXTSPLIT_MAX_ITEMS) break;
+            itemCounter++;
+            if (itemCounter >= RAYGUI_TEXTSPLIT_MAX_ITEMS) break;
         }
     }
 
-    *count = counter;
-    return result;
+    *count = itemCounter;
+    return itemPtrs;
 }
 
 // Convert color data from RGB to HSV
@@ -5902,53 +5924,6 @@ static void DrawRectangleGradientV(int posX, int posY, int width, int height, Co
 {
     Rectangle bounds = { (float)posX, (float)posY, (float)width, (float)height };
     DrawRectangleGradientEx(bounds, color1, color2, color2, color1);
-}
-
-// Split string into multiple strings
-char **TextSplit(const char *text, char delimiter, int *count)
-{
-    // NOTE: Current implementation returns a copy of the provided string with '\0' (string end delimiter)
-    // inserted between strings defined by "delimiter" parameter. No memory is dynamically allocated,
-    // all used memory is static... it has some limitations:
-    //      1. Maximum number of possible split strings is set by RAYGUI_TEXTSPLIT_MAX_ITEMS
-    //      2. Maximum size of text to split is RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE
-
-    #if !defined(RAYGUI_TEXTSPLIT_MAX_ITEMS)
-        #define RAYGUI_TEXTSPLIT_MAX_ITEMS          128
-    #endif
-    #if !defined(RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE)
-        #define RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE      1024
-    #endif
-
-    static const char *result[RAYGUI_TEXTSPLIT_MAX_ITEMS] = { NULL };
-    static char buffer[RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE] = { 0 };
-    memset(buffer, 0, RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE);
-
-    result[0] = buffer;
-    int counter = 0;
-
-    if (text != NULL)
-    {
-        counter = 1;
-
-        // Count how many substrings text contains and point to every one of them
-        for (int i = 0; i < RAYGUI_TEXTSPLIT_MAX_TEXT_SIZE; i++)
-        {
-            buffer[i] = text[i];
-            if (buffer[i] == '\0') break;
-            else if (buffer[i] == delimiter)
-            {
-                buffer[i] = '\0';   // Set an end of string at this point
-                result[counter] = buffer + i + 1;
-                counter++;
-
-                if (counter == RAYGUI_TEXTSPLIT_MAX_ITEMS) break;
-            }
-        }
-    }
-
-    *count = counter;
-    return result;
 }
 
 // Get integer value from text
