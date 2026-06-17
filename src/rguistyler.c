@@ -33,7 +33,8 @@
 *           that requires compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
 *
 *   VERSIONS HISTORY:
-*       6.5  (xx-Jun-2026)  Redesigned properties management to consider per control properties
+*       6.5  (xx-Jun-2026)  ADDED: Controls extended properties edition support
+*                           REDESIGNED: Properties management to consider per control properties
 *                           UPDATED: Using raylib 6.1-dev and raygui 5.0-dev
 *
 *       6.0  (27-Mar-2025)  Complete redesign of the tool
@@ -233,10 +234,11 @@ enum TableControlType {
     TYPE_SPINNER
 };
 
+// Property type for every property
 enum PropertyType {
-    PROPERTY_INT = 0,
-    PROPERTY_COLOR,
-    PROPERTY_ALIGNMENT,
+    PROPERTY_INT,           // Integer value: Slider: propertyValue
+    PROPERTY_COLOR,         // Color value: ColorPicker: colorPickerValue
+    PROPERTY_STATE,         // Toggle value: ToggleGroup: toggleActive
 };
 
 // Property description
@@ -244,6 +246,7 @@ enum PropertyType {
 typedef struct PropertyDesc {
     const char *name;
     int type;
+    const char state[64];   // ToggleGroup state
 } PropertyDesc;
 
 //----------------------------------------------------------------------------------
@@ -279,7 +282,7 @@ static int guiControlPropsDefaultSize = 0;
 static const char *guiControlPropsText[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
 static int guiControlPropsType[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
 
-// Common control properties
+// Base properties
 static PropertyDesc guiProps[] = {
     { "BORDER_COLOR_NORMAL", PROPERTY_COLOR },
     { "BASE_COLOR_NORMAL", PROPERTY_COLOR },
@@ -295,7 +298,7 @@ static PropertyDesc guiProps[] = {
     { "TEXT_COLOR_DISABLED", PROPERTY_COLOR },
     { "BORDER_WIDTH", PROPERTY_INT },
     { "TEXT_PADDING", PROPERTY_INT },
-    { "TEXT_ALIGNMENT", PROPERTY_ALIGNMENT },
+    { "TEXT_ALIGNMENT", PROPERTY_STATE, "#87#LEFT;#89#CENTER;#83#RIGHT" }, // Toggle values: 0-Left, 1-Center, 2-Right
 };
 
 // Default extended properties
@@ -305,8 +308,8 @@ static PropertyDesc guiPropsDefaultExtended[] = {
     { "LINE_COLOR", PROPERTY_COLOR },
     { "BACKGROUND_COLOR", PROPERTY_COLOR },
     { "TEXT_LINE_SPACING", PROPERTY_INT },
-    { "TEXT_ALIGNMENT_VERTICAL", PROPERTY_ALIGNMENT },
-    { "TEXT_WRAP_MODE", PROPERTY_INT },
+    { "TEXT_ALIGNMENT_VERTICAL", PROPERTY_STATE, "#87#TOP;#89#MIDDLE;#83#BOTTOM" }, // Toggle values: 0-Top, 1-Middle, 2-Bottom
+    { "TEXT_WRAP_MODE", PROPERTY_STATE, "NO WARP;CHAR WRAP;WORD WRAP" }, // Toggle values: 0-None, 1-Char, 2-Word
 };
 
 // Toggle extended properties
@@ -314,22 +317,22 @@ static PropertyDesc guiPropsToggleExtended[] = {
     { "GROUP_PADDING", PROPERTY_INT },
 };
 
-// Slider extended properties
+// Slider/SliderBar extended properties
 static PropertyDesc guiPropsSliderExtended[] = {
     { "SLIDER_WIDTH", PROPERTY_INT },
     { "SLIDER_PADDING", PROPERTY_INT },
 };
 
-// Progress extended properties
-static PropertyDesc guiPropsProgressExtended[] = {
+// ProgressBar extended properties
+static PropertyDesc guiPropsProgressBarExtended[] = {
     { "PROGRESS_PADDING", PROPERTY_INT },
-    { "PROGRESS_SIDE", PROPERTY_INT },
+    { "PROGRESS_SIDE", PROPERTY_STATE, "LEFT to RIGHT;RIGHT to LEFT" }, // Toggle values: 0-Left->Right, 1-Right->Left
 };
 
-// Scrollbar extended properties
-static PropertyDesc guiPropsScrollExtended[] = {
+// ScrollBar extended properties
+static PropertyDesc guiPropsScrollBarExtended[] = {
     { "ARROWS_SIZE", PROPERTY_INT },
-    { "ARROWS_VISIBLE", PROPERTY_INT },
+    { "ARROWS_VISIBLE", PROPERTY_STATE, "NO ARROWS;SHOW ARROWS" }, // Toggle values: 0-False or 1-True
     { "SCROLL_SLIDER_PADDING", PROPERTY_INT },
     { "SCROLL_SLIDER_SIZE", PROPERTY_INT },
     { "SCROLL_PADDING", PROPERTY_INT },
@@ -337,42 +340,49 @@ static PropertyDesc guiPropsScrollExtended[] = {
 };
 
 // CheckBox extended properties
-static PropertyDesc guiPropsCheckExtended[] = {
+static PropertyDesc guiPropsCheckBoxExtended[] = {
     { "CHECK_PADDING", PROPERTY_INT },
 };
 
 // ComboBox extended properties
-static PropertyDesc guiPropsComboExtended[] = {
+static PropertyDesc guiPropsComboBoxExtended[] = {
     { "COMBO_BUTTON_WIDTH", PROPERTY_INT },
     { "COMBO_BUTTON_SPACING", PROPERTY_INT },
 };
 
 // DropdownBox extended properties
-static PropertyDesc guiPropsDropdowExtended[] = {
+static PropertyDesc guiPropsDropdowBoxExtended[] = {
     { "ARROW_PADDING", PROPERTY_INT },
     { "DROPDOWN_ITEMS_SPACING", PROPERTY_INT },
-    { "DROPDOWN_ARROW_HIDDEN", PROPERTY_INT },
-    { "DROPDOWN_ROLL_UP", PROPERTY_INT },
+    { "DROPDOWN_ARROW_HIDDEN", PROPERTY_STATE, "SHOW ARROW;HIDE ARROW" }, // Toggle values: 0-False or 1-True
+    { "DROPDOWN_ROLL_UP", PROPERTY_STATE, "ROLL DOWN;ROLL UP" }, // Toggle values: 0-False or 1-True
 };
 
-// TextBox extended properties
-static PropertyDesc guiPropsTextExtended[] = {
-    { "TEXT_READONLY", PROPERTY_INT },
+// TextBox/TextBoxMulti/ValueBox/Spinner extended properties
+static PropertyDesc guiPropsTextBoxExtended[] = {
+    { "TEXT_READONLY", PROPERTY_STATE, "EDITABLE TEXT;READONLY TEXT" }, // Toggle values: 0-False or 1-True
 };
 
-// Spinner extended properties
+// ValueBox/Spinner extended properties
 static PropertyDesc guiPropsSpinnerExtended[] = {
     { "SPINNER_BUTTON_WIDTH", PROPERTY_INT },
     { "SPINNER_BUTTON_SPACING", PROPERTY_INT },
 };
 
+// TabBar extended properties
+static PropertyDesc guiPropsTabBarExtended[] = {
+    { "TAB_ITEMS_WIDTH", PROPERTY_INT },
+    { "TAB_CLOSE_BUTTON", PROPERTY_STATE, "NO TAB CLOSE BTN;SHOW TAB CLOSE BTN" }, // Toggle values: 0-False or 1-True
+    { "TAB_LINE_SIDE", PROPERTY_STATE, "BOTTOM LINE;TOP LINE" }, // Toggle values: 0-Bottom line, 1-Top line
+};
+
 // ListView extended properties
-static PropertyDesc guiPropsListExtended[] = {
+static PropertyDesc guiPropsListViewExtended[] = {
     { "LIST_ITEMS_HEIGHT", PROPERTY_INT },
     { "LIST_ITEMS_SPACING", PROPERTY_INT },
     { "SCROLLBAR_WIDTH", PROPERTY_INT },
-    { "SCROLLBAR_SIDE", PROPERTY_INT },
-    { "LIST_ITEMS_BORDER_NORMAL", PROPERTY_INT },
+    { "SCROLLBAR_SIDE", PROPERTY_STATE, "LEFT SIDE;RIGHT SIDE" }, // Toggle values: 0-SCROLLBAR_LEFT_SIDE, 1-SCROLLBAR_RIGHT_SIDE
+    { "LIST_ITEMS_BORDER_NORMAL", PROPERTY_STATE, "NO BORDER DEFAULT;BORDER DEFAULT" }, // Toggle values: 0-No Item border, 1-Item border
     { "LIST_ITEMS_BORDER_WIDTH", PROPERTY_INT },
 };
 
@@ -617,7 +627,7 @@ int main(int argc, char *argv[])
     //bool aColorEditMode = false;
 
     char hexColorText[9] = "00000000";
-    int textAlignmentActive = 0;
+    int toggleActive = 0;
     bool genFontSizeEditMode = false;
     bool fontSpacingEditMode = false;
     int fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
@@ -1280,7 +1290,7 @@ int main(int argc, char *argv[])
                 {
                     case PROPERTY_INT: propertyValue = GuiGetStyle(currentSelectedControl, property); break;
                     case PROPERTY_COLOR: colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, property)); break;
-                    case PROPERTY_ALIGNMENT: textAlignmentActive = GuiGetStyle(currentSelectedControl, property); break;
+                    case PROPERTY_STATE: toggleActive = GuiGetStyle(currentSelectedControl, property); break;
                     default: break;
                 }
 
@@ -1292,7 +1302,7 @@ int main(int argc, char *argv[])
                 {
                     case PROPERTY_INT: GuiSetStyle(currentSelectedControl, property, propertyValue); break;
                     case PROPERTY_COLOR: GuiSetStyle(currentSelectedControl, property, ColorToInt(colorPickerValue)); break;
-                    case PROPERTY_ALIGNMENT: GuiSetStyle(currentSelectedControl, property, textAlignmentActive); break;
+                    case PROPERTY_STATE: GuiSetStyle(currentSelectedControl, property, toggleActive); break;
                     default: break;
                 }
             }
@@ -1417,7 +1427,7 @@ int main(int argc, char *argv[])
                 GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 104, 24 }, "Text Alignment:");
                 GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 120, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 76, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &textAlignmentActive);
+                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 120, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 76, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &toggleActive);
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
             }
             else
@@ -1546,10 +1556,11 @@ int main(int argc, char *argv[])
                 }
 
                 float scrollWidth = (float)styleTableRec.width - GetScreenWidth();
-                if (scrollWidth > 0) {
+                if (scrollWidth > 0)
+                {
                     // Calculate the slider bar width proportional to the image panel size and viewing part
-                    GuiSetStyle(SLIDER, SLIDER_WIDTH, (int)(((float)GetScreenWidth() / 1920.0f) * GetScreenWidth()));
-                    GuiSlider((Rectangle) { 0, GetScreenHeight() - 24 - 12 + 1, GetScreenWidth(), 12 }, NULL, NULL, & styleTableRec.x, 0.0f, scrollWidth);
+                    GuiSetStyle(SLIDER, SLIDER_WIDTH, (int)(((float)GetScreenWidth()/1920.0f)*GetScreenWidth()));
+                    GuiSlider((Rectangle){ 0, GetScreenHeight() - 24 - 12 + 1, GetScreenWidth(), 12 }, NULL, NULL, &styleTableRec.x, 0.0f, scrollWidth);
                     GuiSetStyle(SLIDER, SLIDER_WIDTH, 16);
                 }
 
@@ -3108,27 +3119,27 @@ static void BuildControlPropsText(int currentSelectedControl)
         case PROGRESSBAR:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsProgressExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
+            guiControlPropsTextSize += CopyControlProps(guiPropsProgressBarExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
         } break;
         case CHECKBOX:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsCheckExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 1);
+            guiControlPropsTextSize += CopyControlProps(guiPropsCheckBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 1);
         } break;
         case COMBOBOX:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsComboExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
+            guiControlPropsTextSize += CopyControlProps(guiPropsComboBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
         } break;
         case DROPDOWNBOX:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsDropdowExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 4);
+            guiControlPropsTextSize += CopyControlProps(guiPropsDropdowBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 4);
         } break;
         case TEXTBOX:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsTextExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 1);
+            guiControlPropsTextSize += CopyControlProps(guiPropsTextBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 1);
         } break;
         case VALUEBOX:
         {
@@ -3138,11 +3149,12 @@ static void BuildControlPropsText(int currentSelectedControl)
         case TABBAR:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
+            guiControlPropsTextSize += CopyControlProps(guiPropsTabBarExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 3);
         } break;
         case LISTVIEW:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsListExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 6);
+            guiControlPropsTextSize += CopyControlProps(guiPropsListViewExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 6);
         } break;
         case COLORPICKER:
         {
@@ -3152,7 +3164,7 @@ static void BuildControlPropsText(int currentSelectedControl)
         case SCROLLBAR:
         {
             guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsScrollExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 6);
+            guiControlPropsTextSize += CopyControlProps(guiPropsScrollBarExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 6);
         } break;
         case STATUSBAR:
         {
