@@ -236,17 +236,16 @@ enum TableControlType {
 
 // Property type for every property
 enum PropertyType {
-    PROPERTY_INT,           // Integer value: Slider: propertyValue
-    PROPERTY_COLOR,         // Color value: ColorPicker: colorPickerValue
-    PROPERTY_STATE,         // Toggle value: ToggleGroup: toggleActive
+    PROPERTY_TYPE_INT,           // Integer value: Slider: propertyValue
+    PROPERTY_TYPE_COLOR,         // Color value: ColorPicker: colorPickerValue
+    PROPERTY_TYPE_STATE,         // Toggle value: ToggleGroup: toggleActive
 };
 
-// Property description
-// NOTE: Defines name and type
+// Property descriptor
 typedef struct PropertyDesc {
     const char *name;
     int type;
-    const char state[64];   // ToggleGroup state
+    const char state[64];   // ToggleGroup state / Slider Min-Max values
 } PropertyDesc;
 
 //----------------------------------------------------------------------------------
@@ -277,122 +276,126 @@ static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
     "STATUSBAR"
 };
 
-static int guiControlPropsTextSize = 0;
-static int guiControlPropsDefaultSize = 0;
-static const char *guiControlPropsText[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
-static int guiControlPropsType[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
+// Pointers to build properties lists
+// NOTE: Kept as separate arrays of data because required by GuiListView() and other controls
+static int guiControlPropsTextCount = 0;
+static int guiControlPropsDefaultCount = 0;
+static const char *guiControlPropsNames[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
+static int guiControlPropsTypes[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
+static const char *guiControlPropsStates[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
 
 // Base properties
 static PropertyDesc guiProps[] = {
-    { "BORDER_COLOR_NORMAL", PROPERTY_COLOR },
-    { "BASE_COLOR_NORMAL", PROPERTY_COLOR },
-    { "TEXT_COLOR_NORMAL", PROPERTY_COLOR },
-    { "BORDER_COLOR_FOCUSED", PROPERTY_COLOR },
-    { "BASE_COLOR_FOCUSED", PROPERTY_COLOR },
-    { "TEXT_COLOR_FOCUSED", PROPERTY_COLOR },
-    { "BORDER_COLOR_PRESSED", PROPERTY_COLOR },
-    { "BASE_COLOR_PRESSED", PROPERTY_COLOR },
-    { "TEXT_COLOR_PRESSED", PROPERTY_COLOR },
-    { "BORDER_COLOR_DISABLED", PROPERTY_COLOR },
-    { "BASE_COLOR_DISABLED", PROPERTY_COLOR },
-    { "TEXT_COLOR_DISABLED", PROPERTY_COLOR },
-    { "BORDER_WIDTH", PROPERTY_INT },
-    { "TEXT_PADDING", PROPERTY_INT },
-    { "TEXT_ALIGNMENT", PROPERTY_STATE, "#87#LEFT;#89#CENTER;#83#RIGHT" }, // Toggle values: 0-Left, 1-Center, 2-Right
+    { "BORDER_COLOR_NORMAL", PROPERTY_TYPE_COLOR },
+    { "BASE_COLOR_NORMAL", PROPERTY_TYPE_COLOR },
+    { "TEXT_COLOR_NORMAL", PROPERTY_TYPE_COLOR },
+    { "BORDER_COLOR_FOCUSED", PROPERTY_TYPE_COLOR },
+    { "BASE_COLOR_FOCUSED", PROPERTY_TYPE_COLOR },
+    { "TEXT_COLOR_FOCUSED", PROPERTY_TYPE_COLOR },
+    { "BORDER_COLOR_PRESSED", PROPERTY_TYPE_COLOR },
+    { "BASE_COLOR_PRESSED", PROPERTY_TYPE_COLOR },
+    { "TEXT_COLOR_PRESSED", PROPERTY_TYPE_COLOR },
+    { "BORDER_COLOR_DISABLED", PROPERTY_TYPE_COLOR },
+    { "BASE_COLOR_DISABLED", PROPERTY_TYPE_COLOR },
+    { "TEXT_COLOR_DISABLED", PROPERTY_TYPE_COLOR },
+    { "BORDER_WIDTH", PROPERTY_TYPE_INT, { 0, 16 }}, // Min-max values
+    { "TEXT_PADDING", PROPERTY_TYPE_INT, { 0, 12 }},
+    { "TEXT_ALIGNMENT", PROPERTY_TYPE_STATE, "#87#LEFT;#89#CENTER;#83#RIGHT" }, // Toggle values: 0-Left, 1-Center, 2-Right
 };
 
 // Default extended properties
 static PropertyDesc guiPropsDefaultExtended[] = {
-    { "TEXT_SIZE", PROPERTY_INT },
-    { "TEXT_SPACING", PROPERTY_INT },
-    { "LINE_COLOR", PROPERTY_COLOR },
-    { "BACKGROUND_COLOR", PROPERTY_COLOR },
-    { "TEXT_LINE_SPACING", PROPERTY_INT },
-    { "TEXT_ALIGNMENT_VERTICAL", PROPERTY_STATE, "#87#TOP;#89#MIDDLE;#83#BOTTOM" }, // Toggle values: 0-Top, 1-Middle, 2-Bottom
-    { "TEXT_WRAP_MODE", PROPERTY_STATE, "NO WARP;CHAR WRAP;WORD WRAP" }, // Toggle values: 0-None, 1-Char, 2-Word
+    { "TEXT_SIZE", PROPERTY_TYPE_INT, { 8, 64 }},
+    { "TEXT_SPACING", PROPERTY_TYPE_INT, { -16, 32 }},
+    { "LINE_COLOR", PROPERTY_TYPE_COLOR },
+    { "BACKGROUND_COLOR", PROPERTY_TYPE_COLOR },
+    { "TEXT_LINE_SPACING", PROPERTY_TYPE_INT, { -16, 32 }},
+    { "TEXT_ALIGNMENT_VERTICAL", PROPERTY_TYPE_STATE, "#81#TOP;#89#MIDDLE;#85#BOTTOM" }, // Toggle values: 0-Top, 1-Middle, 2-Bottom
+    { "TEXT_WRAP_MODE", PROPERTY_TYPE_STATE, "#107#NO WRAP;#104#CHAR WRAP;#105#WORD WRAP" }, // Toggle values: 0-None, 1-Char, 2-Word
 };
 
 // Toggle extended properties
 static PropertyDesc guiPropsToggleExtended[] = {
-    { "GROUP_PADDING", PROPERTY_INT },
+    { "GROUP_PADDING", PROPERTY_TYPE_INT, { 0, 16 }},
+    { "GROUP_WIDTH_FULL", PROPERTY_TYPE_STATE, "#214#PER ITEM;#106#FULL"},
 };
 
 // Slider/SliderBar extended properties
 static PropertyDesc guiPropsSliderExtended[] = {
-    { "SLIDER_WIDTH", PROPERTY_INT },
-    { "SLIDER_PADDING", PROPERTY_INT },
+    { "SLIDER_WIDTH", PROPERTY_TYPE_INT, { 4, 24 }},
+    { "SLIDER_PADDING", PROPERTY_TYPE_INT, { 0, 16 }},
 };
 
 // ProgressBar extended properties
 static PropertyDesc guiPropsProgressBarExtended[] = {
-    { "PROGRESS_PADDING", PROPERTY_INT },
-    { "PROGRESS_SIDE", PROPERTY_STATE, "LEFT to RIGHT;RIGHT to LEFT" }, // Toggle values: 0-Left->Right, 1-Right->Left
+    { "PROGRESS_PADDING", PROPERTY_TYPE_INT, { 0, 16 }},
+    { "PROGRESS_SIDE", PROPERTY_TYPE_STATE, "#119#LEFT to RIGHT;#118#RIGHT to LEFT" }, // Toggle values: 0-Left->Right, 1-Right->Left
 };
 
 // ScrollBar extended properties
 static PropertyDesc guiPropsScrollBarExtended[] = {
-    { "ARROWS_SIZE", PROPERTY_INT },
-    { "ARROWS_VISIBLE", PROPERTY_STATE, "NO ARROWS;SHOW ARROWS" }, // Toggle values: 0-False or 1-True
-    { "SCROLL_SLIDER_PADDING", PROPERTY_INT },
-    { "SCROLL_SLIDER_SIZE", PROPERTY_INT },
-    { "SCROLL_PADDING", PROPERTY_INT },
-    { "SCROLL_SPEED", PROPERTY_INT },
+    { "ARROWS_SIZE", PROPERTY_TYPE_INT, { 3, 16 }},
+    { "ARROWS_VISIBLE", PROPERTY_TYPE_STATE, "#108#NO ARROWS;#120#SHOW ARROWS" }, // Toggle values: 0-False or 1-True
+    { "SCROLL_SLIDER_PADDING", PROPERTY_TYPE_INT, { 0, 16 }},
+    { "SCROLL_SLIDER_SIZE", PROPERTY_TYPE_INT, { 2, 24 }},
+    { "SCROLL_PADDING", PROPERTY_TYPE_INT, { 0, 12 }},
+    { "SCROLL_SPEED", PROPERTY_TYPE_INT, { 1, 32 }},
 };
 
 // CheckBox extended properties
 static PropertyDesc guiPropsCheckBoxExtended[] = {
-    { "CHECK_PADDING", PROPERTY_INT },
+    { "CHECK_PADDING", PROPERTY_TYPE_INT, { 0, 16 }},
 };
 
 // ComboBox extended properties
 static PropertyDesc guiPropsComboBoxExtended[] = {
-    { "COMBO_BUTTON_WIDTH", PROPERTY_INT },
-    { "COMBO_BUTTON_SPACING", PROPERTY_INT },
+    { "COMBO_BUTTON_WIDTH", PROPERTY_TYPE_INT, { 16, 48 }},
+    { "COMBO_BUTTON_SPACING", PROPERTY_TYPE_INT, { 0, 16 }},
 };
 
 // DropdownBox extended properties
 static PropertyDesc guiPropsDropdowBoxExtended[] = {
-    { "ARROW_PADDING", PROPERTY_INT },
-    { "DROPDOWN_ITEMS_SPACING", PROPERTY_INT },
-    { "DROPDOWN_ARROW_HIDDEN", PROPERTY_STATE, "SHOW ARROW;HIDE ARROW" }, // Toggle values: 0-False or 1-True
-    { "DROPDOWN_ROLL_UP", PROPERTY_STATE, "ROLL DOWN;ROLL UP" }, // Toggle values: 0-False or 1-True
+    { "ARROW_PADDING", PROPERTY_TYPE_INT, { 0, 16 }},
+    { "DROPDOWN_ITEMS_SPACING", PROPERTY_TYPE_INT, { 0, 16 }},
+    { "DROPDOWN_ARROW_HIDDEN", PROPERTY_TYPE_STATE, "#120#SHOW ARROW;#108#HIDE ARROW" }, // Toggle values: 0-False or 1-True
+    { "DROPDOWN_ROLL_UP", PROPERTY_TYPE_STATE, "#120#ROLL DOWN;#121#ROLL UP" }, // Toggle values: 0-False or 1-True
 };
 
 // TextBox/TextBoxMulti/ValueBox/Spinner extended properties
 static PropertyDesc guiPropsTextBoxExtended[] = {
-    { "TEXT_READONLY", PROPERTY_STATE, "EDITABLE TEXT;READONLY TEXT" }, // Toggle values: 0-False or 1-True
+    { "TEXT_READONLY", PROPERTY_TYPE_STATE, "#30#EDITABLE TEXT;#176#READONLY TEXT" }, // Toggle values: 0-False or 1-True
 };
 
 // ValueBox/Spinner extended properties
 static PropertyDesc guiPropsSpinnerExtended[] = {
-    { "SPINNER_BUTTON_WIDTH", PROPERTY_INT },
-    { "SPINNER_BUTTON_SPACING", PROPERTY_INT },
+    { "SPINNER_BUTTON_WIDTH", PROPERTY_TYPE_INT, { 16, 64 }},
+    { "SPINNER_BUTTON_SPACING", PROPERTY_TYPE_INT, { 0, 16 }},
 };
 
 // TabBar extended properties
 static PropertyDesc guiPropsTabBarExtended[] = {
-    { "TAB_ITEMS_WIDTH", PROPERTY_INT },
-    { "TAB_CLOSE_BUTTON", PROPERTY_STATE, "NO TAB CLOSE BTN;SHOW TAB CLOSE BTN" }, // Toggle values: 0-False or 1-True
-    { "TAB_LINE_SIDE", PROPERTY_STATE, "BOTTOM LINE;TOP LINE" }, // Toggle values: 0-Bottom line, 1-Top line
+    { "TAB_ITEMS_WIDTH", PROPERTY_TYPE_INT, { 24, 256 }},
+    { "TAB_CLOSE_BUTTON", PROPERTY_TYPE_STATE, "#107#NO TAB CLOSE BTN;#113#SHOW TAB CLOSE BTN" }, // Toggle values: 0-False or 1-True
+    { "TAB_LINE_SIDE", PROPERTY_TYPE_STATE, "#85#BOTTOM LINE;#81#TOP LINE" }, // Toggle values: 0-Bottom line, 1-Top line
 };
 
 // ListView extended properties
 static PropertyDesc guiPropsListViewExtended[] = {
-    { "LIST_ITEMS_HEIGHT", PROPERTY_INT },
-    { "LIST_ITEMS_SPACING", PROPERTY_INT },
-    { "SCROLLBAR_WIDTH", PROPERTY_INT },
-    { "SCROLLBAR_SIDE", PROPERTY_STATE, "LEFT SIDE;RIGHT SIDE" }, // Toggle values: 0-SCROLLBAR_LEFT_SIDE, 1-SCROLLBAR_RIGHT_SIDE
-    { "LIST_ITEMS_BORDER_NORMAL", PROPERTY_STATE, "NO BORDER DEFAULT;BORDER DEFAULT" }, // Toggle values: 0-No Item border, 1-Item border
-    { "LIST_ITEMS_BORDER_WIDTH", PROPERTY_INT },
+    { "LIST_ITEMS_HEIGHT", PROPERTY_TYPE_INT, { 12, 48 }},
+    { "LIST_ITEMS_SPACING", PROPERTY_TYPE_INT, { 0, 16 }},
+    { "SCROLLBAR_WIDTH", PROPERTY_TYPE_INT, { 4, 24 }},
+    { "SCROLLBAR_SIDE", PROPERTY_TYPE_STATE, "#114#LEFT SIDE;#115#RIGHT SIDE" }, // Toggle values: 0-SCROLLBAR_LEFT_SIDE, 1-SCROLLBAR_RIGHT_SIDE
+    { "LIST_ITEMS_BORDER_NORMAL", PROPERTY_TYPE_STATE, "#109#NO BORDER DEFAULT;#110#BORDER DEFAULT" }, // Toggle values: 0-No Item border, 1-Item border
+    { "LIST_ITEMS_BORDER_WIDTH", PROPERTY_TYPE_INT, { 0, 12 }},
 };
 
 // ColorPicker extended properties
 static PropertyDesc guiPropsColorExtended[] = {
-    { "COLOR_SELECTOR_SIZE", PROPERTY_INT },
-    { "HUEBAR_WIDTH", PROPERTY_INT },
-    { "HUEBAR_PADDING", PROPERTY_INT },
-    { "HUEBAR_SELECTOR_HEIGHT", PROPERTY_INT },
-    { "HUEBAR_SELECTOR_OVERFLOW", PROPERTY_INT },
+    { "COLOR_SELECTOR_SIZE", PROPERTY_TYPE_INT, { 1, 12 }},
+    { "HUEBAR_WIDTH", PROPERTY_TYPE_INT, { 0, 12 }},
+    { "HUEBAR_PADDING", PROPERTY_TYPE_INT, { 0, 12 }},
+    { "HUEBAR_SELECTOR_HEIGHT", PROPERTY_TYPE_INT, { 0, 12 }},
+    { "HUEBAR_SELECTOR_OVERFLOW", PROPERTY_TYPE_INT, { 0, 12 }},
 };
 
 // Style template names
@@ -502,7 +505,7 @@ static int CountStyleChangesDefault(void); // Count gui style properties changes
 static int CountStyleChanges(unsigned int *style, unsigned int *refStyle); // Count style properties changes vs refStyle
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color); // Gui color box
 
-static int CopyControlProps(PropertyDesc src[], const char *names[], int types[], int count); // Copy controls data, used on BuildControlPropsText()
+static int CopyControlProps(PropertyDesc src[], const char *names[], int types[], const char *states[], int count); // Copy controls data, used on BuildControlPropsText()
 static void BuildControlPropsText(int currentSelectedControl); // Build ListView text for selected control
 
 //------------------------------------------------------------------------------------
@@ -1279,18 +1282,18 @@ int main(int argc, char *argv[])
         {
             if ((previousSelectedProperty != currentSelectedProperty) && !obtainProperty) obtainProperty = true;
 
-            int propertyType = guiControlPropsType[currentSelectedProperty];
+            int propertyType = guiControlPropsTypes[currentSelectedProperty];
             int property = currentSelectedProperty;
-            if (currentSelectedProperty >= guiControlPropsDefaultSize)
-                property = currentSelectedProperty - guiControlPropsDefaultSize + RAYGUI_MAX_PROPS_BASE;
+            if (currentSelectedProperty >= guiControlPropsDefaultCount)
+                property = currentSelectedProperty - guiControlPropsDefaultCount + RAYGUI_MAX_PROPS_BASE;
 
             if (obtainProperty)
             {
                 switch (propertyType)
                 {
-                    case PROPERTY_INT: propertyValue = GuiGetStyle(currentSelectedControl, property); break;
-                    case PROPERTY_COLOR: colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, property)); break;
-                    case PROPERTY_STATE: toggleActive = GuiGetStyle(currentSelectedControl, property); break;
+                    case PROPERTY_TYPE_INT: propertyValue = GuiGetStyle(currentSelectedControl, property); break;
+                    case PROPERTY_TYPE_COLOR: colorPickerValue = GetColor(GuiGetStyle(currentSelectedControl, property)); break;
+                    case PROPERTY_TYPE_STATE: toggleActive = GuiGetStyle(currentSelectedControl, property); break;
                     default: break;
                 }
 
@@ -1300,9 +1303,9 @@ int main(int argc, char *argv[])
             {
                 switch (propertyType)
                 {
-                    case PROPERTY_INT: GuiSetStyle(currentSelectedControl, property, propertyValue); break;
-                    case PROPERTY_COLOR: GuiSetStyle(currentSelectedControl, property, ColorToInt(colorPickerValue)); break;
-                    case PROPERTY_STATE: GuiSetStyle(currentSelectedControl, property, toggleActive); break;
+                    case PROPERTY_TYPE_INT: GuiSetStyle(currentSelectedControl, property, propertyValue); break;
+                    case PROPERTY_TYPE_COLOR: GuiSetStyle(currentSelectedControl, property, ColorToInt(colorPickerValue)); break;
+                    case PROPERTY_TYPE_STATE: GuiSetStyle(currentSelectedControl, property, toggleActive); break;
                     default: break;
                 }
             }
@@ -1315,25 +1318,6 @@ int main(int argc, char *argv[])
         // Color selection logic (text box and color picker)
         //----------------------------------------------------------------------------------
         if (!textHexColorEditMode) snprintf(hexColorText, 9, "%02X%02X%02X%02X", colorPickerValue.r, colorPickerValue.g, colorPickerValue.b, colorPickerValue.a);
-
-        // Color selection cursor show/hide logic
-        Rectangle colorPickerRec = { anchorPropEditor.x + 10, anchorPropEditor.y + 55, 240, 240 };
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(mousePos, colorPickerRec)) selectingColor = true;
-        if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
-        {
-            selectingColor = false;
-            ShowCursor();
-        }
-
-        if (selectingColor)
-        {
-            HideCursor();
-            if (mousePos.x < colorPickerRec.x) SetMousePosition(colorPickerRec.x, mousePos.y);
-            else if (mousePos.x > colorPickerRec.x + colorPickerRec.width) SetMousePosition(colorPickerRec.x + colorPickerRec.width, mousePos.y);
-
-            if (mousePos.y < colorPickerRec.y) SetMousePosition(mousePos.x, colorPickerRec.y);
-            else if (mousePos.y > colorPickerRec.y + colorPickerRec.height) SetMousePosition(mousePos.x, colorPickerRec.y + colorPickerRec.height);
-        }
         //----------------------------------------------------------------------------------
 
         // WARNING: Some windows should lock the main screen controls when shown
@@ -1376,7 +1360,7 @@ int main(int argc, char *argv[])
             // Properties list view
             BuildControlPropsText(currentSelectedControl);
             GuiListViewEx((Rectangle){ anchorMain.x + 163, anchorMain.y + 52, 180, GetScreenHeight() - 256 - 48 },
-                guiControlPropsText, guiControlPropsTextSize, &propertyListScroll, &currentSelectedProperty, NULL);
+                guiControlPropsNames, guiControlPropsTextCount, &propertyListScroll, &currentSelectedProperty, NULL);
 
             // Controls properties editor window
             if (controlsWindowActive)
@@ -1384,51 +1368,98 @@ int main(int argc, char *argv[])
                 Rectangle controlsWindowRec = (Rectangle){ anchorWindow.x, anchorWindow.y, 385, GetScreenHeight() - 256 - 48 };
                 controlsWindowActive = !GuiWindowBox(controlsWindowRec, "#198#Control properties editor");
 
-                GuiGroupBox((Rectangle){ anchorPropEditor.x, anchorPropEditor.y, controlsWindowRec.width - 20, controlsWindowRec.height - 24 - 28 }, "Property Editor");
+                GuiGroupBox((Rectangle){ anchorPropEditor.x, anchorPropEditor.y, controlsWindowRec.width - 20, controlsWindowRec.height - 24 - 28 }, "Selected Property");
 
-                // Value property editor
-                float propValueFloat = (float)propertyValue;
-                GuiSlider((Rectangle){ anchorPropEditor.x + 50, anchorPropEditor.y + 15, 235, 15 }, "Value:", NULL, &propValueFloat, 0, 32);
-                propertyValue = (int)propValueFloat;
-                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 10, 60, 25 }, NULL, &propertyValue, 0, 32, propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
+                // Get current selected property type, name and states
+                int currentPropType = -1;
+                if (currentSelectedProperty > 0) currentPropType = guiControlPropsTypes[currentSelectedProperty];
+
+                char *currentPropNameValue = "<SELECT PROPERTY>";
+                char *currentPropNameColor = "<SELECT COLOR PROPERTY>";
+                char *currentPropNameState = "<SELECT PROPERTY>";
+                char *currentPropValues = NULL; // Min-max values for slider
+                char *currentPropState = "STATE01;STATE02;STATE03";
+                if (currentSelectedProperty > 0)
+                {
+                    if (currentPropType == PROPERTY_TYPE_INT)
+                    {
+                        currentPropNameValue = guiControlPropsNames[currentSelectedProperty];
+                        currentPropValues = guiControlPropsStates[currentSelectedProperty];
+                    }
+                    else if (currentPropType == PROPERTY_TYPE_COLOR)
+                    {
+                        currentPropNameColor = guiControlPropsNames[currentSelectedProperty];
+                    }
+                    else if (currentPropType == PROPERTY_TYPE_STATE)
+                    {
+                        currentPropNameState = guiControlPropsNames[currentSelectedProperty];
+                        currentPropState = guiControlPropsStates[currentSelectedProperty];
+                    }
+                }
 
                 // Color property editor
-                int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 200;
-                GuiLine((Rectangle){ anchorPropEditor.x, anchorPropEditor.y + 35, 365, 15 }, NULL);
-                GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55, 320, colorPickerHeight }, NULL, &colorPickerValue);
+                //--------------------------------------------------------------------------------------------
+                if (currentPropType != PROPERTY_TYPE_COLOR) GuiDisable();
+                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 12, 320, 24 }, currentPropNameColor);
+                if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
+
+                int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 222;
+                GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 36, 320, colorPickerHeight }, NULL, &colorPickerValue);
 
                 rColorValue = (int)colorPickerValue.r;
                 gColorValue = (int)colorPickerValue.g;
                 bColorValue = (int)colorPickerValue.b;
                 GuiSetStyle(VALUEBOX, SPINNER_BUTTON_WIDTH, 18);
-                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12, anchorPropEditor.y + 55 + colorPickerHeight + 12, 86, 24 }, NULL, &rColorValue, 0, 255, rColorEditMode)) rColorEditMode = !rColorEditMode;
-                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12 + 90, anchorPropEditor.y + 55 + colorPickerHeight + 12, 86, 24 }, NULL, &gColorValue, 0, 255, gColorEditMode)) gColorEditMode = !gColorEditMode;
-                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12 + 180, anchorPropEditor.y + 55 + colorPickerHeight + 12, 86, 24 }, NULL, &bColorValue, 0, 255, bColorEditMode)) bColorEditMode = !bColorEditMode;
+                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12, anchorPropEditor.y + 36 + colorPickerHeight + 12, 86, 24 }, NULL, &rColorValue, 0, 255, rColorEditMode)) rColorEditMode = !rColorEditMode;
+                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12 + 90, anchorPropEditor.y + 36 + colorPickerHeight + 12, 86, 24 }, NULL, &gColorValue, 0, 255, gColorEditMode)) gColorEditMode = !gColorEditMode;
+                if (GuiSpinner((Rectangle){ anchorPropEditor.x + 12 + 180, anchorPropEditor.y + 36 + colorPickerHeight + 12, 86, 24 }, NULL, &bColorValue, 0, 255, bColorEditMode)) bColorEditMode = !bColorEditMode;
                 if (rColorValue != (int)colorPickerValue.r) colorPickerValue.r = (char)rColorValue;
                 if (gColorValue != (int)colorPickerValue.g) colorPickerValue.g = (char)gColorValue;
                 if (bColorValue != (int)colorPickerValue.b) colorPickerValue.b = (char)bColorValue;
                 GuiSetStyle(VALUEBOX, SPINNER_BUTTON_WIDTH, 24); // Default value
-
+       
                 // Color hex editor
-                if (GuiTextBox((Rectangle){ anchorPropEditor.x + 12 + 274, anchorPropEditor.y + 55 + colorPickerHeight + 12, 70, 24 }, hexColorText, 9, textHexColorEditMode))
+                if (GuiTextBox((Rectangle){ anchorPropEditor.x + 12 + 274, anchorPropEditor.y + 36 + colorPickerHeight + 12, 70, 24 }, hexColorText, 9, textHexColorEditMode))
                 {
                     textHexColorEditMode = !textHexColorEditMode;
                     colorPickerValue = GetColor((int)strtoul(hexColorText, NULL, 16));
                 }
 
                 // Colors selector palette
-                GuiLabel((Rectangle){ anchorPropEditor.x + 12, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 40, 320, 20 }, "#25#PALETTE:");
-                for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorPropEditor.x + 12 + 80 + 22*i, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 40, 20, 20 }, &colorPickerValue, colorBoxValue[i]);
+                GuiLabel((Rectangle){ anchorPropEditor.x + 12, anchorPropEditor.y + 36 + colorPickerHeight + 12 + 40, 320, 20 }, "#25#PALETTE:");
+                for (int i = 0; i < 12; i++) colorBoxValue[i] = GuiColorBox((Rectangle){ anchorPropEditor.x + 12 + 80 + 22*i, anchorPropEditor.y + 36 + colorPickerHeight + 12 + 40, 20, 20 }, &colorPickerValue, colorBoxValue[i]);
+                //--------------------------------------------------------------------------------------------
 
-                GuiLine((Rectangle){ anchorPropEditor.x + 0, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 36, 365, 12 }, NULL);
+                GuiLine((Rectangle){ anchorPropEditor.x, anchorPropEditor.y + 32 + colorPickerHeight + 12 + 32 + 36, 365, 12 }, NULL);
 
-                // Specific property editing: TEXT_ALIGNMENT
-                if ((mainToolbarState.propsStateActive == STATE_NORMAL) && (currentSelectedProperty != TEXT_ALIGNMENT)) GuiDisable();
-                GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
-                GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 104, 24 }, "Text Alignment:");
-                GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
-                GuiToggleGroup((Rectangle){ anchorPropEditor.x + 120, anchorPropEditor.y + 55 + colorPickerHeight + 12 + 32 + 28 + 28, 76, 24 }, "#87#LEFT;#89#CENTER;#83#RIGHT", &toggleActive);
+                // Value property editor
+                //--------------------------------------------------------------------------------------------
+                if (currentPropType != PROPERTY_TYPE_INT) GuiDisable();
+                float propValueFloat = (float)propertyValue;
+                GuiSlider((Rectangle){ anchorPropEditor.x + 16 + GuiGetTextWidth(currentPropNameValue), anchorPropEditor.y + 58 + colorPickerHeight + 12 + 32 + 36, 
+                    385 - GuiGetTextWidth(currentPropNameValue) - 44 - 68, 15 }, currentPropNameValue, NULL, &propValueFloat, 0, 32);
+                propertyValue = (int)propValueFloat;
+                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 53 + colorPickerHeight + 12 + 32 + 36, 60, 24 }, NULL, &propertyValue, 
+                    (currentPropValues != NULL)? currentPropValues[0] : 0, (currentPropValues != NULL)? currentPropValues[1] : 32, 
+                    propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
+                //--------------------------------------------------------------------------------------------
+
+                GuiLine((Rectangle){ anchorPropEditor.x, anchorPropEditor.y + 62 + colorPickerHeight + 12 + 32 + 28 + 28, 365, 15 }, NULL);
+
+                // States property editor
+                //--------------------------------------------------------------------------------------------
+                if (currentPropType != PROPERTY_TYPE_STATE) GuiDisable();
+                GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
+                GuiLabel((Rectangle){ anchorPropEditor.x + 4, anchorPropEditor.y + 80 + colorPickerHeight + 12 + 32 + 28 + 28, 
+                    GuiGetTextWidth(currentPropNameState) + 8, 24 }, currentPropNameState);
+                GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
+                GuiSetStyle(TOGGLE, GROUP_WIDTH_FULL, 1);
+                GuiToggleGroup((Rectangle){ anchorPropEditor.x + GuiGetTextWidth(currentPropNameState) + 16, anchorPropEditor.y + 80 + colorPickerHeight + 12 + 32 + 28 + 28, 
+                    385 - GuiGetTextWidth(currentPropNameState) - 16 - 34, 24 }, currentPropState, &toggleActive);
+                GuiSetStyle(TOGGLE, GROUP_WIDTH_FULL, 0);
+                if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
+                //--------------------------------------------------------------------------------------------
             }
             else
             {
@@ -2086,7 +2117,7 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_TEXT: SaveStyle(TextFormat("%s%s", outFileName, ".rgs"), outputFormat); break;
+            case STYLE_TEXT: SaveStyle(TextFormat("%s%s", outFileName, ".txt.rgs"), outputFormat); break;
             case STYLE_BINARY: SaveStyle(TextFormat("%s%s", outFileName, ".rgs"), outputFormat); break;
             case STYLE_AS_CODE: ExportStyleAsCode(TextFormat("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
@@ -2111,7 +2142,82 @@ static void ProcessCommandLine(int argc, char *argv[])
 // WARNING: Using globals: fontEmbeddedChecked, fontDataCompressed
 static char *SaveStyleToMemory(int *size)
 {
-    #define GUI_STYLE_RGS_VERSION   400
+    #define GUI_STYLE_RGS_VERSION   600
+
+    // Style File Structure (.rgs)
+    // ------------------------------------------------------
+    // Offset  | Size    | Type       | Description
+    // ------------------------------------------------------
+    // 0       | 4       | char       | Signature: "rGS "
+    // 4       | 2       | short      | Version: 200, 400, 600
+    // 6       | 2       | short      | reserved
+    // 8       | 4       | int        | Num properties (only changed ones from default style)
+
+    // Properties Data (8 bytes per property)
+    // WARNING: Only properties required that differ from default (light) internal style
+    // foreach (property)
+    // {
+    //   8+8*i  | 2       | short      | ControlId
+    //   8+8*i  | 2       | short      | PropertyId
+    //   8+8*i  | 4       | int        | PropertyValue
+    // }
+
+    // Custom Font Data : Parameters (64 bytes)
+    // ...     | 4       | int        | Font data size (0 - no font, no more fields added!)
+    // ...     | 32      | char       | Font filename (with extension) - VERSION: >=600
+    // ...     | 4       | int        | Font base size
+    // ...     | 4       | int        | Font glyph count [glyphCount]
+    // ...     | 4       | int        | Font type (0-NORMAL, 1-SDF)
+    // ...     | 16      | Rectangle  | Font white rectangle
+
+    // Custom Font Data : Image (20 bytes + imData)
+    // NOTE: Font image atlas is always converted to GRAY+ALPHA
+    // and atlas image data can be compressed (DEFLATE)
+    // 48+4*N  | 4       | int        | Image data size (uncompressed)
+    // 52+4*N  | 4       | int        | Image data size (compressed)
+    // 56+4*N  | 4       | int        | Image width
+    // 60+4*N  | 4       | int        | Image height
+    // 64+4*N  | 4       | int        | Image format
+    // 68+4*N  | imSize  | byte       | Image data (comp or uncomp)
+
+    // Custom Font Data : Recs (32 bytes*glyphCount)
+    // NOTE: Font recs data can be compressed (DEFLATE)
+    // ...     | 4       | int        | Recs data compressed size (0 - not compressed, 1-compressed) - VERSION: >=400
+    // 
+    // if (compRecsSize == 0)
+    // {
+    //    NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
+    //    foreach (glyph)
+    //    {
+    //       ...  | 16      | Rectangle  | Glyph rectangle (in image)
+    //    }
+    // }
+    // else
+    // {
+    //    ...  | compRecsSize | byte  | Rectangles data
+    // }
+    //
+
+    // Custom Font Data : Glyph Info (32 bytes*glyphCount)
+    // NOTE: Font glyphs info data can be compressed (DEFLATE)
+    // ...     | 4       | int        | Glyphs data compressed size (0 - not compressed) - VERSION: >=400
+    // 
+    // if (compGlyphsSize == 0)
+    // {
+    //    NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
+    //    foreach (glyph)
+    //    {
+    //      ...   | 4       | int        | Glyph value
+    //      ...   | 4       | int        | Glyph offset X
+    //      ...   | 4       | int        | Glyph offset Y
+    //      ...   | 4       | int        | Glyph advance X
+    //    }
+    // }
+    // else
+    // {
+    //    ...  | compGlyphsSize | byte | Glyphs data
+    // }
+    // ------------------------------------------------------
 
     char *buffer = (char *)RL_CALLOC(1024*1024, 1);  // 1MB should be enough to save the style
     int dataSize = 0;
@@ -2205,7 +2311,7 @@ static char *SaveStyleToMemory(int *size)
         Image imFont = LoadImageFromTexture(customFont.texture);
 
         // Write font parameters
-        int fontParamsSize = 32;
+        int fontParamsSize = 32 + 32; // VERSION: 600 adds 32 bytes for font filename
         int fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
         int fontImageCompSize = fontImageUncompSize;
         int fontGlyphDataSize = customFont.glyphCount*32;       // 32 bytes by char
@@ -2368,74 +2474,12 @@ static char *SaveStyleToMemory(int *size)
 // a text style mode is also available for debug (no font embedding)
 static int SaveStyle(const char *fileName, int format)
 {
-    #define GUI_STYLE_RGS_VERSION   400
+    #define GUI_STYLE_RGS_VERSION   600
 
     int result = 0;
 
     if (format == STYLE_BINARY)
     {
-        // Style File Structure (.rgs)
-        // ------------------------------------------------------
-        // Offset  | Size    | Type       | Description
-        // ------------------------------------------------------
-        // 0       | 4       | char       | Signature: "rGS "
-        // 4       | 2       | short      | Version: 200, 400
-        // 6       | 2       | short      | reserved
-        // 8       | 4       | int        | Num properties (only changed ones from default style)
-
-        // Properties Data: (controlId (2 byte) +  propertyId (2 byte) + propertyValue (4 bytes))*N
-        // foreach (property)
-        // {
-        //   8+8*i  | 2       | short      | ControlId
-        //   8+8*i  | 2       | short      | PropertyId
-        //   8+8*i  | 4       | int        | PropertyValue
-        // }
-
-        // Custom Font Data : Parameters (32 bytes)
-        // 16+4*N  | 4       | int        | Font data size (0 - no font, no more fields added!)
-        // 20+4*N  | 4       | int        | Font base size
-        // 24+4*N  | 4       | int        | Font glyph count [glyphCount]
-        // 28+4*N  | 4       | int        | Font type (0-NORMAL, 1-SDF)
-        // 32+4*N  | 16      | Rectangle  | Font white rectangle
-
-        // Custom Font Data : Image (20 bytes + imData)
-        // NOTE: Font image atlas is always converted to GRAY+ALPHA
-        // and atlas image data can be compressed (DEFLATE)
-        // 48+4*N  | 4       | int        | Image data size (uncompressed)
-        // 52+4*N  | 4       | int        | Image data size (compressed)
-        // 56+4*N  | 4       | int        | Image width
-        // 60+4*N  | 4       | int        | Image height
-        // 64+4*N  | 4       | int        | Image format
-        // 68+4*N  | imSize  | byte       | Image data (comp or uncomp)
-
-        // Custom Font Data : Recs (32 bytes*glyphCount)
-        // NOTE: Font recs data can be compressed (DEFLATE)
-        // if (version >= 400)
-        // {
-        //    ...  | 4       | int       | Recs data compressed size (0 - not compressed)
-        // }
-        // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
-        // foreach (glyph)
-        // {
-        //    ...  | 16      | Rectangle  | Glyph rectangle (in image)
-        // }
-
-        // Custom Font Data : Glyph Info (32 bytes*glyphCount)
-        // NOTE: Font glyphs info data can be compressed (DEFLATE)
-        // if (version >= 400)
-        // {
-        //    ...  | 4       | int       | Glyphs data compressed size (0 - not compressed)
-        // }
-        // NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
-        // foreach (glyph)
-        // {
-        //   ...   | 4       | int        | Glyph value
-        //   ...   | 4       | int        | Glyph offset X
-        //   ...   | 4       | int        | Glyph offset Y
-        //   ...   | 4       | int        | Glyph advance X
-        // }
-        // ------------------------------------------------------
-
         int rgsFileDataSize = 0;
         char *rgsFileData = SaveStyleToMemory(&rgsFileDataSize);
 
@@ -3074,12 +3118,13 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
     return color;
 }
 
-static int CopyControlProps(PropertyDesc src[], const char *names[], int types[], int count)
+static int CopyControlProps(PropertyDesc src[], const char *names[], int types[], const char *states[], int count)
 {
     for (int i = 0; i < count; i++)
     {
         names[i] = src[i].name;
         types[i] = src[i].type;
+        states[i] = src[i].state;
     }
 
     return count;
@@ -3087,88 +3132,88 @@ static int CopyControlProps(PropertyDesc src[], const char *names[], int types[]
 
 static void BuildControlPropsText(int currentSelectedControl)
 {
-    guiControlPropsTextSize = 0;
-    guiControlPropsDefaultSize = 15;
+    guiControlPropsTextCount = 0;
+    guiControlPropsDefaultCount = 15;
 
     switch (currentSelectedControl)
     {
         case DEFAULT:
         {
-            guiControlPropsDefaultSize = 15;
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsDefaultExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 7);
+            guiControlPropsDefaultCount = 15;
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsDefaultExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 7);
         } break;
         case LABEL:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
         } break;
         case BUTTON:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
         } break;
         case TOGGLE:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsToggleExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 1);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsToggleExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 2);
         } break;
         case SLIDER:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsSliderExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsSliderExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 2);
         } break;
         case PROGRESSBAR:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsProgressBarExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsProgressBarExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 2);
         } break;
         case CHECKBOX:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsCheckBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 1);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsCheckBoxExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 1);
         } break;
         case COMBOBOX:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsComboBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsComboBoxExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 2);
         } break;
         case DROPDOWNBOX:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsDropdowBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 4);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsDropdowBoxExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 4);
         } break;
         case TEXTBOX:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsTextBoxExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 1);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsTextBoxExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 1);
         } break;
         case VALUEBOX:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsSpinnerExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 2);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsSpinnerExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 2);
         } break;
         case TABBAR:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsTabBarExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 3);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsTabBarExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 3);
         } break;
         case LISTVIEW:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsListViewExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 6);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsListViewExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 6);
         } break;
         case COLORPICKER:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsColorExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 5);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsColorExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 5);
         } break;
         case SCROLLBAR:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
-            guiControlPropsTextSize += CopyControlProps(guiPropsScrollBarExtended, guiControlPropsText + guiControlPropsTextSize, guiControlPropsType + guiControlPropsTextSize, 6);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
+            guiControlPropsTextCount += CopyControlProps(guiPropsScrollBarExtended, guiControlPropsNames + guiControlPropsTextCount, guiControlPropsTypes + guiControlPropsTextCount, guiControlPropsStates + guiControlPropsTextCount, 6);
         } break;
         case STATUSBAR:
         {
-            guiControlPropsTextSize += CopyControlProps(guiProps, guiControlPropsText, guiControlPropsType, guiControlPropsDefaultSize);
+            guiControlPropsTextCount += CopyControlProps(guiProps, guiControlPropsNames, guiControlPropsTypes, guiControlPropsStates, guiControlPropsDefaultCount);
         } break;
         default: break;
     }
