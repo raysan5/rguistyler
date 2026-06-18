@@ -3828,14 +3828,14 @@ int GuiListViewEx(Rectangle bounds, char **text, int count, int *scrollIndex, in
     return result;
 }
 
-// Color Panel control - Color (RGBA) variant
+// Color Panel control
 int GuiColorPanel(Rectangle bounds, const char *text, Color *color)
 {
     int result = 0;
 
     Vector3 vcolor = { (float)color->r/255.0f, (float)color->g/255.0f, (float)color->b/255.0f };
     Vector3 hsv = ConvertRGBtoHSV(vcolor);
-    Vector3 prevHsv = hsv; // workaround to see if GuiColorPanelHSV modifies the hsv
+    Vector3 prevHsv = hsv; // NOTE: Workaround to see if GuiColorPanelHSV() modifies the hsv
 
     GuiColorPanelHSV(bounds, text, &hsv);
 
@@ -3843,17 +3843,13 @@ int GuiColorPanel(Rectangle bounds, const char *text, Color *color)
     // This is required, because the Color->HSV->Color conversion has precision errors
     // Thus the assignment from HSV to Color should only be made, if the HSV has a new user-entered value
     // Otherwise GuiColorPanel would often modify it's color without user input
-    // TODO: GuiColorPanelHSV could return 1 if the slider was dragged, to simplify this check
-    if (hsv.x != prevHsv.x || hsv.y != prevHsv.y || hsv.z != prevHsv.z)
+    // TODO: GuiColorPanelHSV() could return 1 if the slider was dragged, to simplify this check
+    if ((hsv.x != prevHsv.x) || (hsv.y != prevHsv.y) || (hsv.z != prevHsv.z))
     {
         Vector3 rgb = ConvertHSVtoRGB(hsv);
-
-        // NOTE: Vector3ToColor() only available on raylib 1.8.1
-        *color = RAYGUI_CLITERAL(Color){ (unsigned char)(255.0f*rgb.x),
-                            (unsigned char)(255.0f*rgb.y),
-                            (unsigned char)(255.0f*rgb.z),
-                            color->a };
+        *color = RAYGUI_CLITERAL(Color){ (unsigned char)(255.0f*rgb.x), (unsigned char)(255.0f*rgb.y), (unsigned char)(255.0f*rgb.z), color->a };
     }
+
     return result;
 }
 
@@ -4089,7 +4085,7 @@ int GuiColorPickerHSV(Rectangle bounds, const char *text, Vector3 *colorHsv)
 
     GuiColorPanelHSV(bounds, NULL, colorHsv);
 
-    const Rectangle boundsHue = { (float)bounds.x + bounds.width + GuiGetStyle(COLORPICKER, HUEBAR_PADDING), (float)bounds.y, (float)GuiGetStyle(COLORPICKER, HUEBAR_WIDTH), (float)bounds.height };
+    Rectangle boundsHue = { (float)bounds.x + bounds.width + GuiGetStyle(COLORPICKER, HUEBAR_PADDING), (float)bounds.y, (float)GuiGetStyle(COLORPICKER, HUEBAR_WIDTH), (float)bounds.height };
 
     GuiColorBarHue(boundsHue, NULL, &colorHsv->x);
 
@@ -4111,9 +4107,7 @@ int GuiColorPanelHSV(Rectangle bounds, const char *text, Vector3 *colorHsv)
 
     Vector3 maxHue = { colorHsv->x, 1.0f, 1.0f };
     Vector3 rgbHue = ConvertHSVtoRGB(maxHue);
-    Color maxHueCol = { (unsigned char)(255.0f*rgbHue.x),
-                      (unsigned char)(255.0f*rgbHue.y),
-                      (unsigned char)(255.0f*rgbHue.z), 255 };
+    Color maxHueCol = { (unsigned char)(255.0f*rgbHue.x), (unsigned char)(255.0f*rgbHue.y), (unsigned char)(255.0f*rgbHue.z), 255 };
 
     // Update control
     //--------------------------------------------------------------------
@@ -4137,12 +4131,11 @@ int GuiColorPanelHSV(Rectangle bounds, const char *text, Vector3 *colorHsv)
                     // Calculate color from picker
                     Vector2 colorPick = { pickerSelector.x - bounds.x, pickerSelector.y - bounds.y };
 
-                    colorPick.x /= (float)bounds.width;     // Get normalized value on x
-                    colorPick.y /= (float)bounds.height;    // Get normalized value on y
+                    colorPick.x /= (float)bounds.width; // Get normalized value on x
+                    colorPick.y /= (float)bounds.height; // Get normalized value on y
 
                     colorHsv->y = colorPick.x;
                     colorHsv->z = 1.0f - colorPick.y;
-
                 }
             }
             else
@@ -4551,6 +4544,81 @@ void GuiLoadStyle(const char *fileName)
 // WARNING: Binary files only
 void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize)
 {
+    // Style File Structure (.rgs)
+    // ------------------------------------------------------
+    // Offset  | Size    | Type       | Description
+    // ------------------------------------------------------
+    // 0       | 4       | char       | Signature: "rGS "
+    // 4       | 2       | short      | Version: 200, 400, 600
+    // 6       | 2       | short      | reserved
+    // 8       | 4       | int        | Num properties (only changed ones from default style)
+
+    // Properties Data (8 bytes per property)
+    // WARNING: Only properties required that differ from default (light) internal style
+    // foreach (property)
+    // {
+    //   8+8*i  | 2       | short      | ControlId
+    //   8+8*i  | 2       | short      | PropertyId
+    //   8+8*i  | 4       | int        | PropertyValue
+    // }
+
+    // Custom Font Data : Parameters (64 bytes)
+    // ...     | 4       | int        | Font data size (0 - no font, no more fields added!)
+    // ...     | 32      | char       | Font filename (with extension) - VERSION: >=600
+    // ...     | 4       | int        | Font base size
+    // ...     | 4       | int        | Font glyph count [glyphCount]
+    // ...     | 4       | int        | Font type (0-NORMAL, 1-SDF)
+    // ...     | 16      | Rectangle  | Font white rectangle
+
+    // Custom Font Data : Image (20 bytes + imData)
+    // NOTE: Font image atlas is always converted to GRAY+ALPHA
+    // and atlas image data can be compressed (DEFLATE)
+    // 48+4*N  | 4       | int        | Image data size (uncompressed)
+    // 52+4*N  | 4       | int        | Image data size (compressed)
+    // 56+4*N  | 4       | int        | Image width
+    // 60+4*N  | 4       | int        | Image height
+    // 64+4*N  | 4       | int        | Image format
+    // 68+4*N  | imSize  | byte       | Image data (comp or uncomp)
+
+    // Custom Font Data : Recs (32 bytes*glyphCount)
+    // NOTE: Font recs data can be compressed (DEFLATE)
+    // ...     | 4       | int        | Recs data compressed size (0 - not compressed, 1-compressed) - VERSION: >=400
+    // 
+    // if (compRecsSize == 0)
+    // {
+    //    NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
+    //    foreach (glyph)
+    //    {
+    //       ...  | 16      | Rectangle  | Glyph rectangle (in image)
+    //    }
+    // }
+    // else
+    // {
+    //    ...  | compRecsSize | byte  | Rectangles data
+    // }
+    //
+
+    // Custom Font Data : Glyph Info (32 bytes*glyphCount)
+    // NOTE: Font glyphs info data can be compressed (DEFLATE)
+    // ...     | 4       | int        | Glyphs data compressed size (0 - not compressed) - VERSION: >=400
+    // 
+    // if (compGlyphsSize == 0)
+    // {
+    //    NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
+    //    foreach (glyph)
+    //    {
+    //      ...   | 4       | int        | Glyph value
+    //      ...   | 4       | int        | Glyph offset X
+    //      ...   | 4       | int        | Glyph offset Y
+    //      ...   | 4       | int        | Glyph advance X
+    //    }
+    // }
+    // else
+    // {
+    //    ...  | compGlyphsSize | byte | Glyphs data
+    // }
+    // ------------------------------------------------------
+
     unsigned char *fileDataPtr = (unsigned char *)fileData;
 
     char signature[5] = { 0 };
@@ -4603,6 +4671,14 @@ void GuiLoadStyleFromMemory(const unsigned char *fileData, int dataSize)
         {
             Font font = { 0 };
             int fontType = 0;   // 0-Normal, 1-SDF
+            char fontFileName[32] = { 0 };
+
+            // WARNING: Version 600 adds 32 bytes for the font filename (with extension)
+            if (version >= 600)
+            {
+                memcpy(fontFileName, fileDataPtr, sizeof(int));
+                fileDataPtr += 32;
+            }
 
             memcpy(&font.baseSize, fileDataPtr, sizeof(int));
             memcpy(&font.glyphCount, fileDataPtr + 4, sizeof(int));
@@ -4914,30 +4990,6 @@ unsigned int *GuiGetIcons(void) { return guiIconsPtr; }
 // WARNING: guiIconsName[]][] memory should be manually freed!
 char **GuiLoadIcons(const char *fileName, bool loadIconsName)
 {
-    // Style File Structure (.rgi)
-    // ------------------------------------------------------
-    // Offset  | Size    | Type       | Description
-    // ------------------------------------------------------
-    // 0       | 4       | char       | Signature: "rGI "
-    // 4       | 2       | short      | Version: 100, 500 (raygui 5.0)
-    // 6       | 2       | short      | reserved
-
-    // 8       | 2       | short      | Num icons (N)
-    // 10      | 2       | short      | Icons Size (Options: 16, 32, 64)
-
-    // Icons name id (32 bytes per name id)
-    // foreach (icon)
-    // {
-    //   12+32*i  | 32   | char       | Icon NameId
-    // }
-
-    // Icons data: One bit per pixel, stored as unsigned int array (depends on icon size)
-    // Size*Size pixels/32bit per unsigned int = K unsigned int per icon
-    // foreach (icon)
-    // {
-    //   ...   | K       | unsigned int | Icon Data
-    // }
-
     FILE *rgiFile = fopen(fileName, "rb");
     char **guiIconsName = NULL;
 
@@ -4969,6 +5021,31 @@ char **GuiLoadIcons(const char *fileName, bool loadIconsName)
 // GLOBAL: Updates global variable: guiIconsPtr
 char **GuiLoadIconsFromMemory(const unsigned char *fileData, int dataSize, bool loadIconsName)
 {
+    // Icon File Structure (.rgi)
+    // ------------------------------------------------------
+    // Offset  | Size    | Type       | Description
+    // ------------------------------------------------------
+    // 0       | 4       | char       | Signature: "rGI "
+    // 4       | 2       | short      | Version: 100, 500
+    // 6       | 2       | short      | reserved
+
+    // 8       | 2       | short      | Num icons (N)
+    // 10      | 2       | short      | Icons Size (Options: 16, 32, 64)
+
+    // Icons name id (32 bytes per name id)
+    // foreach (icon)
+    // {
+    //   12+32*i  | 32   | char       | Icon NameId
+    // }
+
+    // Icons data: One bit per pixel, stored as unsigned int array (depends on icon size)
+    // Size*Size pixels/32bit per unsigned int = K unsigned int per icon
+    // foreach (icon)
+    // {
+    //   ...   | K       | unsigned int | Icon Data
+    // }
+    // ------------------------------------------------------
+
     unsigned char *fileDataPtr = (unsigned char *)fileData;
     char **guiIconsName = NULL;
 
