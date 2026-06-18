@@ -650,6 +650,7 @@ typedef enum {
 // Toggle/ToggleGroup
 typedef enum {
     GROUP_PADDING = 16,         // ToggleGroup separation between toggles
+    GROUP_WIDTH_FULL            // ToggleGroup bounds width considers all items: 0-Width per item, 1-Full width
 } GuiToggleProperty;
 
 // Slider/SliderBar
@@ -2197,6 +2198,15 @@ int GuiToggleGroup(Rectangle bounds, const char *text, int *active)
     bool itemReady = false;
     float initBoundsX = bounds.x;
     float initBoundsY = bounds.y;
+
+    if (GuiGetStyle(TOGGLE, GROUP_WIDTH_FULL))
+    {
+        // Calculate item width considring all horizontal items
+        // NOTE: bounds.height still considers individual items height
+        int itemCount = 1;
+        for (int c = 0; textPtr[c] != '\0'; c++) { if (textPtr[c] == ';') itemCount++; }
+        bounds.width /= itemCount;
+    }
 
     // Text parsing needed to consider potential row and col entries (vertical/horizontal layout)
     // when '\n' found move vertically next toggle, when ';' found move horizontally
