@@ -440,7 +440,7 @@ static char fontFilePaths[MAX_FONT_PATHS][256] = {
 };
 
 static int fontFileCount = 16;
-static char fontFileNamesList[512] = { 0 };
+static char fontFileNamesList[512] = { 0 }; // Useed to concat font names for GuiListView()
 
 static int fontBaseSize[MAX_FONT_PATHS] = { 10, 16, 16, 10, 14, 16, 12, 16, 15, 16, 15, 16, 16, 13, 12, 16 };
 static int fontBaseSpacing[MAX_FONT_PATHS] = { 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0 };
@@ -471,11 +471,10 @@ static unsigned int loadedStyle[RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAY
 static bool fontEmbeddedChecked = true;         // Select to embed font into style file
 static bool fontDataCompressedChecked = true;   // Export font data compressed (recs and glyphs)
 
-static int styleFontSelected = -1;               // Style font selected on list view (Default: no-font)
-
+static int styleFontSelected = -1;              // Style font selected on list view (Default: no-font)
 static Rectangle fontWhiteRec = { 0 };          // Font white rectangle, required to be updated from window font atlas
 
-static char currentStyleName[64] = { 0 };       // Current style name
+static char currentStyleName[32] = { 0 };       // Current style name
 
 // NOTE: Max length depends on OS, in Windows MAX_PATH = 256
 static char inFileName[512] = { 0 };            // Input file name (required in case of drag & drop over executable)
@@ -571,9 +570,13 @@ int main(int argc, char *argv[])
     if ((inFileName[0] != '\0') && (IsFileExtension(inFileName, ".rgs")))
     {
         GuiLoadStyle(inFileName); // Loads into guiStyle
+        for (int i = 0; i < MAX_FONT_PATHS; i++)
+        {
+            if (TextIsEqual(guiFontName, GetFileName(fontFilePaths[i]))) styleFontSelected = i; break;
+        }
         SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
         inputFileLoaded = true;
-        strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 256 - 1);
+        strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 32 - 1);
     }
     else
     {
@@ -737,10 +740,10 @@ int main(int argc, char *argv[])
             {
                 GuiLoadStyleDefault();               // Reset to base default style
                 GuiLoadStyle(droppedFiles.paths[0]); // Load new style properties
-
-                strcpy(inFileName, droppedFiles.paths[0]);
-                SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
-                inputFileLoaded = true;
+                for (int i = 0; i < MAX_FONT_PATHS; i++)
+                {
+                    if (TextIsEqual(guiFontName, GetFileName(fontFilePaths[i]))) { styleFontSelected = i; break; }
+                }
 
                 fontDrawSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
                 fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
@@ -748,12 +751,24 @@ int main(int argc, char *argv[])
 
                 // Load .rgs custom font in font
                 customFont = GuiGetFont();
-                memset(inFontFileName, 0, 512);
-                customFontLoaded = true;
+                if (styleFontSelected > 0)
+                {
+                    strcpy(inFontFileName, fontFilePaths[styleFontSelected]);
+                    windowFontAtlasState.fontAtlasRegen = true;
+                }
+                else
+                {
+                    memset(inFontFileName, 0, 512);
+                    customFontLoaded = true;
+                }
 
                 // Reset current style backup for changes tracking
                 memcpy(loadedStyle, guiStyle, RAYGUI_MAX_CONTROLS*(RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED));
                 saveChangesRequired = false;
+
+                strcpy(inFileName, droppedFiles.paths[0]);
+                SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
+                inputFileLoaded = true;
             }
             else if (IsFileExtension(droppedFiles.paths[0], ".ttf;.otf"))
             {
@@ -964,7 +979,7 @@ int main(int argc, char *argv[])
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
             SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
-            strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 256 - 1);
+            strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 32 - 1);
 
             genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
@@ -1231,7 +1246,7 @@ int main(int argc, char *argv[])
 
             // Variables required to reset
             saveChangesRequired = false;
-            memset(currentStyleName, 0, 64);
+            memset(currentStyleName, 0, 32);
             strcpy(currentStyleName, styleNames[mainToolbarState.visualStyleActive]);
 
             // Font atlas parameters update
@@ -1248,8 +1263,9 @@ int main(int argc, char *argv[])
             fontAtlasView.position.y = windowFontAtlasState.bounds.y + windowFontAtlasState.bounds.height/2 - customFont.texture.height*fontAtlasView.scale/2;
             fontAtlasView.prevPosition = fontAtlasView.position;
 
-            // Reset list view font selected
-            memset(inFontFileName, 0, 512);
+            // Select style font file required
+            int fontIndex = defaultStyleFont[mainToolbarState.visualStyleActive];
+            strcpy(inFontFileName, fontFilePaths[fontIndex]);
             styleFontSelected = -1;
         }
 
@@ -1608,7 +1624,7 @@ int main(int argc, char *argv[])
             GuiSetStyle(STATUSBAR, TEXT_ALIGNMENT, TEXT_ALIGN_CENTER);
             GuiStatusBar((Rectangle){ 320 - 2, GetScreenHeight() - 24, 190, 24 }, TextFormat("CHANGED PROPERTIES: %i", styleChanges));
 
-            if (GuiTextBox((Rectangle){ 170 - 1, GetScreenHeight() - 24, 150, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
+            if (GuiTextBox((Rectangle){ 170 - 1, GetScreenHeight() - 24, 150, 24 }, currentStyleName, 32, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
 
             GuiStatusBar((Rectangle){ 320 + 190 - 3, GetScreenHeight() - 24, GetScreenWidth() - 880 - 530 + 7, 24 }, NULL);
 
@@ -2173,12 +2189,12 @@ static char *SaveStyleToMemory(int *size)
     // Custom Font Data : Image (20 bytes + imData)
     // NOTE: Font image atlas is always converted to GRAY+ALPHA
     // and atlas image data can be compressed (DEFLATE)
-    // 48+4*N  | 4       | int        | Image data size (uncompressed)
-    // 52+4*N  | 4       | int        | Image data size (compressed)
-    // 56+4*N  | 4       | int        | Image width
-    // 60+4*N  | 4       | int        | Image height
-    // 64+4*N  | 4       | int        | Image format
-    // 68+4*N  | imSize  | byte       | Image data (comp or uncomp)
+    // ...     | 4       | int        | Image data size (uncompressed)
+    // ...     | 4       | int        | Image data size (compressed)
+    // ...     | 4       | int        | Image width
+    // ...     | 4       | int        | Image height
+    // ...     | 4       | int        | Image format
+    // ...     | imSize  | byte       | Image data (comp or uncomp)
 
     // Custom Font Data : Recs (32 bytes*glyphCount)
     // NOTE: Font recs data can be compressed (DEFLATE)
@@ -2311,12 +2327,13 @@ static char *SaveStyleToMemory(int *size)
         Image imFont = LoadImageFromTexture(customFont.texture);
 
         // Write font parameters
-        int fontParamsSize = 32 + 32; // VERSION: 600 adds 32 bytes for font filename
+        // WARNING: VERSION: 600 adds 32 bytes for font filename
+        int fontParamsSize = 32 + ((version >= 600)? 32 : 0);
         int fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
         int fontImageCompSize = fontImageUncompSize;
         int fontGlyphDataSize = customFont.glyphCount*32;       // 32 bytes by char
         int fontDataSize = fontParamsSize + fontImageUncompSize + fontGlyphDataSize;
-        int fontType = 0;       // 0-NORMAL, 1-SDF
+        int fontType = 0; // 0-NORMAL, 1-SDF
 
 #if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
         // NOTE: If data is compressed using raylib CompressData() DEFLATE,
@@ -2337,13 +2354,24 @@ static char *SaveStyleToMemory(int *size)
         fontDataSize = fontParamsSize + fontImageCompSize + fontGlyphDataSize;
 #endif
         memcpy(buffer + dataSize, &fontDataSize, sizeof(int));
-        memcpy(buffer + dataSize + 4, &customFont.baseSize, sizeof(int));
-        memcpy(buffer + dataSize + 8, &customFont.glyphCount, sizeof(int));
-        memcpy(buffer + dataSize + 12, &fontType, sizeof(int));
+        dataSize += 4;
+
+        if (version >= 600)
+        {
+            // Save font filename (32 bytes, with '\0' terminator)
+            char *fontName = GetFileName(inFontFileName);
+            if (fontName != NULL) memcpy(buffer + dataSize, fontName, 31);
+            else memcpy(buffer + dataSize, "<NO_FONT_NAME>", 31);
+            dataSize += 32;
+        }
+
+        memcpy(buffer + dataSize, &customFont.baseSize, sizeof(int));
+        memcpy(buffer + dataSize + 4, &customFont.glyphCount, sizeof(int));
+        memcpy(buffer + dataSize + 8, &fontType, sizeof(int));
 
         // Save font white rectangle
-        memcpy(buffer + dataSize + 16, &fontWhiteRec, sizeof(Rectangle));
-        dataSize += (16 + sizeof(Rectangle));
+        memcpy(buffer + dataSize + 12, &fontWhiteRec, sizeof(Rectangle));
+        dataSize += (12 + sizeof(Rectangle));
 
         // Write font image parameters
         memcpy(buffer + dataSize, &fontImageUncompSize, sizeof(int));
@@ -2585,6 +2613,7 @@ static int SaveStyle(const char *fileName, int format)
 
 // Export gui style as properties array
 // NOTE: Code file already implements a function to load style
+// GLOBAL: guiStyle, inFontFileName
 static void ExportStyleAsCode(const char *fileName, const char *styleName)
 {
     // DEFAULT extended properties
@@ -2669,7 +2698,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
 
         if (customFontLoaded)
         {
-            // TODO: Find font name for style if defined in .h include and available in list
+            // NOTE: Font name is also updated in guiFontName on style loading
             fprintf(txtFile, "// WARNING: This style uses a custom font: \"%s\" (size: %i, spacing: %i)\n\n",
                     GetFileName(inFontFileName), GuiGetStyle(DEFAULT, TEXT_SIZE), GuiGetStyle(DEFAULT, TEXT_SPACING));
         }
@@ -2803,6 +2832,9 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
                 fprintf(txtFile, "    //Rectangle fontWhiteRec = { 0, 0, 0, 0 };\n");
                 fprintf(txtFile, "    //SetShapesTexture(font.texture, fontWhiteRec);\n\n");
             }
+
+            fprintf(txtFile, "    // Set font name in raygui internal variable (requires raygui 5.0)\n");
+            fprintf(txtFile, "    memcpy(guiFontName, \"%s\", 31);\n", GetFileName(inFontFileName));
         }
 
         fprintf(txtFile, "    //-----------------------------------------------------------------\n\n");
