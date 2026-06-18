@@ -354,9 +354,11 @@
     <ClInclude Include="..\..\..\src\gui_window_about.h" />
     <ClInclude Include="..\..\..\src\gui_window_font_atlas.h" />
     <ClInclude Include="..\..\..\src\gui_window_help.h" />
+    <ClInclude Include="..\..\..\src\styles\style_advance.h" />
     <ClInclude Include="..\..\..\src\styles\style_amber.h" />
     <ClInclude Include="..\..\..\src\styles\style_ashes.h" />
     <ClInclude Include="..\..\..\src\styles\style_bluish.h" />
+    <ClInclude Include="..\..\..\src\styles\style_brick.h" />
     <ClInclude Include="..\..\..\src\styles\style_candy.h" />
     <ClInclude Include="..\..\..\src\styles\style_cherry.h" />
     <ClInclude Include="..\..\..\src\styles\style_cyber.h" />
@@ -365,9 +367,12 @@
     <ClInclude Include="..\..\..\src\styles\style_genesis.h" />
     <ClInclude Include="..\..\..\src\styles\style_jungle.h" />
     <ClInclude Include="..\..\..\src\styles\style_lavanda.h" />
+    <ClInclude Include="..\..\..\src\styles\style_pocket.h" />
     <ClInclude Include="..\..\..\src\styles\style_rltech.h" />
     <ClInclude Include="..\..\..\src\styles\style_sunny.h" />
     <ClInclude Include="..\..\..\src\styles\style_terminal.h" />
+    <ClInclude Include="..\..\..\src\styles\style_turbo.h" />
+    <ClInclude Include="..\..\..\src\styles\style_wisteria.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\rguistyler.c" />

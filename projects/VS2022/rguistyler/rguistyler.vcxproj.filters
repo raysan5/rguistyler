@@ -52,6 +52,21 @@
     <ClInclude Include="..\..\..\src\styles\style_bluish.h">
       <Filter>styles</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_turbo.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_wisteria.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_advance.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_brick.h">
+      <Filter>styles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\src\styles\style_pocket.h">
+      <Filter>styles</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\..\..\src\rguistyler.rc" />
