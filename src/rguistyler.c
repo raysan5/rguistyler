@@ -164,7 +164,7 @@
 
 // raygui embedded styles (used as templates)
 // NOTE: Included in the same order as selector
-#define MAX_GUI_STYLES_AVAILABLE    15      // WARNING: Required for styleNames[]
+#define MAX_GUI_STYLES_AVAILABLE    20      // WARNING: Required for styleNames[]
 #include "styles/style_jungle.h"            // raygui style: jungle
 #include "styles/style_candy.h"             // raygui style: candy
 #include "styles/style_lavanda.h"           // raygui style: lavanda
@@ -179,6 +179,11 @@
 #include "styles/style_amber.h"             // raygui style: amber
 #include "styles/style_rltech.h"            // raygui style: rltech
 #include "styles/style_genesis.h"           // raygui style: genesis
+#include "styles/style_wisteria.h"          // raygui style: wisteria
+#include "styles/style_pocket.h"            // raygui style: pocket
+#include "styles/style_brick.h"             // raygui style: brick
+#include "styles/style_advance.h"           // raygui style: advance
+#include "styles/style_turbo.h"             // raygui style: turbo
 
 #define RPNG_IMPLEMENTATION
 #include "external/rpng.h"                  // PNG chunks management
@@ -399,7 +404,7 @@ static PropertyDesc guiPropsColorExtended[] = {
 };
 
 // Style template names
-static const char *styleNames[MAX_GUI_STYLES_AVAILABLE] = {
+static char *styleNames[MAX_GUI_STYLES_AVAILABLE] = {
     "Light",
     "Jungle",
     "Candy",
@@ -414,7 +419,12 @@ static const char *styleNames[MAX_GUI_STYLES_AVAILABLE] = {
     "Enefete",
     "Amber",
     "RLTech",
-    "Genesis"
+    "Genesis",
+    "Wisteria",
+    "Pocket",
+    "Brick",
+    "Advance",
+    "Turbo"
 };
 
 #define MAX_FONT_PATHS 16
@@ -460,6 +470,11 @@ static int defaultStyleFont[MAX_GUI_STYLES_AVAILABLE] = { // Font file index use
     2,      // Amber
     11,     // RLTech
     7,      // Genesis
+    6,      // Wisteria
+    12,     // Pocket
+    3,      // Brick
+    14,     // Advance
+    2,      // Turbo
 };
 
 // Default (Light) style backup to check changed properties
@@ -1000,8 +1015,8 @@ int main(int argc, char *argv[])
             if (styleCounter > 7) styleCounter = 0;
         }
 #endif
-/*
-#if defined(PLATFORM_DESKTOP)
+
+#if _DEBUG && defined(PLATFORM_DESKTOP)
         // Save all style file formats for current style
         // NOTE: This is a convenience feature to export raygui styles required files
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
@@ -1013,18 +1028,13 @@ int main(int argc, char *argv[])
             // Style header: style_name.h
             ExportStyleAsCode(TextFormat("%s/style_%s.h", styleNameLower, styleNameLower), currentStyleName);
 
-            //fontDataCompressedChecked = true;
-
-            // Style binary: style_name.old.rgs (backward compatible)
-            //version = 300;
-            //SaveStyle(TextFormat("%s/style_%s.old.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
-            //version = 400;
+            //fontDataCompressedChecked = true; // Default
 
             // Style binary: style_name.rgs
             SaveStyle(TextFormat("%s/style_%s.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
 
             // Style text (font required): style_name.txt.rgs
-            //SaveStyle(TextFormat("%s/style_%s.txt.rgs", styleNameLower, styleNameLower), STYLE_TEXT);
+            SaveStyle(TextFormat("%s/style_%s.txt.rgs", styleNameLower, styleNameLower), STYLE_TEXT);
 
             // Style table (with style chunck): style_name.png
             Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
@@ -1037,12 +1047,16 @@ int main(int argc, char *argv[])
             rpng_chunk_write(TextFormat("%s/style_%s.png", styleNameLower, styleNameLower), chunk);
             RPNG_FREE(chunk.data);
 
+            // Copy font used
+            FileCopy(TextFormat("%s/%s", GetWorkingDirectory(), inFontFileName),
+                TextFormat("%s/%s", styleNameLower, GetFileName(inFontFileName)));
+
             // Style screenshot: screenshot.png
             // Select LABEL, BORDER_COLOR_FOCUSED -> Update required?
             TakeScreenshot(TextFormat("%s/screenshot.png", styleNameLower));
         }
 #endif
-*/
+
         // New style file, previous in/out files registeres are reseted
         if ((IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_N)) || mainToolbarState.btnNewFilePressed)
         {
@@ -1233,6 +1247,11 @@ int main(int argc, char *argv[])
                 case 12: GuiLoadStyleAmber(); break;
                 case 13: GuiLoadStyleRLTech(); break;
                 case 14: GuiLoadStyleGenesis(); break;
+                case 15: GuiLoadStyleWisteria(); break;
+                case 16: GuiLoadStylePocket(); break;
+                case 17: GuiLoadStyleBrick(); break;
+                case 18: GuiLoadStyleAdvance(); break;
+                case 19: GuiLoadStyleTurbo(); break;
                 default: break;
             }
 
@@ -1365,8 +1384,7 @@ int main(int argc, char *argv[])
             // Styles list view
             int prevVisualStyle = mainToolbarState.visualStyleActive;
             GuiListView((Rectangle){ 12, anchorMain.y + 52, 148, GetScreenHeight() - 256 - 48 },
-                "Light;Jungle;Candy;Lavanda;Cyber;Terminal;Ashes;Bluish;Dark;Cherry;Sunny;Enefete;Amber;RLTech;Genesis",
-                &styleListScroll, &mainToolbarState.visualStyleActive);
+                TextJoin(styleNames, MAX_GUI_STYLES_AVAILABLE, ";"), &styleListScroll, &mainToolbarState.visualStyleActive);
             if (mainToolbarState.visualStyleActive == -1) mainToolbarState.visualStyleActive = prevVisualStyle;
 
             // Controls list view
