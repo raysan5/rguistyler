@@ -163,12 +163,12 @@ GuiWindowFontAtlasState InitGuiWindowFontAtlas(void)
 
     // Custom variables initialization
     state.fontWhiteRec = GetShapesTextureRectangle();
-    state.selectedCharset = 0;
-    state.prevSelectedCharset = 0;
+    state.selectedCharset = 1;
+    state.prevSelectedCharset = 1;
     state.externalCodepointList = NULL;
     state.externalCodepointListCount = 0;
 
-    codepointList = LoadCodepoints(charsetBasic, &codepointListCount);
+    codepointList = LoadCodepoints(charsetDefault, &codepointListCount);
 
     state.fontAtlasRegen = false;
 
@@ -388,6 +388,16 @@ void GuiWindowFontAtlas(GuiWindowFontAtlasState *state)
 
             // Set shapes texture and rectangle
             SetShapesTexture(customFont.texture, state->fontWhiteRec);
+
+            // Reset font atlas view position and scale
+            fontAtlasView.scale = 1.0f;
+            fontAtlasView.position.x = state->bounds.x + state->bounds.width/2 - fontAtlasView.texture.width*fontAtlasView.scale/2;
+            fontAtlasView.position.y = state->bounds.y + state->bounds.height/2 - fontAtlasView.texture.height*fontAtlasView.scale/2;
+            fontAtlasView.prevPosition = fontAtlasView.position;
+
+            prevSelectWhiteRecActive = false; 
+            state->selectWhiteRecActive = false;
+            prevFontGenSizeValue = state->fontGenSizeValue;
 
             state->fontAtlasRegen = false;  // Reset regen flag
         }
