@@ -1451,7 +1451,7 @@ int main(int argc, char *argv[])
                 if (gColorValue != (int)colorPickerValue.g) colorPickerValue.g = (char)gColorValue;
                 if (bColorValue != (int)colorPickerValue.b) colorPickerValue.b = (char)bColorValue;
                 GuiSetStyle(VALUEBOX, SPINNER_BUTTON_WIDTH, 24); // Default value
-       
+
                 // Color hex editor
                 if (GuiTextBox((Rectangle){ anchorPropEditor.x + 12 + 274, anchorPropEditor.y + 36 + colorPickerHeight + 12, 70, 24 }, hexColorText, 9, textHexColorEditMode))
                 {
@@ -1470,11 +1470,11 @@ int main(int argc, char *argv[])
                 //--------------------------------------------------------------------------------------------
                 if (currentPropType != PROPERTY_TYPE_INT) GuiDisable();
                 float propValueFloat = (float)propertyValue;
-                GuiSlider((Rectangle){ anchorPropEditor.x + 16 + GuiGetTextWidth(currentPropNameValue), anchorPropEditor.y + 58 + colorPickerHeight + 12 + 32 + 36, 
+                GuiSlider((Rectangle){ anchorPropEditor.x + 16 + GuiGetTextWidth(currentPropNameValue), anchorPropEditor.y + 58 + colorPickerHeight + 12 + 32 + 36,
                     385 - GuiGetTextWidth(currentPropNameValue) - 44 - 68, 15 }, currentPropNameValue, NULL, &propValueFloat, 0, 32);
                 propertyValue = (int)propValueFloat;
-                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 53 + colorPickerHeight + 12 + 32 + 36, 60, 24 }, NULL, &propertyValue, 
-                    (currentPropValues != NULL)? currentPropValues[0] : 0, (currentPropValues != NULL)? currentPropValues[1] : 32, 
+                if (GuiValueBox((Rectangle){ anchorPropEditor.x + 295, anchorPropEditor.y + 53 + colorPickerHeight + 12 + 32 + 36, 60, 24 }, NULL, &propertyValue,
+                    (currentPropValues != NULL)? currentPropValues[0] : 0, (currentPropValues != NULL)? currentPropValues[1] : 32,
                     propertyValueEditMode)) propertyValueEditMode = !propertyValueEditMode;
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
                 //--------------------------------------------------------------------------------------------
@@ -1485,11 +1485,11 @@ int main(int argc, char *argv[])
                 //--------------------------------------------------------------------------------------------
                 if (currentPropType != PROPERTY_TYPE_STATE) GuiDisable();
                 GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_RIGHT);
-                GuiLabel((Rectangle){ anchorPropEditor.x + 4, anchorPropEditor.y + 80 + colorPickerHeight + 12 + 32 + 28 + 28, 
+                GuiLabel((Rectangle){ anchorPropEditor.x + 4, anchorPropEditor.y + 80 + colorPickerHeight + 12 + 32 + 28 + 28,
                     GuiGetTextWidth(currentPropNameState) + 8, 24 }, currentPropNameState);
                 GuiSetStyle(LABEL, TEXT_ALIGNMENT, TEXT_ALIGN_LEFT);
                 GuiSetStyle(TOGGLE, GROUP_WIDTH_FULL, 1);
-                GuiToggleGroup((Rectangle){ anchorPropEditor.x + GuiGetTextWidth(currentPropNameState) + 16, anchorPropEditor.y + 80 + colorPickerHeight + 12 + 32 + 28 + 28, 
+                GuiToggleGroup((Rectangle){ anchorPropEditor.x + GuiGetTextWidth(currentPropNameState) + 16, anchorPropEditor.y + 80 + colorPickerHeight + 12 + 32 + 28 + 28,
                     385 - GuiGetTextWidth(currentPropNameState) - 16 - 34, 24 }, currentPropState, &toggleActive);
                 GuiSetStyle(TOGGLE, GROUP_WIDTH_FULL, 0);
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
@@ -2217,7 +2217,7 @@ static char *SaveStyleToMemory(int *size)
     // Custom Font Data : Recs (32 bytes*glyphCount)
     // NOTE: Font recs data can be compressed (DEFLATE)
     // ...     | 4       | int        | Recs data compressed size (0 - not compressed, 1-compressed) - VERSION: >=400
-    // 
+    //
     // if (compRecsSize == 0)
     // {
     //    NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
@@ -2235,7 +2235,7 @@ static char *SaveStyleToMemory(int *size)
     // Custom Font Data : Glyph Info (32 bytes*glyphCount)
     // NOTE: Font glyphs info data can be compressed (DEFLATE)
     // ...     | 4       | int        | Glyphs data compressed size (0 - not compressed) - VERSION: >=400
-    // 
+    //
     // if (compGlyphsSize == 0)
     // {
     //    NOTE: Uncompressed size can be calculated: (glyphCount*16 byte)
@@ -2327,7 +2327,7 @@ static char *SaveStyleToMemory(int *size)
                 memcpy(buffer + dataSize, &controlId, sizeof(short));
                 memcpy(buffer + dataSize + 2, &propertyId, sizeof(short));
                 memcpy(buffer + dataSize + 4, &propertyValue, sizeof(int));
-                dataSize += 8;    
+                dataSize += 8;
 
                 changedPropCounter++;
             }
@@ -2344,6 +2344,15 @@ static char *SaveStyleToMemory(int *size)
     {
         Image imFont = LoadImageFromTexture(customFont.texture);
 
+        // Make sure font atlas image data is GRAY + ALPHA
+        // WARNING: Should RGBA font data be supported?
+        if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA)
+        {
+            // TODO: For further optimization, GRAYSCALE format can be used,
+            // to be decomposed into 2 channels on loading
+            ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
+        }
+
         // Write font parameters
         // WARNING: VERSION: 600 adds 32 bytes for font filename
         int fontParamsSize = 32 + ((version >= 600)? 32 : 0);
@@ -2357,13 +2366,7 @@ static char *SaveStyleToMemory(int *size)
         // NOTE: If data is compressed using raylib CompressData() DEFLATE,
         // it requires to be decompressed with raylib DecompressData(), that requires
         // compiling raylib with SUPPORT_COMPRESSION_API config flag enabled
-
-        // Make sure font atlas image data is GRAY + ALPHA for better compression
-        if (imFont.format != PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA)
-        {
-            ImageFormat(&imFont, PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
-            fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
-        }
+        fontImageUncompSize = GetPixelDataSize(imFont.width, imFont.height, imFont.format);
 
         // Compress font atlas image data
         unsigned char *compData = CompressData(imFont.data, fontImageUncompSize, &fontImageCompSize);
