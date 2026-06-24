@@ -2807,13 +2807,6 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    font.baseSize = %i;\n", GuiGetStyle(DEFAULT, TEXT_SIZE));
             fprintf(txtFile, "    font.glyphCount = %i;\n\n", customFont.glyphCount);
 
-            fprintf(txtFile, "    // Load texture from image\n");
-            fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n");
-#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
-            fprintf(txtFile, "    UnloadImage(imFont);  // Uncompressed image data can be unloaded from memory\n\n");
-#else
-            fprintf(txtFile, "    // WARNING: Uncompressed global image data can not be freed\n\n");
-#endif
             /*
             // Assign global recs/glyphs data to loaded font
             // NOTE: DO NOT DO THAT! GuiLoadStyleDefault() frees memory for styles loaded (other than default)
@@ -2836,13 +2829,31 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             fprintf(txtFile, "    font.glyphs = (GlyphInfo *)RAYGUI_CALLOC(font.glyphCount, sizeof(GlyphInfo));\n");
             fprintf(txtFile, "    memcpy(font.glyphs, %sFontGlyphs, font.glyphCount*sizeof(GlyphInfo));\n\n", styleNameLower);
 
+            fprintf(txtFile, "    // Define font white rectangle to be used on shapes drawing\n");
+            fprintf(txtFile, "    // WARNING: It can be updated if icons are baked into font atlas image\n");
+            fprintf(txtFile, "    Rectangle fontWhiteRec = { %.0f, %.0f, %.0f, %.0f };\n\n", fontWhiteRec.x, fontWhiteRec.y, fontWhiteRec.width, fontWhiteRec.height);
+
+            // Bake icons into font atlas image, if required
+            fprintf(txtFile, "#if defined(RAYGUI_FONT_ICONS_BAKING)\n");
+            fprintf(txtFile, "     // Font atlas image icons baking\n");
+            fprintf(txtFile, "     Rectangle updatedWhiteRec = { 0 };\n");
+            fprintf(txtFile, "     guiIconFontOffsetY = GuiFontIconBaking(&imFont, font, &updatedWhiteRec);\n");
+            fprintf(txtFile, "     if (guiIconFontOffsetY > 0) fontWhiteRec = updatedWhiteRec;\n");
+            fprintf(txtFile, "#endif\n");
+
+            fprintf(txtFile, "    // Load texture from image\n");
+            fprintf(txtFile, "    font.texture = LoadTextureFromImage(imFont);\n");
+#if defined(SUPPORT_COMPRESSED_FONT_ATLAS)
+            fprintf(txtFile, "    UnloadImage(imFont);  // Uncompressed image data can be unloaded from memory\n\n");
+#else
+            fprintf(txtFile, "    // WARNING: Uncompressed global image data can not be freed\n\n");
+#endif
             fprintf(txtFile, "    GuiSetFont(font);\n\n");
 
             if ((fontWhiteRec.x > 0) && (fontWhiteRec.y > 0) && (fontWhiteRec.width > 0) && (fontWhiteRec.height > 0))
             {
                 fprintf(txtFile, "    // Setup a white rectangle on the font to be used on shapes drawing,\n");
                 fprintf(txtFile, "    // it makes possible to draw shapes and text (full UI) in a single draw call\n");
-                fprintf(txtFile, "    Rectangle fontWhiteRec = { %.0f, %.0f, %.0f, %.0f };\n", fontWhiteRec.x, fontWhiteRec.y, fontWhiteRec.width, fontWhiteRec.height);
                 fprintf(txtFile, "    SetShapesTexture(font.texture, fontWhiteRec);\n\n");
             }
             else
