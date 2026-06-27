@@ -285,9 +285,9 @@ static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
 // NOTE: Kept as separate arrays of data because required by GuiListView() and other controls
 static int guiControlPropsTextCount = 0;
 static int guiControlPropsDefaultCount = 0;
-static const char *guiControlPropsNames[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
+static char *guiControlPropsNames[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
 static int guiControlPropsTypes[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
-static const char *guiControlPropsStates[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
+static char *guiControlPropsStates[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
 
 // Base properties
 static PropertyDesc guiProps[] = {
@@ -379,7 +379,7 @@ static PropertyDesc guiPropsSpinnerExtended[] = {
 
 // TabBar extended properties
 static PropertyDesc guiPropsTabBarExtended[] = {
-    { "TAB_ITEMS_WIDTH", PROPERTY_TYPE_INT, { 24, 256 }},
+    { "TAB_ITEMS_WIDTH", PROPERTY_TYPE_INT, { 24, 255 }},
     { "TAB_CLOSE_BUTTON", PROPERTY_TYPE_STATE, "#107#NO TAB CLOSE BTN;#113#SHOW TAB CLOSE BTN" }, // Toggle values: 0-False or 1-True
     { "TAB_LINE_SIDE", PROPERTY_TYPE_STATE, "#85#BOTTOM LINE;#81#TOP LINE" }, // Toggle values: 0-Bottom line, 1-Top line
 };
@@ -1191,7 +1191,8 @@ int main(int argc, char *argv[])
 
             // Update style default color values
             GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
-            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7)/10.0f, (fabsf(0.5f - hsvNormal.z) < 0.2f)? 1.0f + ((GetRandomValue(3, 5)/10.0f)*fabsf(0.5f - hsvNormal.z) / (0.5 - hsvNormal.z)) : 1 - hsvNormal.z)));
+            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7)/10.0f, 
+                (fabsf(0.5f - hsvNormal.z) < 0.2f)? 1.0f + ((GetRandomValue(3, 5)/10.0f)*fabsf(0.5f - hsvNormal.z)/(0.5f - hsvNormal.z)) : 1.0f - hsvNormal.z)));
             GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
 
             GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, ColorToInt(ColorFromHSV(hsvFocused.x, hsvFocused.y, hsvFocused.z)));
@@ -1437,7 +1438,7 @@ int main(int argc, char *argv[])
                 GuiLabel((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 12, 320, 24 }, currentPropNameColor);
                 if (mainToolbarState.propsStateActive != STATE_DISABLED) GuiEnable();
 
-                int colorPickerHeight = GetScreenHeight() - anchorPropEditor.y - 256 - 222;
+                int colorPickerHeight = GetScreenHeight() - (int)anchorPropEditor.y - 256 - 222;
                 GuiColorPicker((Rectangle){ anchorPropEditor.x + 10, anchorPropEditor.y + 36, 320, colorPickerHeight }, NULL, &colorPickerValue);
 
                 rColorValue = (int)colorPickerValue.r;
@@ -1629,7 +1630,7 @@ int main(int argc, char *argv[])
                     GuiSetStyle(SLIDER, SLIDER_WIDTH, 16);
                 }
 
-                DrawStyleControlsTable(-styleTableRec.x, GetScreenHeight() - 264);
+                DrawStyleControlsTable(-(int)styleTableRec.x, GetScreenHeight() - 264);
             }
             //----------------------------------------------------------------------------------------
 
@@ -2380,7 +2381,7 @@ static char *SaveStyleToMemory(int *size)
         if (version >= 600)
         {
             // Save font filename (32 bytes, with '\0' terminator)
-            char *fontName = GetFileName(inFontFileName);
+            const char *fontName = GetFileName(inFontFileName);
             if (fontName != NULL) memcpy(buffer + dataSize, fontName, 31);
             else memcpy(buffer + dataSize, "<NO_FONT_NAME>", 31);
             dataSize += 32;
@@ -2590,7 +2591,7 @@ static int SaveStyle(const char *fileName, int format)
                 if (defaultStyle[i] != GuiGetStyle(0, i))
                 {
                     // NOTE: Control properties are written as hexadecimal values, extended properties names not provided
-                    if (i < RAYGUI_MAX_PROPS_BASE) fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", i, GuiGetStyle(0, i), guiProps[i]);
+                    if (i < RAYGUI_MAX_PROPS_BASE) fprintf(rgsFile, "p 00 %02i 0x%08x    DEFAULT_%s \n", i, GuiGetStyle(0, i), guiProps[i].name);
                     else  fprintf(rgsFile, "p 00 %02i 0x%08x    %s \n", i, GuiGetStyle(0, i), guiPropsDefaultExtended[i - RAYGUI_MAX_PROPS_BASE].name);
                 }
             }
@@ -2944,7 +2945,7 @@ static void DrawStyleControlsTable(int posX, int posY)
     rec = (Rectangle){ posX + TABLE_LEFT_PADDING, posY + TABLE_TOP_PADDING + TABLE_CELL_HEIGHT/2 + 20, tableStateNameWidth, TABLE_CELL_HEIGHT };
 
     // Draw style palette as small rectangles for easy color reference
-    for (int i = 0; i < 12; i++) DrawRectangle(rec.x + 8*i, rec.y - 14, 8, 8, GetColor((unsigned int)GuiGetStyle(0, i)));
+    for (int i = 0; i < 12; i++) DrawRectangleRec((Rectangle){ rec.x + 8*i, rec.y - 14, 8, 8 }, GetColor((unsigned int)GuiGetStyle(0, i)));
 
     for (int i = 0; i < 4; i++)
     {
