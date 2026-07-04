@@ -248,9 +248,9 @@ enum PropertyType {
 
 // Property descriptor
 typedef struct PropertyDesc {
-    const char *name;
+    char *name;
     int type;
-    const char state[64];   // ToggleGroup state / Slider Min-Max values
+    char state[64];   // ToggleGroup state / Slider Min-Max values
 } PropertyDesc;
 
 //----------------------------------------------------------------------------------
@@ -519,7 +519,7 @@ static int CountStyleChangesDefault(void); // Count gui style properties changes
 static int CountStyleChanges(unsigned int *style, unsigned int *refStyle); // Count style properties changes vs refStyle
 static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color); // Gui color box
 
-static int CopyControlProps(PropertyDesc src[], const char *names[], int types[], const char *states[], int count); // Copy controls data, used on BuildControlPropsText()
+static int CopyControlProps(PropertyDesc src[], char *names[], int types[], char *states[], int count); // Copy controls data, used on BuildControlPropsText()
 static void BuildControlPropsText(int currentSelectedControl); // Build ListView text for selected control
 
 //------------------------------------------------------------------------------------
@@ -571,11 +571,11 @@ int main(int argc, char *argv[])
     SetExitKey(0);
 
     // General pourpose variables
-    Vector2 mousePos = { 0.0f, 0.0f };
-    int frameCounter = 0;
+    //Vector2 mousePos = { 0.0f, 0.0f };
+    //int frameCounter = 0;
 
     bool obtainProperty = false;
-    bool selectingColor = false;
+    //bool selectingColor = false;
 
     // Default light style backup (used to track global changes on export)
     GuiGetStyle(0, 0); // WARNING: Make sure default style is lazy initialized!
@@ -587,7 +587,7 @@ int main(int argc, char *argv[])
         GuiLoadStyle(inFileName); // Loads into guiStyle
         for (int i = 0; i < MAX_FONT_PATHS; i++)
         {
-            if (TextIsEqual(guiFontName, GetFileName(fontFilePaths[i]))) styleFontSelected = i; break;
+            if (TextIsEqual(guiFontName, GetFileName(fontFilePaths[i]))) { styleFontSelected = i; break; }
         }
         SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
         inputFileLoaded = true;
@@ -1191,7 +1191,7 @@ int main(int argc, char *argv[])
 
             // Update style default color values
             GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
-            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7)/10.0f, 
+            GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, GetRandomValue(4, 7)/10.0f,
                 (fabsf(0.5f - hsvNormal.z) < 0.2f)? 1.0f + ((GetRandomValue(3, 5)/10.0f)*fabsf(0.5f - hsvNormal.z)/(0.5f - hsvNormal.z)) : 1.0f - hsvNormal.z)));
             GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, ColorToInt(ColorFromHSV(hsvNormal.x, hsvNormal.y, hsvNormal.z)));
 
@@ -1299,8 +1299,8 @@ int main(int argc, char *argv[])
 
         // Basic program flow logic
         //----------------------------------------------------------------------------------
-        frameCounter++;                     // General usage frames counter
-        mousePos = GetMousePosition();      // Get mouse position each frame
+        //frameCounter++;                     // General usage frames counter
+        //mousePos = GetMousePosition();      // Get mouse position each frame
 
         // Check for changed properties
         if (CountStyleChangesDefault() > 0) saveChangesRequired = true;
@@ -2381,9 +2381,14 @@ static char *SaveStyleToMemory(int *size)
         if (version >= 600)
         {
             // Save font filename (32 bytes, with '\0' terminator)
-            const char *fontName = GetFileName(inFontFileName);
-            if (fontName != NULL) memcpy(buffer + dataSize, fontName, 31);
-            else memcpy(buffer + dataSize, "<NO_FONT_NAME>", 31);
+            char fontName[32] = { 0 }; 
+            strncpy(fontName, GetFileName(inFontFileName), 31);
+            if (fontName[0] != '\0') memcpy(buffer + dataSize, fontName, 31);
+            else 
+            {
+                strcpy(fontName, "<NO_FONT_NAME>");
+                memcpy(buffer + dataSize, fontName, 31);
+            }
             dataSize += 32;
         }
 
@@ -2867,7 +2872,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             }
 
             fprintf(txtFile, "    // Set font name in raygui internal variable (requires raygui 5.0)\n");
-            fprintf(txtFile, "    memcpy(guiFontName, \"%s\", 31);\n", GetFileName(inFontFileName));
+            fprintf(txtFile, "    strncpy(guiFontName, \"%s\", 31);\n", GetFileName(inFontFileName));
         }
 
         fprintf(txtFile, "    //-----------------------------------------------------------------\n\n");
@@ -3183,7 +3188,7 @@ static Color GuiColorBox(Rectangle bounds, Color *colorPicker, Color color)
     return color;
 }
 
-static int CopyControlProps(PropertyDesc src[], const char *names[], int types[], const char *states[], int count)
+static int CopyControlProps(PropertyDesc src[], char *names[], int types[], char *states[], int count)
 {
     for (int i = 0; i < count; i++)
     {
