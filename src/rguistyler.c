@@ -591,7 +591,7 @@ int main(int argc, char *argv[])
         }
         SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
         inputFileLoaded = true;
-        strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 32 - 1);
+        snprintf(currentStyleName, 32, "%s", GetFileNameWithoutExt(inFileName));
     }
     else
     {
@@ -994,7 +994,7 @@ int main(int argc, char *argv[])
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
             SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
-            strncpy(currentStyleName, GetFileNameWithoutExt(inFileName), 32 - 1);
+            snprintf(currentStyleName, 32, "%s", GetFileNameWithoutExt(inFileName));
 
             genFontSizeValue = GuiGetStyle(DEFAULT, TEXT_SIZE);
             fontSpacingValue = GuiGetStyle(DEFAULT, TEXT_SPACING);
@@ -1689,7 +1689,7 @@ int main(int argc, char *argv[])
             {
                 Rectangle messageBox = { (float)GetScreenWidth()/2 - 300/2, (float)GetScreenHeight()/2 - 190/2 - 20, 300, 190 };
                 int result = GuiMessageBox(messageBox, "#220#Report Issue",
-                    "Do you want to report any issue or\nfeature request for this program?\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub");
+                    "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub");
 
                 if (result == 1)    // Report issue pressed
                 {
@@ -2381,8 +2381,8 @@ static char *SaveStyleToMemory(int *size)
         if (version >= 600)
         {
             // Save font filename (32 bytes, with '\0' terminator)
-            char fontName[32] = { 0 }; 
-            strncpy(fontName, GetFileName(inFontFileName), 31);
+            char fontName[32] = { 0 };
+            snprintf(fontName, 32, "%s", GetFileName(inFontFileName));
             if (fontName[0] != '\0') memcpy(buffer + dataSize, fontName, 31);
             else 
             {
@@ -2872,7 +2872,7 @@ static void ExportStyleAsCode(const char *fileName, const char *styleName)
             }
 
             fprintf(txtFile, "    // Set font name in raygui internal variable (requires raygui 5.0)\n");
-            fprintf(txtFile, "    strncpy(guiFontName, \"%s\", 31);\n", GetFileName(inFontFileName));
+            fprintf(txtFile, "    snprintf(guiFontName, 32, \"%%s\", \"%s\");\n", GetFileName(inFontFileName));
         }
 
         fprintf(txtFile, "    //-----------------------------------------------------------------\n\n");
