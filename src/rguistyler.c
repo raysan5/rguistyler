@@ -137,6 +137,8 @@
 
 #include "raylib.h"
 
+#include "rlgl.h"
+
 #if defined(PLATFORM_WEB)
     #define CUSTOM_MODAL_DIALOGS            // Force custom modal dialogs usage
     #include <emscripten/emscripten.h>      // Emscripten library - LLVM to JavaScript compiler
@@ -286,7 +288,8 @@ static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
 static int guiControlPropsTextCount = 0;
 static int guiControlPropsDefaultCount = 0;
 static char *guiControlPropsNames[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
-static int guiControlPropsTypes[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
+static int guiControlPropsTypes[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 0,  0, 0, 0, 0, 0, 0, 0, 0 };
 static char *guiControlPropsStates[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
 
 // Base properties
@@ -491,6 +494,8 @@ static Rectangle fontWhiteRec = { 0 };          // Font white rectangle, require
 
 static char currentStyleName[32] = { 0 };       // Current style name
 
+static bool automaticStylesExport = false;
+
 // NOTE: Max length depends on OS, in Windows MAX_PATH = 256
 static char inFileName[512] = { 0 };            // Input file name (required in case of drag & drop over executable)
 static char outFileName[512] = { 0 };           // Output file name (required for file save/export)
@@ -567,7 +572,7 @@ int main(int argc, char *argv[])
     InitWindow(screenWidth, screenHeight, TextFormat("%s v%s | %s", toolName, toolVersion, toolDescription));
     SetWindowMinSize(1812, 810);
     //EnableEventWaiting();
-    MaximizeWindow();
+    //MaximizeWindow();
     SetExitKey(0);
 
     // General pourpose variables
@@ -1016,44 +1021,31 @@ int main(int argc, char *argv[])
         }
 #endif
 
-#if _DEBUG && defined(PLATFORM_DESKTOP)
+#if defined(PLATFORM_DESKTOP) && _DEBUG
         // Save all style file formats for current style
         // NOTE: This is a convenience feature to export raygui styles required files
         if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_B))
         {
-            char styleNameLower[64] = { 0 };
-            strcpy(styleNameLower, TextToLower(currentStyleName));
-            if (!DirectoryExists(styleNameLower)) MakeDirectory(styleNameLower);
+            // Automatic styles export for all available styles
+            automaticStylesExport = true;
+            mainToolbarState.visualStyleActive = 0;
+        }
 
-            // Style header: style_name.h
-            ExportStyleAsCode(TextFormat("%s/style_%s.h", styleNameLower, styleNameLower), currentStyleName);
+        if (automaticStylesExport)
+        {
+            // Switch to next style
+            // NOTE: Style export is deferred to the end of the frame to set style and UI
+            mainToolbarState.visualStyleActive++;
+            currentSelectedControl = BUTTON;
+            previousSelectedControl = BUTTON;
+            currentSelectedProperty = BORDER_COLOR_FOCUSED;
+            previousSelectedProperty = 0;
 
-            //fontDataCompressedChecked = true; // Default
-
-            // Style binary: style_name.rgs
-            SaveStyle(TextFormat("%s/style_%s.rgs", styleNameLower, styleNameLower), STYLE_BINARY);
-
-            // Style text (font required): style_name.txt.rgs
-            SaveStyle(TextFormat("%s/style_%s.txt.rgs", styleNameLower, styleNameLower), STYLE_TEXT);
-
-            // Style table (with style chunck): style_name.png
-            Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
-            ExportImage(imStyleTable, TextFormat("%s/style_%s.png", styleNameLower, styleNameLower));
-            UnloadImage(imStyleTable);
-            // Write a custom chunk - rGSf (rGuiStyler file)
-            rpng_chunk chunk = { 0 };
-            memcpy(chunk.type, "rGSf", 4); // Chunk type FOURCC
-            chunk.data = SaveStyleToMemory(&chunk.length);
-            rpng_chunk_write(TextFormat("%s/style_%s.png", styleNameLower, styleNameLower), chunk);
-            RPNG_FREE(chunk.data);
-
-            // Copy font used
-            FileCopy(TextFormat("%s/%s", GetWorkingDirectory(), inFontFileName),
-                TextFormat("%s/%s", styleNameLower, GetFileName(inFontFileName)));
-
-            // Style screenshot: screenshot.png
-            // Select LABEL, BORDER_COLOR_FOCUSED -> Update required?
-            TakeScreenshot(TextFormat("%s/screenshot.png", styleNameLower));
+            if (mainToolbarState.visualStyleActive >= MAX_GUI_STYLES_AVAILABLE)
+            {
+                mainToolbarState.visualStyleActive = 0;
+                automaticStylesExport = false;
+            }
         }
 #endif
 
@@ -1224,8 +1216,8 @@ int main(int argc, char *argv[])
             LOG("INFO: Current Visual Style: %i\n", mainToolbarState.visualStyleActive);
 
             // When a new template style is selected, everything is reseted
-            currentSelectedControl = -1;
-            currentSelectedProperty = -1;
+            //currentSelectedControl = -1;
+            //currentSelectedProperty = -1;
 
             // Reset to default internal style
             // NOTE: Required to unload any previously loaded font texture
@@ -1286,7 +1278,7 @@ int main(int argc, char *argv[])
             // Select style font file required
             int fontIndex = defaultStyleFont[mainToolbarState.visualStyleActive];
             strcpy(inFontFileName, fontFilePaths[fontIndex]);
-            styleFontSelected = -1;
+            styleFontSelected = fontIndex;
         }
 
         fontWhiteRec = windowFontAtlasState.fontWhiteRec;   // Register fontWhiteRec from fontAtlas window
@@ -1503,6 +1495,8 @@ int main(int argc, char *argv[])
                 if (GuiButton((Rectangle){ anchorWindow.x + 385 - 16 - 5, anchorWindow.y + 3, 18, 18 }, "#53#")) controlsWindowActive = true;
                 GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
             }
+
+            rlDrawRenderBatchActive(); // Force batch system flush
             //---------------------------------------------------------------------------------------------------------
 
             // GUI: Font Atlas Window
@@ -1511,12 +1505,15 @@ int main(int argc, char *argv[])
             int textOffset = 0;
             TextAppend(fontFileNamesList, "default", &textOffset);
             for (int i = 1; i < fontFileCount; i++) TextAppend(fontFileNamesList, TextFormat(";%s", GetFileNameWithoutExt(fontFilePaths[i])), &textOffset);
+            
             // Font list view
             int prevStyleFontIndex = styleFontSelected;
             GuiStatusBar((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8, anchorMain.y + 52, 160, 24 }, "#31#Font");
             GuiListView((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8, anchorMain.y + 52 + 23, 160, GetScreenHeight() - 256 - 72 },
                 fontFileNamesList, &fontListScroll, &styleFontSelected);
             if ((styleFontSelected == -1) && (prevStyleFontIndex != -1)) styleFontSelected = prevStyleFontIndex; // WARNING: Avoid disabling font selected
+
+            rlDrawRenderBatchActive(); // Force batch system flush
 
             // It could happen that the style already contains the font atlas
             // but it has not been generated at that moment, in that case it could
@@ -2023,6 +2020,57 @@ int main(int argc, char *argv[])
             }
             //----------------------------------------------------------------------------------------
 
+#if defined(PLATFORM_DESKTOP) && _DEBUG
+            // Automated styles export system, traverses all available styles and exports all required data for all them
+            // NOTE: Exported data is directly placed on raygui required directory, my platform-dependant!
+            if (automaticStylesExport)
+            {
+                const char *styleExportPath = "C:/GitHub/raygui/styles";
+
+                char styleNameLower[64] = { 0 };
+                strcpy(styleNameLower, TextToLower(currentStyleName));
+                if (!DirectoryExists(TextFormat("%s/%s", styleExportPath, styleNameLower))) 
+                    MakeDirectory(TextFormat("%s/%s", styleExportPath, styleNameLower));
+
+                // Style header: style_<name>.h
+                ExportStyleAsCode(TextFormat("%s/%s/style_%s.h", styleExportPath, styleNameLower, styleNameLower), currentStyleName);
+                // Copy .h to raygui/eexamples/styles/ and rguistyler/src/styles/ 
+                FileCopy(TextFormat("%s/%s/style_%s.h", styleExportPath, styleNameLower, styleNameLower),
+                    TextFormat("%s/../examples/styles/style_%s.h", styleExportPath, styleNameLower));
+                FileCopy(TextFormat("%s/%s/style_%s.h", styleExportPath, styleNameLower, styleNameLower),
+                    TextFormat("%s/styles/style_%s.h", GetWorkingDirectory(), styleNameLower));
+
+                // Style binary: style_<name>.rgs
+                SaveStyle(TextFormat("%s/%s/style_%s.rgs", styleExportPath, styleNameLower, styleNameLower), STYLE_BINARY);
+                // Copy .rgs to rguistyler/styles/
+                FileCopy(TextFormat("%s/%s/style_%s.rgs", styleExportPath, styleNameLower, styleNameLower),
+                    TextFormat("%s/../styles/style_%s.rgs", GetWorkingDirectory(), styleNameLower));
+
+                // Style text (font required): style_<name>.rgs.txt
+                SaveStyle(TextFormat("%s/%s/style_%s.rgs.txt", styleExportPath, styleNameLower, styleNameLower), STYLE_TEXT);
+
+                // Style table (with style chunck): style_<name>.png
+                Image imStyleTable = GenImageStyleControlsTable(1920, 256, currentStyleName);
+                ExportImage(imStyleTable, TextFormat("%s/%s/style_%s.png", styleExportPath, styleNameLower, styleNameLower));
+                UnloadImage(imStyleTable);
+                // Write a custom chunk - rGSf (rGuiStyler file)
+                rpng_chunk chunk = { 0 };
+                memcpy(chunk.type, "rGSf", 4); // Chunk type FOURCC
+                chunk.data = SaveStyleToMemory(&chunk.length);
+                rpng_chunk_write(TextFormat("%s/%s/style_%s.png", styleExportPath, styleNameLower, styleNameLower), chunk);
+                RPNG_FREE(chunk.data);
+
+                // Copy font file used (.ttf/.otf)
+                FileCopy(TextFormat("%s/%s", GetWorkingDirectory(), inFontFileName),
+                    TextFormat("%s/%s/%s", styleExportPath, styleNameLower, GetFileName(inFontFileName)));
+
+                // Style screenshot: screenshot.png
+                // NOTE: It required this code to bee deferred and also forcing some batch flushes (OpenGL-related)
+                Image screen = LoadImageFromScreen(); // rlReadScreenPixels() reads back buffer by default (when double-buffering)
+                ExportImage(screen, TextFormat("%s/%s/screenshot.png", styleExportPath, styleNameLower));
+                UnloadImage(screen);
+            }
+#endif
         EndDrawing();
         //----------------------------------------------------------------------------------
     }
