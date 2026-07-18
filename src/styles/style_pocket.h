@@ -568,10 +568,6 @@ static void GuiLoadStylePocket(void)
     font.baseSize = 16;
     font.glyphCount = 188;
 
-    // Load texture from image
-    font.texture = LoadTextureFromImage(imFont);
-    UnloadImage(imFont);  // Uncompressed image data can be unloaded from memory
-
     // Copy char recs data from global fontRecs
     // NOTE: Required to avoid issues if trying to free font
     font.recs = (Rectangle *)RAYGUI_CALLOC(font.glyphCount, sizeof(Rectangle));
@@ -582,15 +578,28 @@ static void GuiLoadStylePocket(void)
     font.glyphs = (GlyphInfo *)RAYGUI_CALLOC(font.glyphCount, sizeof(GlyphInfo));
     memcpy(font.glyphs, pocketFontGlyphs, font.glyphCount*sizeof(GlyphInfo));
 
+    // Define font white rectangle to be used on shapes drawing
+    // WARNING: It can be updated if icons are baked into font atlas image
+    Rectangle fontWhiteRec = { 510, 254, 1, 1 };
+
+#if defined(RAYGUI_FONT_ICONS_BAKING)
+     // Font atlas image icons baking
+     Rectangle updatedWhiteRec = { 0 };
+     guiIconFontOffsetY = GuiFontIconBaking(&imFont, font, &updatedWhiteRec);
+     if (guiIconFontOffsetY > 0) fontWhiteRec = updatedWhiteRec;
+#endif
+    // Load texture from image
+    font.texture = LoadTextureFromImage(imFont);
+    UnloadImage(imFont);  // Uncompressed image data can be unloaded from memory
+
     GuiSetFont(font);
 
     // Setup a white rectangle on the font to be used on shapes drawing,
     // it makes possible to draw shapes and text (full UI) in a single draw call
-    Rectangle fontWhiteRec = { 510, 254, 1, 1 };
     SetShapesTexture(font.texture, fontWhiteRec);
 
     // Set font name in raygui internal variable (requires raygui 5.0)
-    memcpy(guiFontName, "GMSN.ttf", 31);
+    snprintf(guiFontName, 32, "%s", "GMSN.ttf");
     //-----------------------------------------------------------------
 
     // TODO: Custom user style setup: Set specific properties here (if required)
