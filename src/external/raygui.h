@@ -3710,7 +3710,7 @@ int GuiListViewEx(Rectangle bounds, char **text, int count, int *scrollIndex, in
 
     // Draw control
     //--------------------------------------------------------------------
-    GuiDrawRectangle(bounds, GuiGetStyle(LISTVIEW, BORDER_WIDTH), GetColor(GuiGetStyle(LISTVIEW, BORDER + state*3)), GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));     // Draw background
+    GuiDrawRectangle(bounds, GuiGetStyle(LISTVIEW, BORDER_WIDTH), GetColor(GuiGetStyle(LISTVIEW, BORDER + state*3)), GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR))); // Draw background
 
     // Draw visible items
     for (int i = 0; ((i < visibleItems) && (text != NULL)); i++)
@@ -4487,11 +4487,16 @@ void GuiLoadStyle(const char *fileName)
             int controlId = 0;
             int propertyId = 0;
             unsigned int propertyValue = 0;
+            unsigned int version = 0;
 
             while (!feof(rgsFile))
             {
                 switch (buffer[0])
                 {
+                    case 'v':
+                    {
+                        sscanf(buffer, "v %d", &version);
+                    }
                     case 'p':
                     {
                         // Style property: p <control_id> <property_id> <property_value> <property_name>
@@ -4502,12 +4507,14 @@ void GuiLoadStyle(const char *fileName)
                     } break;
                     case 'f':
                     {
-                        // Style font: f <gen_font_size> <charmap_file> <font_file>
+                        // Style font: f <gen_font_size> <font_file> <charmap_file>
 
                         int fontSize = 0;
-                        char charmapFileName[256] = { 0 };
-                        char fontFileName[256] = { 0 };
-                        sscanf(buffer, "f %d %s %[^\r\n]s", &fontSize, charmapFileName, fontFileName);
+                        char charmapFileName[32] = { 0 };
+                        char fontFileName[32] = { 0 };
+                        
+                        if (version >= 600) sscanf(buffer, "f %d %31s %31[^\r\n]s", &fontSize, fontFileName, charmapFileName);
+                        else sscanf(buffer, "f %d %31s %31[^\r\n]s", &fontSize, charmapFileName, fontFileName);
 
                         // GLOBAL: Copy font file name into guiFontName
                         snprintf(guiFontName, 32, "%s", fontFileName);
@@ -5163,7 +5170,7 @@ void GuiDrawIcon(int iconId, int posX, int posY, int pixelSize, Color color)
             RAYGUI_ICON_SIZE, RAYGUI_ICON_SIZE };
         Rectangle dstRec = { (float)posX, (float)posY, (float)pixelSize*RAYGUI_ICON_SIZE, (float)pixelSize*RAYGUI_ICON_SIZE };
 
-        DrawTexturePro(guiFont.texture, srcRec, dstRec, (Vector2){ 0, 0 }, 0.0f, color);
+        DrawTexturePro(guiFont.texture, srcRec, dstRec, RAYGUI_CLITERAL(Vector2){ 0, 0 }, 0.0f, color);
     }
     else
     {
@@ -5888,7 +5895,7 @@ static int GuiFontIconBaking(Image *imFont, Font font, Rectangle *whiteRec)
             for (int x = 0; x < 3; x++)
                 ((unsigned short *)newImData)[(imFont->height - y - 1)*imFont->width + imFont->width - x - 1] = 0xffff;
 
-        *whiteRec = (Rectangle){ (float)imFont->width - 2, (float)imFont->height - 2, 1, 1 };
+        *whiteRec = RAYGUI_CLITERAL(Rectangle){ (float)imFont->width - 2, (float)imFont->height - 2, 1, 1 };
     }
 
     // Calculate image offset positions to start drawing
