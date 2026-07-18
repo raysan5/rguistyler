@@ -989,8 +989,8 @@ int main(int argc, char *argv[])
         {
             currentSelectedProperty = -1;
 
-            //GuiLoadStyleDefault();          // Reset to base default style
-            GuiLoadStyle(stylesList[styleCounter]);  // Load new style properties
+            //GuiLoadStyleDefault(); // Reset to base default style
+            GuiLoadStyle(stylesList[styleCounter]); // Load new style properties
 
             strcpy(inFileName, GetFileName(stylesList[styleCounter]));
             SetWindowTitle(TextFormat("%s v%s | File: %s", toolName, toolVersion, GetFileName(inFileName)));
@@ -1935,7 +1935,7 @@ int main(int argc, char *argv[])
                         case STYLE_TEXT:
                         {
                             // Check for valid extension and make sure it is
-                            if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".rgs")) strcat(outFileName, ".rgs\0");
+                            if ((GetFileExtension(outFileName) == NULL) || !IsFileExtension(outFileName, ".txt")) strcat(outFileName, ".txt\0");
                             SaveStyle(outFileName, STYLE_TEXT);
                         } break;
                         */
@@ -2152,7 +2152,7 @@ static void ProcessCommandLine(int argc, char *argv[])
         // Export style files with different formats
         switch (outputFormat)
         {
-            case STYLE_TEXT: SaveStyle(TextFormat("%s%s", outFileName, ".txt.rgs"), outputFormat); break;
+            case STYLE_TEXT: SaveStyle(TextFormat("%s%s", outFileName, ".rgs.txt"), outputFormat); break;
             case STYLE_BINARY: SaveStyle(TextFormat("%s%s", outFileName, ".rgs"), outputFormat); break;
             case STYLE_AS_CODE: ExportStyleAsCode(TextFormat("%s%s", outFileName, ".h"), GetFileNameWithoutExt(outFileName)); break;
             case STYLE_TABLE_IMAGE:
@@ -2548,16 +2548,17 @@ static int SaveStyle(const char *fileName, int format)
 
         if (rgsFile != NULL)
         {
-            #define RGS_FILE_VERSION_TEXT  "4.0"
-
             // Write some description comments
-            fprintf(rgsFile, "#\n# rgs style text file (v%s) - raygui style file generated using rGuiStyler\n#\n", RGS_FILE_VERSION_TEXT);
+            fprintf(rgsFile, "#\n# rgs style text file - raygui style file generated using rGuiStyler\n#\n");
             fprintf(rgsFile, "# Provided info:\n");
-            fprintf(rgsFile, "#    f fontGenSize charsetFileName fontFileName\n");
+            fprintf(rgsFile, "#    f <fontGenSize> <fontFileName> <charsetFileName>\n");
             fprintf(rgsFile, "#    p <controlId> <propertyId> <propertyValue>  Property description\n#\n");
 
             if (customFontLoaded)
             {
+                fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n#\n");
+                fprintf(rgsFile, "v %i\n", GUI_STYLE_RGS_VERSION);
+
                 // Save charset into an external file
                 // NOTE: Only saving charset if not basic one (95 codepoints)
                 // WARNING: codepointList and codepointListCount are global variables in gui_window_font_atlas module
@@ -2581,14 +2582,13 @@ static int SaveStyle(const char *fileName, int format)
                     RL_FREE(textData);
                 }
 
-                fprintf(rgsFile, "# WARNING: This style uses a custom font, must be provided with style file\n#\n");
-
-                if (FileExists(TextFormat("%s/charset.txt", GetDirectoryPath(fileName))))   // Check charset.txt saved successfully
+                if (FileExists(TextFormat("%s/charset.txt", GetDirectoryPath(fileName)))) // Check charset.txt saved successfully
                 {
-                    fprintf(rgsFile, "f %i %s %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), "charset.txt", GetFileName(inFontFileName));
+                    fprintf(rgsFile, "f %i %s %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GetFileName(inFontFileName), "charset.txt");
                 }
-                else fprintf(rgsFile, "f %i 0 %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GetFileName(inFontFileName));
+                else fprintf(rgsFile, "f %i %s\n", GuiGetStyle(DEFAULT, TEXT_SIZE), GetFileName(inFontFileName));
             }
+            else fprintf(rgsFile, "#\nv %i\n", GUI_STYLE_RGS_VERSION);
 
             // Save DEFAULT properties that changed
             for (int i = 0; i < (RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED); i++)
