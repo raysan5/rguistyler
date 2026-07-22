@@ -35,7 +35,7 @@
 *   VERSIONS HISTORY:
 *       6.5  (xx-Jun-2026)  ADDED: Controls extended properties edition support
 *                           REDESIGNED: Properties management to consider per control properties
-*                           UPDATED: Using raylib 6.1-dev and raygui 5.0-dev
+*                           UPDATED: Using raylib 6.1-dev and raygui 5.0
 *
 *       6.0  (27-Mar-2025)  Complete redesign of the tool
 *                           ADDED: Styles list view
@@ -288,7 +288,7 @@ static char *guiControlText[RAYGUI_MAX_CONTROLS] = {
 static int guiControlPropsTextCount = 0;
 static int guiControlPropsDefaultCount = 0;
 static char *guiControlPropsNames[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
-static int guiControlPropsTypes[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 
+static int guiControlPropsTypes[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 0,  0, 0, 0, 0, 0, 0, 0, 0 };
 static char *guiControlPropsStates[RAYGUI_MAX_PROPS_BASE + RAYGUI_MAX_PROPS_EXTENDED] = { 0 };
 
@@ -672,6 +672,9 @@ int main(int argc, char *argv[])
     //-----------------------------------------------------------------------------------
     GuiWindowFontAtlasState windowFontAtlasState = InitGuiWindowFontAtlas();
     int fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
+
+    char textBoxMultiText[1024] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n\nDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\n\nThisisastringlongerthanexpectedwithoutspacestotestcharbreaksforthosecases,checkingifworkingasexpected.\n\nExcepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
+    bool textBoxMultiEditMode = false;
     //-----------------------------------------------------------------------------------
 
     // GUI: Help Window
@@ -1217,7 +1220,7 @@ int main(int argc, char *argv[])
 
             // When a new template style is selected, everything is reseted
             //currentSelectedControl = -1;
-            //currentSelectedProperty = -1;
+            currentSelectedProperty = -1;
 
             // Reset to default internal style
             // NOTE: Required to unload any previously loaded font texture
@@ -1505,7 +1508,7 @@ int main(int argc, char *argv[])
             int textOffset = 0;
             TextAppend(fontFileNamesList, "default", &textOffset);
             for (int i = 1; i < fontFileCount; i++) TextAppend(fontFileNamesList, TextFormat(";%s", GetFileNameWithoutExt(fontFilePaths[i])), &textOffset);
-            
+
             // Font list view
             int prevStyleFontIndex = styleFontSelected;
             GuiStatusBar((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8, anchorMain.y + 52, 160, 24 }, "#31#Font");
@@ -1565,6 +1568,13 @@ int main(int argc, char *argv[])
                 windowFontAtlasState.bounds.height = (float)GetScreenHeight() - 256 - 48;
 
                 GuiWindowFontAtlas(&windowFontAtlasState);
+
+                // Multiline text view
+                //GuiSetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL, TEXT_ALIGN_TOP);   // WARNING: Word-wrap does not work as expected in case of no-top alignment
+                //GuiSetStyle(DEFAULT, TEXT_WRAP_MODE, TEXT_WRAP_WORD);            // WARNING: If wrap mode enabled, text editing is not supported
+                //if (GuiTextBox(windowFontAtlasState.bounds, textBoxMultiText, 1024, textBoxMultiEditMode)) textBoxMultiEditMode = !textBoxMultiEditMode;
+                //GuiSetStyle(DEFAULT, TEXT_WRAP_MODE, TEXT_WRAP_NONE);
+                //GuiSetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL, TEXT_ALIGN_MIDDLE);
 
                 if (windowFontAtlasState.fontGenSizeValue != prevFontSize)
                 {
@@ -1685,15 +1695,16 @@ int main(int argc, char *argv[])
             if (showIssueReportWindow)
             {
                 Rectangle messageBox = { (float)GetScreenWidth()/2 - 300/2, (float)GetScreenHeight()/2 - 190/2 - 20, 300, 190 };
-                int result = GuiMessageBox(messageBox, "#220#Report Issue",
-                    "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub");
+                int btnActive = -1;
+                GuiMessageBox(messageBox, "#220#Report Issue",
+                    "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/raylib-project-creator", "#186#Report on GitHub", &btnActive);
 
-                if (result == 1)    // Report issue pressed
+                if (btnActive == 1)    // Report issue pressed
                 {
                     OpenURL("https://github.com/raysan5/rguistyler/issues");
                     showIssueReportWindow = false;
                 }
-                else if (result == 0) showIssueReportWindow = false;
+                else if (btnActive == 0) showIssueReportWindow = false;
             }
             //----------------------------------------------------------------------------------------
 
@@ -1702,7 +1713,8 @@ int main(int argc, char *argv[])
             if (showExportWindow)
             {
                 Rectangle messageBox = { (float)GetScreenWidth()/2 - 248/2, (float)GetScreenHeight()/2 - 150, 248, 196 };
-                int result = GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style");
+                int btnActive = -1;
+                GuiMessageBox(messageBox, "#7#Export Style File", " ", "#7# Export Style", &btnActive);
 
                 GuiLabel((Rectangle){ messageBox.x + 12, messageBox.y + 24 + 12, 106, 24 }, "Style Name:");
                 if (GuiTextBox((Rectangle){ messageBox.x + 12 + 92, messageBox.y + 24 + 12, 132, 24 }, currentStyleName, 128, styleNameEditMode)) styleNameEditMode = !styleNameEditMode;
@@ -1720,12 +1732,12 @@ int main(int argc, char *argv[])
                 //GuiCheckBox((Rectangle){ messageBox.x + 20, messageBox.y + 72 + 32 + 24 + 24, 16, 16 }, "Style embedded as rGSf chunk", &styleChunkChecked);
                 //GuiEnable();
 
-                if (result == 1)    // Export button pressed
+                if (btnActive == 1)    // Export button pressed
                 {
                     showExportWindow = false;
                     showExportStyleDialog = true;
                 }
-                else if (result == 0) showExportWindow = false;
+                else if (btnActive == 0) showExportWindow = false;
             }
             //----------------------------------------------------------------------------------
 
@@ -1733,10 +1745,12 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showExitWindow)
             {
-                int result = GuiMessageBox((Rectangle){ (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 - 50, 250, 100 }, "#159#Closing rGuiStyler", "Do you really want to exit?", "Yes;No");
+                int btnActive = -1;
+                GuiMessageBox((Rectangle){ (float)GetScreenWidth()/2 - 125, (float)GetScreenHeight()/2 - 50, 250, 100 },
+                    "#159#Closing rGuiStyler", "Do you really want to exit?", "#112#Yes;#113#No", &btnActive);
 
-                if ((result == 0) || (result == 2)) showExitWindow = false;
-                else if (result == 1) closeWindow = true;
+                if ((btnActive == 0) || (btnActive == 2)) showExitWindow = false;
+                else if (btnActive == 1) closeWindow = true;
             }
             //----------------------------------------------------------------------------------------
 
@@ -1866,11 +1880,13 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showSaveStyleDialog)
             {
+                int result = -1;
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save raygui style file...", outFileName, "Ok;Cancel", NULL);
-                int result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 30, 280, 112 }, "#2#Save raygui style file...", NULL, "#2#Save", outFileName, 512, NULL);
+                GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 30, 280, 112 },
+                    "#2#Save raygui style file...", NULL, outFileName, 512, "#2#Save", &result, NULL);
 #else
-                int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
+                result = GuiFileDialog(DIALOG_SAVE_FILE, "Save raygui style file...", outFileName, "*.rgs", "raygui Style Files (*.rgs)");
 #endif
                 if (result == 1)
                 {
@@ -1902,9 +1918,11 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showExportStyleDialog)
             {
+                int result = -1;
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Export raygui style file...", outFileName, "Ok;Cancel", NULL);
-                int result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 60, 280, 112 }, "#7#Export raygui style file...", NULL, "#7#Export", outFileName, 512, NULL);
+                GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 60, 280, 112 },
+                "#7#Export raygui style file...", NULL, outFileName, 512, "#7#Export", &result, NULL);
 #else
                 if (outFileName[0] == '\0') strcpy(outFileName, "style");   // Check for empty name
 
@@ -1921,7 +1939,7 @@ int main(int argc, char *argv[])
                     default: break;
                 }
 
-                int result = GuiFileDialog(DIALOG_SAVE_FILE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
+                result = GuiFileDialog(DIALOG_SAVE_FILE, "Export raygui style file...", outFileName, filters, TextFormat("File type (%s)", filters));
 #endif
                 if (result == 1)
                 {
@@ -1991,11 +2009,13 @@ int main(int argc, char *argv[])
             //----------------------------------------------------------------------------------------
             if (showSaveFontAtlasDialog)
             {
+                int result = -1;
 #if defined(CUSTOM_MODAL_DIALOGS)
                 //int result = GuiFileDialog(DIALOG_TEXTINPUT, "Save font atlas image...", outFileName, "Ok;Cancel", NULL);
-                int result = GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 30, 280, 112 }, "#2#Save font atlas image...", NULL, "#2#Save", outFileName, 512, NULL);
+                GuiTextInputBox((Rectangle){ GetScreenWidth()/2 - 280/2, GetScreenHeight()/2 - 112/2 - 30, 280, 112 },
+                    "#2#Save font atlas image...", NULL, outFileName, 512, "#2#Save", &result, NULL);
 #else
-                int result = GuiFileDialog(DIALOG_SAVE_FILE, "Save font atlas image...", outFileName, "*.png", "Image File (*.png)");
+                result = GuiFileDialog(DIALOG_SAVE_FILE, "Save font atlas image...", outFileName, "*.png", "Image File (*.png)");
 #endif
                 if (result == 1)
                 {
@@ -2029,12 +2049,12 @@ int main(int argc, char *argv[])
 
                 char styleNameLower[64] = { 0 };
                 strcpy(styleNameLower, TextToLower(currentStyleName));
-                if (!DirectoryExists(TextFormat("%s/%s", styleExportPath, styleNameLower))) 
+                if (!DirectoryExists(TextFormat("%s/%s", styleExportPath, styleNameLower)))
                     MakeDirectory(TextFormat("%s/%s", styleExportPath, styleNameLower));
 
                 // Style header: style_<name>.h
                 ExportStyleAsCode(TextFormat("%s/%s/style_%s.h", styleExportPath, styleNameLower, styleNameLower), currentStyleName);
-                // Copy .h to raygui/eexamples/styles/ and rguistyler/src/styles/ 
+                // Copy .h to raygui/eexamples/styles/ and rguistyler/src/styles/
                 FileCopy(TextFormat("%s/%s/style_%s.h", styleExportPath, styleNameLower, styleNameLower),
                     TextFormat("%s/../examples/styles/style_%s.h", styleExportPath, styleNameLower));
                 FileCopy(TextFormat("%s/%s/style_%s.h", styleExportPath, styleNameLower, styleNameLower),
@@ -2432,7 +2452,7 @@ static char *SaveStyleToMemory(int *size)
             char fontName[32] = { 0 };
             snprintf(fontName, 32, "%s", GetFileName(inFontFileName));
             if (fontName[0] != '\0') memcpy(buffer + dataSize, fontName, 31);
-            else 
+            else
             {
                 strcpy(fontName, "<NO_FONT_NAME>");
                 memcpy(buffer + dataSize, fontName, 31);
@@ -3094,7 +3114,7 @@ static void DrawStyleControlsTable(int posX, int posY)
                     GuiToggleSlider((Rectangle){ rec.x + rec.width/2 + TABLE_CELL_PADDING, rec.y + rec.height/2 - 24/2, controlWidth[i]/2 - TABLE_CELL_PADDING, 24 }, "#87#OFF;#83#ON", &tempInt);
                     GuiSetStyle(SLIDER, SLIDER_PADDING, 1);
                 } break;
-                case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#40#ComboBox;ComboBox", 0); break;
+                case TYPE_COMBOBOX: GuiComboBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#40#ComboBox;ComboBox", NULL); break;
                 case TYPE_DROPDOWNBOX: GuiDropdownBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "#41#DropdownBox;DropdownBox", &dropdownActive, false); break;
                 case TYPE_TEXTBOX: GuiTextBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, "text box", 32, false); break;
                 case TYPE_VALUEBOX: GuiValueBox((Rectangle){ rec.x + rec.width/2 - controlWidth[i]/2, rec.y + rec.height/2 - 24/2, controlWidth[i], 24 }, NULL, &value, 0, 100, false); break;
