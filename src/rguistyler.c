@@ -670,7 +670,28 @@ int main(int argc, char *argv[])
 
     // GUI: Font Atlas Window
     //-----------------------------------------------------------------------------------
-    GuiWindowFontAtlasState windowFontAtlasState = InitGuiWindowFontAtlas();
+    GuiWindowFontAtlasState windowFontAtlasState = GUI_WINDOW_FONT_ATLAS_STATE_DEFAULT;
+    windowFontAtlasState.windowActive = true;
+    Rectangle fontAtlasBounds = { 748 + 160, 52, 724, 776 - 256 };
+
+    // Font atlas variables initialization
+    // NOTE: Some of thos variables are globals for convenience
+    windowFontAtlasState.fontWhiteRec = GetShapesTextureRectangle();
+    codepointList = LoadCodepoints(charsetDefault, &codepointListCount);
+
+    fontAtlasView.texture = GuiGetFont().texture;
+    fontAtlasView.scale = 1.0f;
+    fontAtlasView.position.x = fontAtlasBounds.x + fontAtlasBounds.width/2 - fontAtlasView.texture.width*fontAtlasView.scale/2;
+    fontAtlasView.position.y = fontAtlasBounds.y + fontAtlasBounds.height/2 - fontAtlasView.texture.height*fontAtlasView.scale/2;
+    fontAtlasView.prevPosition = fontAtlasView.position;
+
+    fontAtlasRec = (Rectangle){
+        fontAtlasView.position.x,
+        fontAtlasView.position.y,
+        fontAtlasView.texture.width*fontAtlasView.scale,
+        fontAtlasView.texture.height*fontAtlasView.scale
+    };
+
     int fontDrawSizeValue = windowFontAtlasState.fontGenSizeValue;
 
     char textBoxMultiText[1024] = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.\n\nDuis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.\n\nThisisastringlongerthanexpectedwithoutspacestotestcharbreaksforthosecases,checkingifworkingasexpected.\n\nExcepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
@@ -1274,8 +1295,8 @@ int main(int argc, char *argv[])
 
             // Reset font atlas view position and scale
             fontAtlasView.scale = 1.0f;
-            fontAtlasView.position.x = windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width/2 - customFont.texture.width*fontAtlasView.scale/2;
-            fontAtlasView.position.y = windowFontAtlasState.bounds.y + windowFontAtlasState.bounds.height/2 - customFont.texture.height*fontAtlasView.scale/2;
+            fontAtlasView.position.x = fontAtlasBounds.x + fontAtlasBounds.width/2 - customFont.texture.width*fontAtlasView.scale/2;
+            fontAtlasView.position.y = fontAtlasBounds.y + fontAtlasBounds.height/2 - customFont.texture.height*fontAtlasView.scale/2;
             fontAtlasView.prevPosition = fontAtlasView.position;
 
             // Select style font file required
@@ -1511,8 +1532,8 @@ int main(int argc, char *argv[])
 
             // Font list view
             int prevStyleFontIndex = styleFontSelected;
-            GuiStatusBar((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8, anchorMain.y + 52, 160, 24 }, "#31#Font");
-            GuiListView((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8, anchorMain.y + 52 + 23, 160, GetScreenHeight() - 256 - 72 },
+            GuiStatusBar((Rectangle){ fontAtlasBounds.x + fontAtlasBounds.width + 8, anchorMain.y + 52, 160, 24 }, "#31#Font");
+            GuiListView((Rectangle){ fontAtlasBounds.x + fontAtlasBounds.width + 8, anchorMain.y + 52 + 23, 160, GetScreenHeight() - 256 - 72 },
                 fontFileNamesList, &fontListScroll, &styleFontSelected);
             if ((styleFontSelected == -1) && (prevStyleFontIndex != -1)) styleFontSelected = prevStyleFontIndex; // WARNING: Avoid disabling font selected
 
@@ -1525,7 +1546,7 @@ int main(int argc, char *argv[])
             {
                 int index = defaultStyleFont[mainToolbarState.visualStyleActive];
 
-                DrawRectangleLinesEx((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width + 8 + 3,
+                DrawRectangleLinesEx((Rectangle){ fontAtlasBounds.x + fontAtlasBounds.width + 8 + 3,
                     anchorMain.y + 52 + 23 + index*(GuiGetStyle(LISTVIEW, LIST_ITEMS_HEIGHT) + GuiGetStyle(LISTVIEW, LIST_ITEMS_SPACING)) + 3,
                     160 - 6, GuiGetStyle(LISTVIEW, LIST_ITEMS_HEIGHT) },
                     1.0f, Fade(GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)), 0.5f));
@@ -1565,14 +1586,14 @@ int main(int argc, char *argv[])
             {
                 fontAtlasView.texture = customFont.texture;
                 int prevFontSize = windowFontAtlasState.fontGenSizeValue;
-                windowFontAtlasState.bounds.height = (float)GetScreenHeight() - 256 - 48;
+                fontAtlasBounds.height = (float)GetScreenHeight() - 256 - 48;
 
-                GuiWindowFontAtlas(&windowFontAtlasState);
+                GuiWindowFontAtlas(fontAtlasBounds, "#30#Font Atlas Generation", &windowFontAtlasState);
 
                 // Multiline text view
                 //GuiSetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL, TEXT_ALIGN_TOP);   // WARNING: Word-wrap does not work as expected in case of no-top alignment
                 //GuiSetStyle(DEFAULT, TEXT_WRAP_MODE, TEXT_WRAP_WORD);            // WARNING: If wrap mode enabled, text editing is not supported
-                //if (GuiTextBox(windowFontAtlasState.bounds, textBoxMultiText, 1024, textBoxMultiEditMode)) textBoxMultiEditMode = !textBoxMultiEditMode;
+                //if (GuiTextBox(fontAtlasBounds, textBoxMultiText, 1024, textBoxMultiEditMode)) textBoxMultiEditMode = !textBoxMultiEditMode;
                 //GuiSetStyle(DEFAULT, TEXT_WRAP_MODE, TEXT_WRAP_NONE);
                 //GuiSetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL, TEXT_ALIGN_MIDDLE);
 
@@ -1585,7 +1606,7 @@ int main(int argc, char *argv[])
                 if (windowFontAtlasState.btnLoadCharsetPressed) showLoadCharsetDialog = true;
                 if (windowFontAtlasState.btnSaveFontAtlasPressed) showSaveFontAtlasDialog = true;
 
-                Rectangle rec = windowFontAtlasState.bounds;
+                Rectangle rec = fontAtlasBounds;
                 GuiLine((Rectangle){ rec.x, rec.y + rec.height - 68 - 24, rec.width, 8 }, NULL);
 
                 // Text drawing options
@@ -1597,9 +1618,9 @@ int main(int argc, char *argv[])
             }
             else
             {
-                GuiStatusBar((Rectangle){ windowFontAtlasState.bounds.x, windowFontAtlasState.bounds.y, windowFontAtlasState.bounds.width, 24 }, "#30#Font Atlas Generation");
+                GuiStatusBar((Rectangle){ fontAtlasBounds.x, fontAtlasBounds.y, fontAtlasBounds.width, 24 }, "#30#Font Atlas Generation");
                 GuiSetStyle(BUTTON, BORDER_WIDTH, 1);
-                if (GuiButton((Rectangle){ windowFontAtlasState.bounds.x + windowFontAtlasState.bounds.width - 16 - 5, windowFontAtlasState.bounds.y + 3, 18, 18 }, "#53#")) windowFontAtlasState.windowActive = true;
+                if (GuiButton((Rectangle){ fontAtlasBounds.x + fontAtlasBounds.width - 16 - 5, fontAtlasBounds.y + 3, 18, 18 }, "#53#")) windowFontAtlasState.windowActive = true;
                 GuiSetStyle(BUTTON, BORDER_WIDTH, 2);
             }
             //----------------------------------------------------------------------------------------
@@ -1697,7 +1718,7 @@ int main(int argc, char *argv[])
                 Rectangle messageBox = { (float)GetScreenWidth()/2 - 300/2, (float)GetScreenHeight()/2 - 190/2 - 20, 300, 190 };
                 int btnActive = -1;
                 GuiMessageBox(messageBox, "#220#Report Issue",
-                    "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/raylib-project-creator", "#186#Report on GitHub", &btnActive);
+                    "Do you want to report any issue or\nfeature request for this program?\n\ngithub.com/raysan5/rguistyler", "#186#Report on GitHub", &btnActive);
 
                 if (btnActive == 1)    // Report issue pressed
                 {
