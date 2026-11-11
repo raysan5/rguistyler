@@ -758,11 +758,6 @@ int main(int argc, char *argv[])
     };
 #endif
 
-    // Render texture to draw full screen, enables screen scaling
-    // NOTE: If screen is scaled, mouse input should be scaled proportionally
-    //RenderTexture2D screenTarget = LoadRenderTexture(GetScreenWidth(), GetScreenHeight());
-    //SetTextureFilter(screenTarget.texture, TEXTURE_FILTER_POINT);
-
     SetTargetFPS(60);       // Set our game desired framerate
     //--------------------------------------------------------------------------------------
 
@@ -2107,9 +2102,9 @@ int main(int argc, char *argv[])
 
                 // Style screenshot: screenshot.png
                 // NOTE: It required this code to bee deferred and also forcing some batch flushes (OpenGL-related)
-                Image screen = LoadImageFromScreen(); // rlReadScreenPixels() reads back buffer by default (when double-buffering)
-                ExportImage(screen, TextFormat("%s/%s/screenshot.png", styleExportPath, styleNameLower));
-                UnloadImage(screen);
+                Image imScreen = LoadImageFromScreen(); // rlReadScreenPixels() reads back buffer by default (when double-buffering)
+                ExportImage(imScreen, TextFormat("%s/%s/screenshot.png", styleExportPath, styleNameLower));
+                UnloadImage(imScreen);
             }
 #endif
         EndDrawing();
